@@ -1,6 +1,6 @@
 # Common Entity Lifecycle Templates
 
-Template hooks cho các entity type thường gặp. Copy và điều chỉnh theo game cụ thể.
+Template hooks for common game entity types. Copy and adjust for your specific game.
 
 ## Table of Contents
 
@@ -19,7 +19,7 @@ RPG, turn-based, auto-battler.
 
 ```typescript
 class BattleUnit {
-    // --- Lifecycle hooks: ~7 cái ---
+    // --- Lifecycle hooks: ~7 ---
     onEnterBattle?: () => void;
     onTurnStart?: () => Promise<void>;       // await ready anim
     onSkillCast?: (data: { info: SkillCastInfo }) => Promise<void>;
@@ -30,9 +30,9 @@ class BattleUnit {
 }
 ```
 
-**Tại sao `onHealed` là void nhưng `onTakeDamage` là Promise?**
-Heal thường không block gameplay flow — diễn nền được.
-Damage thường cần chờ hurt anim (đặc biệt khi kèm knockback, death check).
+**Why is `onHealed` void but `onTakeDamage` is Promise?**
+Healing usually does not block gameplay flow — it can animate in the background.
+Damage typically needs to wait for hurt animation (especially with knockback or death checks).
 
 ---
 
@@ -42,7 +42,7 @@ Card game (TCG, deckbuilder, poker-style).
 
 ```typescript
 class Card {
-    // --- Lifecycle hooks: ~6 cái ---
+    // --- Lifecycle hooks: ~6 ---
     onDrawn?: () => Promise<void>;           // await draw animation
     onPlayed?: (data: { target?: Card | Slot }) => Promise<void>;
     onDiscarded?: () => Promise<void>;
@@ -50,10 +50,10 @@ class Card {
     onEffectApplied?: (data: { effect: CardEffect }) => Promise<void>;
     onDestroyed?: () => Promise<void>;       // remove from field anim
 
-    play(target?: Card | Slot) {
+    async play(target?: Card | Slot) {
         this.applyManaCost();
-        await this.onPlayed?.({ target });   // view diễn card bay ra field
-        await this.applyEffect(target);      // logic apply, có thể trigger target hooks
+        await this.onPlayed?.({ target });   // view animates card moving to field
+        await this.applyEffect(target);      // logic applies effect, may trigger target hooks
     }
 }
 ```
@@ -77,7 +77,7 @@ class CardView extends Component {
         };
 
         card.onRevealed = () => {
-            this.flipCard();  // tween flip, không cần await
+            this.flipCard();  // tween flip, no need to await
         };
     }
 }
@@ -91,7 +91,7 @@ Tower defense.
 
 ```typescript
 class Tower {
-    // --- Lifecycle hooks: ~5 cái ---
+    // --- Lifecycle hooks: ~5 ---
     onPlaced?: (data: { position: Vec2 }) => Promise<void>;
     onAttack?: (data: { target: Enemy; damage: number }) => void;
     onUpgraded?: (data: { fromLevel: number; toLevel: number }) => Promise<void>;
@@ -100,8 +100,8 @@ class Tower {
 
     attack(target: Enemy) {
         const damage = this.calculateDamage(target);
-        this.onAttack?.({ target, damage });  // view bắn projectile — fire-and-forget
-        // Không await vì tower attack liên tục, không chờ từng viên đạn
+        this.onAttack?.({ target, damage });  // view fires projectile — fire-and-forget
+        // No await because tower attacks continuously; waiting for each projectile would stall the game
         target.receiveDamage(damage, this);
     }
 
@@ -115,9 +115,9 @@ class Tower {
 }
 ```
 
-**Lưu ý:** `onAttack` là fire-and-forget vì tower bắn liên tục.
-Nếu chờ mỗi projectile bay xong mới bắn tiếp → game rất chậm.
-Nhưng `onUpgraded` thì await vì upgrade là action rời rạc, cần diễn rõ.
+**Note:** `onAttack` is fire-and-forget because tower fires continuously.
+If it waited for each projectile to land before firing the next → game would be very sluggish.
+But `onUpgraded` does await because upgrade is a discrete action that deserves clear visual feedback.
 
 ---
 
@@ -127,15 +127,15 @@ Board game, puzzle, match-3.
 
 ```typescript
 class Piece {
-    // --- Lifecycle hooks: ~5 cái ---
+    // --- Lifecycle hooks: ~5 ---
     onMoved?: (data: { from: GridPos; to: GridPos }) => Promise<void>;
     onMatched?: (data: { matchGroup: Piece[] }) => Promise<void>;
     onSwapped?: (data: { other: Piece }) => Promise<void>;
     onSpawned?: (data: { position: GridPos }) => Promise<void>;
     onSpecialActivated?: (data: { type: SpecialType }) => Promise<void>;
 
-    // Hầu hết cần await vì puzzle game cần sequence rõ ràng:
-    // swap → match check → destroy → gravity → spawn → match check lại
+    // Most hooks are Promise because puzzle games need clear sequencing:
+    // swap → match check → destroy → gravity → spawn → check again
 }
 ```
 
@@ -150,10 +150,10 @@ class PuzzleBoard {
             b.onSwapped?.({ other: a }),
         ]);
 
-        // 2. Check match
+        // 2. Check for matches
         const matches = this.findMatches();
         if (matches.length === 0) {
-            // Swap back
+            // No match — swap back
             await Promise.all([
                 a.onSwapped?.({ other: b }),
                 b.onSwapped?.({ other: a }),
@@ -161,26 +161,26 @@ class PuzzleBoard {
             return;
         }
 
-        // 3. Destroy matched pieces (song song — tất cả nổ cùng lúc)
+        // 3. Destroy matched pieces (parallel — all explode simultaneously)
         await Promise.all(
             matches.flat().map(p =>
-                p.onMatched?.({ matchGroup: matches.find(g => g.includes(p)) })
+                p.onMatched?.({ matchGroup: matches.find(g => g.includes(p))! })
             )
         );
 
-        // 4. Gravity — rơi xuống (tuần tự từ dưới lên)
+        // 4. Gravity — pieces fall down (staggered but parallel)
         const moved = this.applyGravity();
         for (const { piece, from, to } of moved) {
-            // Không await từng cái — cho rơi cùng lúc nhưng stagger
+            // Fire without awaiting each one — let them fall simultaneously with stagger
             piece.onMoved?.({ from, to });
         }
-        await this.waitForAllAnimations();  // chờ tất cả rơi xong
+        await this.waitForAllAnimations();  // wait for all to finish falling
 
-        // 5. Spawn mới
+        // 5. Spawn new pieces
         const spawned = this.spawnNewPieces();
         await Promise.all(spawned.map(p => p.onSpawned?.({ position: p.position })));
 
-        // 6. Cascade — check match lại
+        // 6. Cascade — check for new matches
         await this.tryResolveMatches();
     }
 }
@@ -194,7 +194,7 @@ Dungeon crawler, roguelike.
 
 ```typescript
 class Room {
-    // --- Lifecycle hooks: ~5 cái ---
+    // --- Lifecycle hooks: ~5 ---
     onEntered?: (data: { from: Direction }) => Promise<void>;
     onCleared?: () => Promise<void>;
     onTreasureOpened?: (data: { loot: Item[] }) => Promise<void>;
@@ -227,11 +227,11 @@ class Room {
 
 ## Inventory Item
 
-Khi item có visual representation (không chỉ data).
+When an item has a visual representation (not just data in a list).
 
 ```typescript
 class InventoryItem {
-    // --- Lifecycle hooks: ~4 cái ---
+    // --- Lifecycle hooks: ~4 ---
     onAcquired?: (data: { source: 'loot' | 'shop' | 'craft' }) => void;
     onEquipped?: (data: { slot: EquipSlot }) => void;
     onUsed?: (data: { target: BattleUnit }) => Promise<void>;
@@ -240,8 +240,8 @@ class InventoryItem {
     async use(target: BattleUnit) {
         if (!this.isUsable()) return;
         const effect = this.calculateEffect(target);
-        await this.onUsed?.({ target });   // view diễn potion splash, etc.
-        target.applyEffect(effect);      // logic apply sau khi view diễn
+        await this.onUsed?.({ target });     // view plays potion splash, etc.
+        target.applyEffect(effect);          // logic applies after view performs
         this.consume();
     }
 }
@@ -251,16 +251,20 @@ class InventoryItem {
 
 ## General Guidelines Across All Entities
 
-1. **Số hooks nên ở khoảng 4-8 per entity.** Dưới 4 có thể quá thô, trên 10 có thể quá chi tiết.
+1. **Aim for 4-8 hooks per entity.** Fewer than 4 may be too coarse; more than 10 is likely too granular.
 
-2. **Naming convention:** `on` + verb (past participle hoặc present).
-   - Past: `onDamaged`, `onHealed`, `onDestroyed` — đã xảy ra, view diễn hậu quả
-   - Present: `onAttack`, `onMove` — đang xảy ra, view diễn action
+2. **Naming convention:** `on` + verb (past participle or present).
+   - Past: `onDamaged`, `onHealed`, `onDestroyed` — it already happened, view shows the aftermath
+   - Present: `onAttack`, `onMove` — it is happening, view shows the action
 
 3. **Promise rule of thumb:**
-   - Sequential gameplay (turn-based, puzzle cascade): hầu hết hooks là `Promise<void>`
-   - Realtime gameplay (tower defense, action): hầu hết hooks là `void` (fire-and-forget)
-   - Hybrid: action là `void`, milestone là `Promise` (upgrade, level clear)
+   - Sequential gameplay (turn-based, puzzle cascade): most hooks are `Promise<void>`
+   - Realtime gameplay (tower defense, action): most hooks are `void` (fire-and-forget)
+   - Hybrid: actions are `void`, milestones are `Promise` (upgrade, level clear)
 
-4. **Data objects (Result types) nên immutable.** View không được modify result —
-   truyền `ReadonlyArray`, freeze objects nếu cần.
+4. **Data objects (Result types) should be immutable.** View must not modify results.
+   Use `ReadonlyArray`, `Readonly<T>`, or `Object.freeze()` if enforcement is needed.
+
+5. **Single callback vs LifecycleHook:** if the entity can belong to a composite structure
+   (team, deck, formation, wave), start with `LifecycleHook` to avoid refactoring when
+   you later need multiple listeners. For standalone entities, single callback is fine.

@@ -1,11 +1,11 @@
 ---
 name: lifecycle-delegate
-description: "Pattern for separating game logic from view/presentation layer using lifecycle callbacks. Use this skill whenever Claude needs to help with: (1) Architecting logic-view separation in game code, (2) Writing game entities/models that can run headless without views, (3) Designing callback hooks between gameplay logic and animation/UI, (4) Refactoring tightly-coupled game code where logic and visuals are mixed, (5) Making game logic testable or reusable across client/server, (6) Designing turn-based or sequential gameplay where logic must await animation completion. Trigger on phrases like 'separate logic and view', 'logic không phụ thuộc view', 'await animation', 'headless game logic', 'tách logic ra khỏi component', 'lifecycle hook', 'callback pattern game'. Also trigger when reviewing game code that has gameplay calculations mixed with cc.tween, spine animation calls, or UI updates inside the same class."
+description: "Pattern for separating game logic from view/presentation using lifecycle callbacks. Use whenever Claude helps with: (1) Logic-view separation in game code, (2) Writing entities/models that run headless without views, (3) Callback hooks between gameplay logic and animation/UI, (4) Refactoring tightly-coupled code where logic and visuals are mixed, (5) Testable/reusable game logic across client/server, (6) Turn-based or sequential gameplay where logic must await animation, (7) Game architecture or MVC-like patterns. Trigger on: 'separate logic and view', 'game architecture', 'MVC for game', 'await animation', 'headless game logic', 'unit test game logic', 'callback pattern game', 'lifecycle hook'. Also trigger when reviewing code mixing gameplay calculations with cc.tween, spine animations, or UI updates in the same class. Even 'my game code is messy' or 'logic and view are tangled' should trigger this skill."
 ---
 
 # Lifecycle Delegate Pattern for Game Development
 
-Tách logic khỏi view bằng lifecycle callbacks — logic định nghĩa các "mốc" trong vòng đời, view hook vào để diễn.
+Separate logic from view using lifecycle callbacks — logic defines "moments" in its lifecycle, view hooks in to perform them visually.
 
 ## Core Principle
 
@@ -24,28 +24,28 @@ Logic Layer (pure data + rules)      View Layer (visual + animation)
 └─────────────────────────┘          └─────────────────────────┘
 ```
 
-**Logic chạy được không cần view.** Callback là optional (`?.()` skip khi undefined).
-**View không chứa gameplay logic.** View chỉ nhận data và quyết định diễn thế nào.
-**Flow control qua Promise.** Logic `await` callback khi cần chờ animation xong.
+**Logic runs without view.** Callbacks are optional — `?.()` skips gracefully when undefined.
+**View contains no gameplay logic.** View receives data and decides *how* to present it.
+**Flow control via Promise.** Logic `await`s callbacks when it needs to wait for animation to finish.
 
 ## When to Apply
 
 Use this pattern when:
-- Entity có cả gameplay logic lẫn visual representation
-- Logic cần chờ animation xong mới tiếp tục (turn-based, skill sequence)
-- Cần chạy logic headless (server, unit test, AI simulation)
-- Muốn swap view mà không đổi logic (2D → 3D, change art style)
+- An entity has both gameplay logic and a visual representation
+- Logic must wait for animation to finish before continuing (turn-based, skill sequences)
+- Logic needs to run headless (server, unit tests, AI simulation)
+- You want to swap the view without touching logic (2D → 3D, change art style)
 
 Do NOT use for:
-- Cross-system broadcast (entity chết → notify quest, analytics) → dùng Event Bus
-- Pure UI không gắn gameplay logic (settings menu, lobby UI)
-- Realtime physics-driven gameplay nơi logic và visual không thể tách rõ
+- Cross-system broadcast (entity dies → notify quest, analytics) → use Event Bus instead
+- Pure UI with no gameplay logic (settings menu, lobby UI)
+- Realtime physics-driven gameplay where logic and visuals cannot be cleanly separated
 
 ## Callback Granularity Rules
 
-**Mỗi callback = 1 "nhịp" gameplay mà view cần diễn.** Không phải mỗi field thay đổi.
+**Each callback = one gameplay "moment" that the view needs to perform.** Not every field change.
 
-### ❌ Quá nhỏ — view phải tự ráp logic từ mảnh vụn
+### ❌ Too granular — view must reassemble logic from fragments
 
 ```typescript
 onHpChanged?: (hp: number) => void;
@@ -55,63 +55,63 @@ onKnockback?: (dir: Vec3) => void;
 onDamageNumberSpawn?: (val: number) => void;
 ```
 
-Vấn đề: view nhận 5 callback riêng lẻ cho MỘT lần bị đánh, phải tự ráp thứ tự diễn,
-dễ race condition, khó biết mấy callback thuộc cùng một "nhịp".
+Problem: view receives 5 separate callbacks for a SINGLE hit, must reassemble the sequence itself,
+prone to race conditions, hard to tell which callbacks belong to the same "moment".
 
-### ❌ Quá to — view phải diff toàn bộ state
+### ❌ Too coarse — view must diff full state
 
 ```typescript
 onChanged?: (state: FullUnitState) => void;
 ```
 
-Vấn đề: gọi cho mọi thay đổi, view không biết nên diễn hurt anim hay buff anim,
-phải diff old vs new state mỗi frame, tốn performance.
+Problem: fires for every change, view cannot tell whether to play hurt anim or buff anim,
+must diff old vs new state every frame, expensive and error-prone.
 
-### ✅ Đúng mức — mỗi callback là một "moment" gameplay
+### ✅ Right level — each callback is one gameplay "moment"
 
 ```typescript
 onTakeDamage?: (data: { result: DamageResult }) => Promise<void>;
 onBuffsChanged?: (data: { buffs: ReadonlyArray<Buff> }) => void;
 ```
 
-`DamageResult` chứa đủ context (damage, crit, shield, knockback). View nhận 1 object,
-tự quyết diễn thế nào.
+`DamageResult` contains full context (damage, crit, shield, knockback). View receives one object
+and decides how to present it.
 
-### Luôn wrap params trong data object
+### Always wrap params in a data object
 
 ```typescript
-// ❌ Positional params — thêm field = break tất cả callback đang bind
+// ❌ Positional params — adding a field breaks all bound callbacks
 onTakeDamage?: (result: DamageResult) => Promise<void>;
-// Sau này cần thêm sourceSkillId → phải sửa thành:
+// Later you need sourceSkillId → must change to:
 onTakeDamage?: (result: DamageResult, sourceSkillId: string) => Promise<void>;
-// → TẤT CẢ view đang bind phải sửa signature
+// → EVERY view binding this hook must update its signature
 
-// ✅ Data object — thêm field không break gì
+// ✅ Data object — adding a field breaks nothing
 onTakeDamage?: (data: { result: DamageResult }) => Promise<void>;
-// Sau này thêm field:
+// Later add a field:
 onTakeDamage?: (data: { result: DamageResult; sourceSkillId?: string }) => Promise<void>;
-// → View cũ vẫn chạy bình thường, chỉ view nào cần field mới mới dùng
+// → Existing views keep working, only views that need the new field use it
 ```
 
-Nguyên tắc: **mọi callback đều nhận đúng 1 argument là data object**, kể cả khi hiện tại
-chỉ có 1 field. Chi phí wrapper gần như zero, nhưng tiết kiệm rất nhiều refactor sau này.
+Principle: **every callback takes exactly 1 argument: a data object**, even when there is currently
+only 1 field. The wrapper cost is near-zero, but it saves significant refactoring later.
 
-### Checklist tự kiểm tra
+### Self-check checklist
 
-- [ ] View có phải listen nhiều callback rồi gom lại mới đủ info để diễn 1 animation? → gom callback lại
-- [ ] Thêm feature nhỏ ở logic phải thêm callback mới? → abstraction đang leak
-- [ ] Callback chỉ forward 1 field thay đổi mà không mang "ý nghĩa gameplay"? → đang observe data, không phải lifecycle
-- [ ] Một entity phức tạp có quá 10 hooks? → cân nhắc gom lại
-- [ ] View phải diff full state để biết diễn gì? → cần tách thêm callback theo "moment"
+- [ ] Does view have to listen to multiple callbacks and combine them to play one animation? → merge callbacks
+- [ ] Does adding a small feature in logic require a new callback? → abstraction is leaking
+- [ ] Does a callback just forward a single field change without gameplay meaning? → you're observing data, not lifecycle
+- [ ] Does a complex entity have more than 10 hooks? → consider merging
+- [ ] Does view have to diff full state to decide what to play? → split into moment-based callbacks
 
 ## Implementation Guide
 
 ### Step 1: Define Result Types
 
-Gom đủ context vào data objects. View nhận 1 object, không cần hỏi ngược logic.
+Bundle sufficient context into data objects. View receives one object and never needs to ask logic for more.
 
 ```typescript
-// Mỗi result type = 1 "nhịp" gameplay
+// Each result type = one gameplay "moment"
 interface DamageResult {
     value: number;
     isCrit: boolean;
@@ -141,7 +141,7 @@ interface SkillCastInfo {
 
 ```typescript
 class BattleUnit {
-    // ~5-8 hooks cho một entity phức tạp
+    // ~5-8 hooks for a complex entity
     onEnterBattle?: () => void;
     onTurnStart?: () => Promise<void>;
     onSkillCast?: (data: { info: SkillCastInfo }) => Promise<void>;
@@ -150,17 +150,19 @@ class BattleUnit {
     onBuffsChanged?: (data: { buffs: ReadonlyArray<Buff> }) => void;
     onDeath?: () => Promise<void>;
 
-    // Logic methods gọi hook ở đúng thời điểm
+    // Logic methods invoke hooks at the right moment
     async receiveDamage(raw: number, element: ElementType, attacker: BattleUnit) {
-        // ... tính toán damage, shield, crit ...
-        const result: DamageResult = { /* gom hết vào đây */ };
+        // ... calculate damage, shield, crit ...
+        const result: DamageResult = { /* bundle everything here */ };
 
         this.hp = Math.max(0, this.hp - result.value);
-        await this.onTakeDamage?.({ result });  // view diễn, logic chờ
+        await this.onTakeDamage?.({ result });  // view performs, logic waits
 
         if (this.hp <= 0) {
             await this.onDeath?.();
-            EventBus.emit('unit_died', this.id);  // broadcast cho system khác
+            // No EventBus here — logic stays pure.
+            // A centralized manager listens to onDeath and broadcasts events.
+            // See references/advanced-patterns.md → Centralized Event Bridge.
         }
     }
 }
@@ -230,7 +232,7 @@ class BattleScene {
         const view = this.views.get(unit.id);
         view?.unbind();
         this.views.delete(unit.id);
-        // logic unit có thể vẫn tồn tại cho replay/history
+        // logic unit can still exist for replay/history
     }
 }
 ```
@@ -239,25 +241,154 @@ class BattleScene {
 
 | Situation | Return type | Reason |
 |-----------|-------------|--------|
-| Logic phải chờ animation xong | `Promise<void>` | `await` để sequence đúng |
-| Logic tiếp tục ngay, view diễn nền | `void` | Không block game flow |
-| Logic cần kết quả từ view (hiếm) | `Promise<T>` | Ví dụ: user chọn target |
+| Logic must wait for animation | `Promise<void>` | `await` to sequence correctly |
+| Logic continues immediately, view performs in background | `void` | Does not block game flow |
+| Logic needs a result from view (rare) | `Promise<T>` | e.g. user picks a target |
 
-Rule of thumb: **dùng Promise khi thứ tự gameplay matters**, fire-and-forget khi chỉ là visual feedback.
+Rule of thumb: **use Promise when gameplay ordering matters**, fire-and-forget when it is purely visual feedback.
+
+### Example: Logic needs a result from view
+
+This is uncommon but arises when the view must present a choice to the player and logic awaits the decision:
+
+```typescript
+class BattleUnit {
+    // View resolves the Promise with the chosen target
+    onChooseTarget?: (data: { candidates: BattleUnit[] }) => Promise<BattleUnit>;
+
+    async castTargetedSkill(skillId: string) {
+        const skill = SkillDB.get(skillId);
+        const candidates = this.findValidTargets(skill);
+
+        // View shows target picker UI, player chooses, Promise resolves
+        const target = await this.onChooseTarget?.({ candidates })
+            ?? candidates[0]; // fallback for headless: pick first
+
+        await this.castSkill(skillId, [target]);
+    }
+}
+```
+
+In headless mode, `onChooseTarget` is undefined, so `?.()` returns `undefined` and the `??` fallback picks the first candidate automatically. This keeps the pattern consistent.
 
 ## Lifecycle vs Event Bus: Where to Draw the Line
 
 ```
-onTakeDamage  ──→  lifecycle callback (view CỦA entity này diễn hurt)
+onTakeDamage  ──→  lifecycle callback (THIS entity's view plays hurt)
 unit_died     ──→  event bus (quest system, sound manager, camera shake)
 
-onSkillCast   ──→  lifecycle callback (view CỦA caster diễn cast anim)
+onSkillCast   ──→  lifecycle callback (THIS caster's view plays cast anim)
 skill_used    ──→  event bus (combo tracker, cooldown UI, analytics)
 ```
 
-**Lifecycle callback:** quan hệ 1:1 giữa logic và view của CÙNG entity.
-**Event bus:** broadcast 1:N cho các system KHÔNG liên quan trực tiếp.
+**Lifecycle callback:** 1:1 relationship between logic and view of the SAME entity.
+**Event bus:** 1:N broadcast to systems NOT directly related to this entity.
 
-Xem chi tiết và ví dụ nâng cao trong:
-- `references/advanced-patterns.md` — multi-entity sequences, object pooling, replay
-- `references/common-entities.md` — template hooks cho các entity type phổ biến trong game
+**Key principle: logic entities should NOT call EventBus directly.** Keep logic pure by using
+a centralized manager that listens to lifecycle hooks and emits events on behalf of the entity.
+This keeps logic free of broadcast dependencies and makes headless mode trivial.
+
+See `references/advanced-patterns.md` → **Centralized Event Bridge** for the full pattern.
+
+## Refactoring Tightly-Coupled Code
+
+When you encounter a class that mixes gameplay logic and view code (common in Cocos Creator
+projects), follow these steps to extract the lifecycle delegate pattern:
+
+### Step 1: Identify the logic core
+
+Read the class and highlight every line that changes gameplay state (hp, position, buffs,
+score, inventory). Everything else is view. A useful test: "Would a headless server need this line?"
+
+### Step 2: Extract result types
+
+Find the data that view code reads after a logic action. Bundle it into a result type.
+
+```typescript
+// BEFORE: view reads fields directly after logic mutates them
+this.hp -= damage;
+this.hpBar.progress = this.hp / this.maxHp;  // view reads this.hp
+this.spawnDamageNumber(damage, isCrit);       // view needs damage + isCrit
+
+// AFTER: bundle into DamageResult
+interface DamageResult {
+    value: number;
+    isCrit: boolean;
+    remainingHp: number;
+    maxHp: number;
+}
+```
+
+### Step 3: Create logic class, move state + rules
+
+Move all gameplay fields and methods into a plain class with no engine dependencies.
+Replace view code with hook invocations.
+
+### Step 4: Create view class, bind to hooks
+
+Move all visual code into a Component subclass. In `bind()`, wire each hook to the
+appropriate animation/UI update.
+
+### Step 5: Verify headless
+
+Instantiate the logic class without a view. Run a gameplay scenario. If it completes
+without errors, the separation is correct. Write a unit test to lock this in.
+
+### Common pitfalls during refactoring
+
+- **Forgetting async:** if the original code used `scheduleOnce` or `setTimeout` to delay
+  between logic steps, those delays were *animation timing*. Replace them with `await` on
+  the hook so the view controls the timing, not the logic.
+- **Shared references:** if view code directly mutates logic state (e.g. `this.hp = 0` in
+  a death animation callback), break that dependency. Logic owns state; view only reads.
+- **Engine singletons:** logic code that calls `cc.find()`, `director.getScene()`, or
+  `this.node.getComponent()` has view dependencies. Extract those into injected references
+  or move them to the view layer.
+
+## Integration with Cocos Creator Component Lifecycle
+
+When using this pattern in Cocos Creator, the engine's own component lifecycle
+(`onLoad`, `onEnable`, `onDisable`, `onDestroy`) interacts with bind/unbind:
+
+```typescript
+class BattleUnitView extends Component {
+    private unit: BattleUnit | null = null;
+
+    // Bind externally — called by the manager/scene after both
+    // the node and logic entity are ready
+    bind(unit: BattleUnit) { /* ... wire hooks ... */ }
+
+    // Option A: unbind on destroy (most common)
+    // Use when the view's lifetime matches the logic entity's lifetime
+    onDestroy() {
+        this.unbind();
+    }
+
+    // Option B: unbind on disable (for pooled/reusable nodes)
+    // Use when the node may be deactivated and reactivated later
+    onDisable() {
+        this.unbind();
+    }
+    onEnable() {
+        // Re-bind only if a logic entity is assigned
+        if (this.unit) this.bind(this.unit);
+    }
+
+    unbind() {
+        if (!this.unit) return;
+        this.unit.onTakeDamage = undefined;
+        this.unit.onDeath = undefined;
+        // ... clear all hooks ...
+        this.unit = null;
+    }
+}
+```
+
+**Which option to choose:**
+- `onDestroy` unbind: default choice. Simple, predictable. The node is gone, hooks are gone.
+- `onDisable/onEnable` unbind: use for object-pooled nodes that get deactivated instead of destroyed. Prevents stale callbacks on inactive nodes, and re-establishes them when the node is reused.
+- **Never bind in `onLoad`** unless the logic entity is guaranteed to exist at that point. Prefer explicit `bind()` calls from the manager that owns both the logic entity and the view node.
+
+See detailed examples and advanced patterns in:
+- `references/advanced-patterns.md` — centralized event bridge, multi-entity sequences, object pooling, replay, error handling, testing
+- `references/common-entities.md` — template hooks for common game entity types
