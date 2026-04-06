@@ -1,661 +1,245 @@
-# Advanced Lifecycle Delegate Patterns
+# Advanced Patterns
 
-## Table of Contents
+## Multi-Entity Sequence
 
-1. [Multi-Entity Sequences](#multi-entity-sequences)
-2. [Object Pooling with Bind/Unbind](#object-pooling)
-3. [Replay & Headless Mode](#replay-and-headless)
-4. [Single Callback vs Multi-Listener](#single-vs-multi-listener)
-5. [Nested Lifecycles](#nested-lifecycles)
-6. [Centralized Event Bridge](#centralized-event-bridge)
-7. [Error Handling in Async Hooks](#error-handling)
-8. [Testing Logic Without View](#testing)
+When a skill hits multiple targets, the Orchestrator sequences each target's response in order:
+
+```typescript
+class BattleOrchestrator {
+    onUnitDamaged?: (data: { unit: BattleUnit; result: DamageResult }) => Promise<void>;
+    onUnitDied?:    (data: { unit: BattleUnit }) => Promise<void>;
+
+    async processSkill(caster: BattleUnit, skill: Skill, targets: BattleUnit[]): Promise<void> {
+        // Targets animate one at a time — or in parallel depending on design
+        for (const target of targets) {
+            const result = target.receiveDamage(skill.power, caster);
+            await this.onUnitDamaged?.({ unit: target, result });
+
+            if (target.isDead()) {
+                await this.onUnitDied?.({ unit: target });
+                this.removeUnit(target);
+            }
+        }
+        // All animations finished — continue game flow
+        await this.startNextTurn();
+    }
+}
+```
+
+For parallel animations (e.g. area attack where all targets react simultaneously):
+
+```typescript
+await Promise.all(targets.map(async target => {
+    const result = target.receiveDamage(skill.power, caster);
+    await this.onUnitDamaged?.({ unit: target, result });
+}));
+```
 
 ---
 
-## Multi-Entity Sequences
+## Ordered Async Pipeline (Cross-System Sequencing)
 
-When a skill affects multiple targets, decide whether to sequence or parallelize the animations.
-
-### Sequential — turn-based, each hit plays out clearly
+When multiple systems must react to the same event IN ORDER and each may be async:
 
 ```typescript
-class BattleUnit {
-    async castSkill(skillId: string, targets: BattleUnit[]) {
-        const skill = SkillDB.get(skillId);
-        this.consumeMp(skill.mpCost);
+class BattleOrchestrator {
+    // One hook, view handles all systems in the right order
+    onUnitDied?: (data: { unit: BattleUnit }) => Promise<void>;
+}
 
-        // Caster plays cast animation
-        await this.onSkillCast?.({ info: { skillId, targets } });
+// View implementation — sequencing is view's responsibility
+orchestrator.onUnitDied = async ({ unit }) => {
+    // 1. Unit animation first
+    await unitView.playDeath();
+    await unitView.fadeOut(0.5);
 
-        // Each target receives damage sequentially — wait for each hurt anim before the next
-        for (const target of targets) {
-            await target.receiveDamage(skill.damage, skill.element, this);
+    // 2. Quest check (may show popup — must await)
+    await questSystem.checkUnitKilled(unit);
+
+    // 3. Sound after quest popup resolves
+    sound.play('victory_sting');
+
+    // 4. Camera transition last
+    await camera.panToNextUnit();
+};
+```
+
+If the ordering needs to be configurable (different scenes want different order), use a handler array:
+
+```typescript
+class GameSequencer {
+    private handlers: Array<(unit: BattleUnit) => Promise<void>> = [];
+
+    registerOnUnitDied(handler: (unit: BattleUnit) => Promise<void>): void {
+        this.handlers.push(handler);
+    }
+
+    async fireUnitDied(unit: BattleUnit): Promise<void> {
+        for (const h of this.handlers) {
+            await h(unit);  // sequential, not concurrent
         }
     }
 }
+
+// Setup — order of registration = order of execution
+sequencer.registerOnUnitDied(async u => await unitView.playDeath(u));
+sequencer.registerOnUnitDied(async u => await questSystem.check(u));
+sequencer.registerOnUnitDied(async u => sound.play('death'));
+sequencer.registerOnUnitDied(async u => await camera.transition());
 ```
 
-### Parallel — AoE, all targets animate simultaneously
+---
+
+## EventBus Bridge
+
+Logic entities must NOT call EventBus directly. The Orchestrator acts as the bridge — it fires hooks (for ordered, awaited systems) and emits events (for fire-and-forget systems) after the hook resolves:
 
 ```typescript
-class BattleUnit {
-    async castAoESkill(skillId: string, targets: BattleUnit[]) {
-        const skill = SkillDB.get(skillId);
-        await this.onSkillCast?.({ info: { skillId, targets } });
+class BattleOrchestrator {
+    onUnitDied?: (data: { unit: BattleUnit }) => Promise<void>;
 
-        // All targets receive damage in parallel
-        await Promise.all(
-            targets.map(t => t.receiveDamage(skill.damage, skill.element, this))
-        );
+    private async handleUnitDied(unit: BattleUnit): Promise<void> {
+        // 1. Ordered systems via hook — await completes before continuing
+        await this.onUnitDied?.({ unit });
+
+        // 2. Fire-and-forget systems via EventBus — don't block game flow
+        EventBus.emit('unit_died', { unit });
+        // → AchievementSystem listens
+        // → AnalyticsSystem listens
+        // → AudioAmbientSystem listens
     }
 }
 ```
 
-### Mixed — cast sequentially, but AoE damage in parallel
-
-```typescript
-class BattleUnit {
-    async castMultiHitSkill(skillId: string, targets: BattleUnit[]) {
-        const skill = SkillDB.get(skillId);
-
-        // Phase 1: cast anim (sequential)
-        await this.onSkillCast?.({ info: { skillId, targets } });
-
-        // Phase 2: each hit is sequential, but each hit affects all targets in parallel
-        for (let i = 0; i < skill.hitCount; i++) {
-            const dmgPerHit = Math.floor(skill.damage / skill.hitCount);
-            await Promise.all(
-                targets.map(t => t.receiveDamage(dmgPerHit, skill.element, this))
-            );
-        }
-    }
-}
-```
+EventBus listeners must never be awaited by the Orchestrator. If a listener needs to await (e.g., showing a "Achievement Unlocked" popup), it manages its own async internally.
 
 ---
 
 ## Object Pooling
 
-When entities are reused (e.g. enemies in a wave-based game), the view must unbind/rebind cleanly.
+When nodes are pooled (reused instead of destroyed), unbind on disable and rebind on enable:
 
 ```typescript
-class EnemyPool {
-    private pool: Node[] = [];
-    private activeViews: Map<string, EnemyView> = new Map();
+class BattleView extends Component {
+    private orchestrator: BattleOrchestrator | null = null;
 
-    spawn(unit: BattleUnit): EnemyView {
-        const node = this.pool.pop() ?? instantiate(this.prefab);
-        const view = node.getComponent(EnemyView);
-
-        view.bind(unit);   // wire callbacks
-        this.activeViews.set(unit.id, view);
-
-        unit.onDeath = async () => {
-            await view.playDeathAnim();
-            this.recycle(unit);
-        };
-
-        return view;
+    bind(orchestrator: BattleOrchestrator): void {
+        this.orchestrator = orchestrator;
+        orchestrator.onUnitDamaged = async ({ unit, result }) => { /* ... */ };
+        // ... other hooks
     }
 
-    private recycle(unit: BattleUnit) {
-        const view = this.activeViews.get(unit.id);
-        if (!view) return;
-
-        view.unbind();      // CRITICAL: clear all callbacks before recycling
-        view.reset();       // reset visual state
-        this.activeViews.delete(unit.id);
-        this.pool.push(view.node);
+    unbind(): void {
+        if (!this.orchestrator) return;
+        this.orchestrator.onUnitDamaged = undefined;
+        // ... clear all hooks
+        this.orchestrator = null;
     }
+
+    // For pooled nodes: clear hooks when deactivated
+    onDisable(): void { this.unbind(); }
+
+    // Re-establish hooks when reused
+    onEnable(): void {
+        if (this.orchestrator) this.bind(this.orchestrator);
+    }
+
+    // For non-pooled nodes: just use onDestroy
+    // onDestroy(): void { this.unbind(); }
 }
 ```
 
-**Critical:** `unbind()` must clear ALL callbacks. If you forget one, the new logic entity
-bound to this recycled view will trigger a stale callback on the old entity's view — a bug
-that is extremely hard to trace.
-
-```typescript
-class EnemyView extends Component {
-    unbind() {
-        if (!this.unit) return;
-        // Clear everything — do not forget any hook
-        this.unit.onEnterBattle = undefined;
-        this.unit.onTakeDamage = undefined;
-        this.unit.onDeath = undefined;
-        this.unit.onBuffsChanged = undefined;
-        this.unit = null;
-    }
-
-    reset() {
-        this.spine.setAnimation(0, 'idle', true);
-        this.hpBar.setFull();
-        this.node.setPosition(Vec3.ZERO);
-        this.node.active = true;
-    }
-}
-```
-
-### Helper: Auto-unbind pattern
-
-To avoid forgetting to clear callbacks, use a helper that tracks all hook names:
-
-```typescript
-// Logic entity base class
-abstract class GameEntity {
-    // Declare all hook names to support auto-clear
-    protected static readonly HOOKS: string[] = [];
-
-    clearAllHooks() {
-        const hooks = (this.constructor as typeof GameEntity).HOOKS;
-        for (const key of hooks) {
-            (this as any)[key] = undefined;
-        }
-    }
-}
-
-class BattleUnit extends GameEntity {
-    protected static readonly HOOKS = [
-        'onEnterBattle', 'onTurnStart', 'onSkillCast',
-        'onTakeDamage', 'onHealed', 'onBuffsChanged', 'onDeath'
-    ];
-
-    onEnterBattle?: () => void;
-    onTurnStart?: () => Promise<void>;
-    onSkillCast?: (data: { info: SkillCastInfo }) => Promise<void>;
-    onTakeDamage?: (data: { result: DamageResult }) => Promise<void>;
-    onHealed?: (data: { result: HealResult }) => void;
-    onBuffsChanged?: (data: { buffs: ReadonlyArray<Buff> }) => void;
-    onDeath?: () => Promise<void>;
-}
-
-// View only needs one line
-class EnemyView extends Component {
-    unbind() {
-        this.unit?.clearAllHooks();
-        this.unit = null;
-    }
-}
-```
+**Rule:** If a node is destroyed (not pooled) → use `onDestroy`. If a node is deactivated and reused → use `onDisable/onEnable`.
 
 ---
 
-## Replay and Headless
+## Headless Testing
 
-The biggest advantage of this pattern: logic runs entirely without a view.
-
-### Headless simulation (server or AI)
+Because logic entities have no hooks and return result objects, they test trivially:
 
 ```typescript
-// No view bound — all callbacks are undefined, skipped via optional chaining
-const battle = new BattleSimulation();
-battle.addUnit(new BattleUnit(heroData));   // no view binding
-battle.addUnit(new BattleUnit(enemyData));
-
-// Logic runs normally; await resolves immediately because callback is undefined
-// undefined?.() returns undefined, and await undefined resolves instantly
-await battle.run();
-
-console.log(battle.getResult()); // winner, turn count, damage dealt...
-```
-
-### Replay — record actions, replay with view
-
-```typescript
-interface BattleAction {
-    type: 'skill' | 'item' | 'move';
-    actorId: string;
-    targetIds: string[];
-    data: any;
-    timestamp: number;
-}
-
-class BattleReplay {
-    // Replay from action log — logic recalculates, view replays animations
-    async replay(actions: BattleAction[], scene: BattleScene) {
-        for (const action of actions) {
-            const actor = scene.getUnit(action.actorId);
-            const targets = action.targetIds.map(id => scene.getUnit(id));
-
-            switch (action.type) {
-                case 'skill':
-                    // Logic recalculates damage, view plays animation
-                    await actor.castSkill(action.data.skillId, targets);
-                    break;
-                case 'item':
-                    await actor.useItem(action.data.itemId, targets[0]);
-                    break;
-            }
-        }
-    }
-
-    // Fast-forward: run headless then apply final state
-    async fastForward(actions: BattleAction[], scene: BattleScene) {
-        // Unbind all views
-        scene.unbindAllViews();
-
-        // Run logic headless — no animations, resolves instantly
-        for (const action of actions) {
-            const actor = scene.getUnit(action.actorId);
-            const targets = action.targetIds.map(id => scene.getUnit(id));
-            if (action.type === 'skill') {
-                await actor.castSkill(action.data.skillId, targets);
-            }
-        }
-
-        // Rebind views, apply final state visually
-        scene.rebindAllViews();
-    }
-}
-```
-
----
-
-## Single Callback vs Multi-Listener
-
-By default, each hook is a single optional callback. This covers ~90% of use cases and keeps
-things simple with clear ownership. However, some situations require multiple listeners on the
-same hook.
-
-### When to use which
-
-| Scenario | Use | Reason |
-|----------|-----|--------|
-| One entity, one view | Single callback | Simple, clear ownership |
-| Entity belongs to a group/team | **Multi-listener** | Both view AND team need to hook `onDeath` |
-| Multiple systems react to same moment | **Multi-listener** | View plays anim, buff system checks expiry, etc. |
-| Entity will be wrapped by higher-level logic | **Multi-listener** | Wrapping a single callback risks overwrite |
-
-**Rule of thumb:** if the entity can be part of a composite structure (team, formation, deck),
-prefer multi-listener from the start to avoid refactoring later.
-
-### LifecycleHook utility class
-
-```typescript
-class LifecycleHook<T extends (...args: any[]) => any> {
-    private listeners: T[] = [];
-
-    add(fn: T) { this.listeners.push(fn); }
-    remove(fn: T) {
-        const idx = this.listeners.indexOf(fn);
-        if (idx >= 0) this.listeners.splice(idx, 1);
-    }
-    clear() { this.listeners.length = 0; }
-
-    async invoke(...args: Parameters<T>): Promise<void> {
-        for (const fn of this.listeners) {
-            await fn(...args);
-        }
-    }
-
-    get hasListeners(): boolean {
-        return this.listeners.length > 0;
-    }
-}
-
-// Usage
-class BattleUnit {
-    readonly onDeath = new LifecycleHook<() => Promise<void>>();
-
-    async die() {
-        await this.onDeath.invoke();  // all listeners run sequentially
-        // No EventBus here — bridge listener handles broadcast (see Centralized Event Bridge)
-    }
-}
-
-// View hooks in
-unit.onDeath.add(async () => { await view.playDeathAnim(); });
-// Team hooks in
-unit.onDeath.add(async () => { team.checkDefeat(); });
-// Bridge hooks in (wired by BattleEventBridge)
-unit.onDeath.add(async () => { eventBus.emit('unit_died', { unitId: unit.id }); });
-```
-
-### Headless compatibility with LifecycleHook
-
-When no listeners are registered, `invoke()` simply iterates an empty array and resolves
-immediately — same behavior as `undefined?.()` with single callbacks. No special handling needed.
-
----
-
-## Nested Lifecycles
-
-When an entity contains sub-entities (e.g. team contains units, unit contains equipment),
-their lifecycles compose naturally.
-
-```typescript
-class BattleTeam {
-    readonly onTeamTurnStart = new LifecycleHook<() => Promise<void>>();
-    readonly onTeamDefeated = new LifecycleHook<() => Promise<void>>();
-
-    private units: BattleUnit[] = [];
-
-    addUnit(unit: BattleUnit) {
-        this.units.push(unit);
-
-        // Hook into unit's death to check team defeat
-        // Using LifecycleHook means this does NOT overwrite the view's hook
-        unit.onDeath.add(async () => {
-            if (this.getAliveUnits().length === 0) {
-                await this.onTeamDefeated.invoke();
-            }
-        });
-    }
-
-    async startTurn() {
-        await this.onTeamTurnStart.invoke();
-
-        for (const unit of this.getAliveUnits()) {
-            await unit.startTurn();  // each unit has its own lifecycle
-        }
-    }
-
-    private getAliveUnits(): BattleUnit[] {
-        return this.units.filter(u => u.hp > 0);
-    }
-}
-```
-
-Notice how `LifecycleHook` eliminates the callback-overwrite problem entirely. The view adds
-its death animation listener, the team adds its defeat-check listener, and both run in sequence
-without interfering. This is why entities that participate in composite structures should use
-multi-listener hooks from the start.
-
----
-
-## Centralized Event Bridge
-
-A key refinement: **logic entities should never import or call EventBus directly.** Instead,
-a centralized manager listens to lifecycle hooks and emits events on their behalf. This keeps
-logic completely pure — no broadcast dependencies, no imports beyond its own domain.
-
-### The problem with EventBus inside logic
-
-```typescript
-// ❌ Logic entity knows about EventBus — impure
-class BattleUnit {
-    async receiveDamage(...) {
-        // ...
-        if (this.hp <= 0) {
-            await this.onDeath?.();
-            EventBus.emit('unit_died', this.id);       // logic depends on EventBus
-            EventBus.emit('check_quest', this.id);     // and keeps growing...
-            EventBus.emit('play_global_sfx', 'death');
-        }
-    }
-}
-```
-
-Problems:
-- Logic imports EventBus — cannot run in a pure headless environment without stubbing it
-- Adding a new system listener means editing the logic class
-- Hard to trace which events fire from which gameplay moment
-
-### The solution: Centralized Bridge
-
-```
-Logic Entity              BattleEventBridge            Other Systems
-─────────────             ─────────────────            ─────────────
-onDeath fires  ────→      listens via hook    ────→    EventBus.emit('unit_died')
-                          transforms data     ────→    EventBus.emit('check_quest')
-                          decides what to              EventBus.emit('play_sfx')
-                          broadcast
-```
-
-```typescript
-// ✅ Logic entity is completely pure — no EventBus, no external imports
-class BattleUnit {
-    onTakeDamage?: (data: { result: DamageResult }) => Promise<void>;
-    onDeath?: () => Promise<void>;
-    onSkillCast?: (data: { info: SkillCastInfo }) => Promise<void>;
-
-    async receiveDamage(raw: number, element: ElementType, attacker: BattleUnit) {
-        const result = this.calculateDamage(raw, element, attacker);
-        this.hp = Math.max(0, this.hp - result.value);
-        await this.onTakeDamage?.({ result });
-
-        if (this.hp <= 0) {
-            await this.onDeath?.();
-            // Nothing else here. Logic is done. Bridge handles the rest.
-        }
-    }
-}
-```
-
-```typescript
-// Bridge: hooks → events. Lives outside logic layer.
-class BattleEventBridge {
-    constructor(private eventBus: EventBus) {}
-
-    /** Wire all lifecycle hooks of a unit to the event bus */
-    wire(unit: BattleUnit) {
-        // Using LifecycleHook.add() so this does NOT overwrite view's hooks
-        unit.onDeath.add(async () => {
-            this.eventBus.emit('unit_died', { unitId: unit.id, team: unit.teamId });
-            this.eventBus.emit('check_quest_progress', { trigger: 'kill', unitId: unit.id });
-        });
-
-        unit.onTakeDamage.add(async ({ result }) => {
-            this.eventBus.emit('damage_dealt', {
-                unitId: unit.id,
-                value: result.value,
-                element: result.element,
-                isCrit: result.isCrit,
-            });
-            if (result.isCrit) {
-                this.eventBus.emit('play_global_sfx', { sfx: 'crit_impact' });
-            }
-        });
-
-        unit.onSkillCast.add(async ({ info }) => {
-            this.eventBus.emit('skill_used', {
-                casterId: unit.id,
-                skillId: info.skillId,
-                targetCount: info.targets.length,
-            });
-        });
-    }
-
-    /** Unwire when unit is removed from battle */
-    unwire(unit: BattleUnit) {
-        // If using LifecycleHook, store references to remove specific listeners.
-        // Or simply clear all hooks if no other listeners remain.
-        // See auto-unbind pattern in Object Pooling section.
-    }
-}
-```
-
-### Integration with BattleScene
-
-```typescript
-class BattleScene {
-    private bridge = new BattleEventBridge(EventBus.global);
-    private views: Map<string, BattleUnitView> = new Map();
-
-    addUnit(unit: BattleUnit, viewNode: Node) {
-        // View hooks: animation
-        const view = viewNode.getComponent(BattleUnitView);
-        view.bind(unit);
-        this.views.set(unit.id, view);
-
-        // Bridge hooks: cross-system events
-        this.bridge.wire(unit);
-    }
-
-    removeUnit(unit: BattleUnit) {
-        this.views.get(unit.id)?.unbind();
-        this.views.delete(unit.id);
-        this.bridge.unwire(unit);
-    }
-}
-```
-
-### Why this matters for headless mode
-
-Without the bridge, headless mode requires a stub EventBus to avoid crashes.
-With the bridge, headless mode simply never creates a BattleEventBridge — logic runs
-with no hooks bound, all `?.()` calls resolve to undefined, and no events fire. Zero setup.
-
-```typescript
-// Headless: no view, no bridge, no EventBus — just logic
-const battle = new BattleSimulation();
-battle.addUnit(new BattleUnit(heroData));   // no view.bind(), no bridge.wire()
-await battle.run();                         // runs cleanly
-```
-
-### Data transformation in the bridge
-
-The bridge is also the right place to reshape hook data into event payloads. Logic result
-types are designed for view consumption (rich, contextual). Event payloads are designed for
-system consumption (flat, minimal). The bridge translates between them:
-
-```typescript
-// Hook data (rich, for view): DamageResult { value, isCrit, element, shieldAbsorbed, ... }
-// Event payload (flat, for systems): { unitId, value, element, isCrit }
-// Bridge does the mapping — neither logic nor systems need to know each other's shape.
-```
-
-### When to use the bridge vs direct hooks
-
-| Scenario | Approach |
-|----------|----------|
-| View needs to animate THIS entity | Direct lifecycle hook |
-| Team/group needs to react to THIS entity | LifecycleHook (multi-listener, same as view) |
-| Unrelated systems need to know something happened | Centralized Event Bridge → EventBus |
-| Debug/logging all lifecycle events | Bridge (single place to add logging) |
-
----
-
-## Error Handling
-
-View callbacks can throw (e.g. node destroyed mid-animation). Logic must remain robust.
-
-```typescript
-class BattleUnit {
-    async receiveDamage(raw: number, element: ElementType, attacker: BattleUnit) {
-        const result = this.calculateDamage(raw, element, attacker);
-        this.hp = Math.max(0, this.hp - result.value);
-
-        // View may crash — logic must continue regardless
-        try {
-            await this.onTakeDamage?.({ result });
-        } catch (e) {
-            console.warn(`View callback failed for unit ${this.id}:`, e);
-            // Logic continues normally — game does not crash because of a view error
-        }
-
-        if (this.hp <= 0) {
-            try {
-                await this.onDeath?.();
-            } catch (e) {
-                console.warn(`Death callback failed for unit ${this.id}:`, e);
-            }
-            // Bridge listener on onDeath handles EventBus broadcast
-        }
-    }
-}
-```
-
-### Timeout guard — prevent view from blocking logic forever
-
-```typescript
-function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
-    return Promise.race([
-        promise,
-        new Promise<T>((_, reject) =>
-            setTimeout(() => reject(new Error(`Timeout: ${label} took > ${ms}ms`)), ms)
-        ),
-    ]);
-}
-
-// Usage
-await withTimeout(
-    this.onTakeDamage?.({ result }) ?? Promise.resolve(),
-    5000,
-    `onTakeDamage unit ${this.id}`
-);
-```
-
-### Safe invoke helper for LifecycleHook
-
-When using multi-listener hooks, wrap invoke with error handling so one failing listener
-does not prevent others from running:
-
-```typescript
-class LifecycleHook<T extends (...args: any[]) => any> {
-    // ... add, remove, clear ...
-
-    async invokeSafe(...args: Parameters<T>): Promise<void> {
-        for (const fn of this.listeners) {
-            try {
-                await fn(...args);
-            } catch (e) {
-                console.warn('Lifecycle listener failed:', e);
-            }
-        }
-    }
-}
-```
-
----
-
-## Testing
-
-Logic runs headless, so testing is straightforward — no engine mocking required.
-
-```typescript
-describe('BattleUnit.receiveDamage', () => {
-    it('should reduce hp and trigger onTakeDamage', async () => {
-        const unit = new BattleUnit({ hp: 100, maxHp: 100, def: 10 });
-        const receivedResults: DamageResult[] = [];
-
-        // "View" is just a callback that records results
-        unit.onTakeDamage = async ({ result }) => {
-            receivedResults.push(result);
-        };
-
-        const attacker = new BattleUnit({ atk: 50 });
-        await unit.receiveDamage(50, ElementType.FIRE, attacker);
-
-        expect(unit.hp).toBeLessThan(100);
-        expect(receivedResults).toHaveLength(1);
-        expect(receivedResults[0].element).toBe(ElementType.FIRE);
+describe('BattleUnit', () => {
+    it('should apply damage correctly', () => {
+        const unit = new BattleUnit({ hp: 100, maxHp: 100 });
+        const attacker = new BattleUnit({ hp: 100, maxHp: 100, atk: 30 });
+        const result = unit.receiveDamage(30, attacker);
+
+        expect(result.value).toBe(30);
+        expect(result.remainingHp).toBe(70);
+        expect(unit.hp).toBe(70);
     });
 
-    it('should work without view (headless)', async () => {
-        const unit = new BattleUnit({ hp: 100, maxHp: 100, def: 10 });
-        // No callback bound
-        const attacker = new BattleUnit({ atk: 50 });
+    it('should report dead when hp reaches 0', () => {
+        const unit = new BattleUnit({ hp: 10, maxHp: 100 });
+        const attacker = new BattleUnit({ hp: 100, maxHp: 100, atk: 50 });
+        unit.receiveDamage(50, attacker);
 
-        // Does not throw, does not crash
-        await unit.receiveDamage(50, ElementType.FIRE, attacker);
-        expect(unit.hp).toBeLessThan(100);
-    });
-
-    it('should trigger onDeath when hp reaches 0', async () => {
-        const unit = new BattleUnit({ hp: 1, maxHp: 100, def: 0 });
-        let deathTriggered = false;
-        unit.onDeath = async () => { deathTriggered = true; };
-
-        const attacker = new BattleUnit({ atk: 50 });
-        await unit.receiveDamage(50, ElementType.PHYSICAL, attacker);
-
-        expect(unit.hp).toBe(0);
-        expect(deathTriggered).toBe(true);
-    });
-
-    it('should support testing with LifecycleHook', async () => {
-        const unit = new BattleUnit({ hp: 100, maxHp: 100, def: 10 });
-        const log: string[] = [];
-
-        // Multiple listeners — verify ordering
-        unit.onTakeDamage.add(async () => { log.push('listener-1'); });
-        unit.onTakeDamage.add(async () => { log.push('listener-2'); });
-
-        const attacker = new BattleUnit({ atk: 50 });
-        await unit.receiveDamage(50, ElementType.FIRE, attacker);
-
-        expect(log).toEqual(['listener-1', 'listener-2']);
+        expect(unit.isDead()).toBe(true);
+        expect(unit.hp).toBe(0);  // never goes negative
     });
 });
 ```
+
+To test the Orchestrator's sequencing without a view, bind a mock hook:
+
+```typescript
+it('should fire onUnitDied after hp reaches 0', async () => {
+    const orchestrator = new BattleOrchestrator();
+    orchestrator.loadUnits([attacker, target]);
+
+    let diedFired = false;
+    orchestrator.onUnitDied = async ({ unit }) => { diedFired = true; };
+
+    await orchestrator.processAttack(attacker, target);
+
+    expect(diedFired).toBe(true);
+});
+```
+
+---
+
+## Refactoring Tightly-Coupled Code
+
+When a class mixes gameplay state and visual updates:
+
+### Step 1 — Identify the logic core
+
+Highlight every line that changes gameplay state (hp, position, score, inventory). Everything else is view. Test: "Would a headless server need this line?"
+
+### Step 2 — Extract result types
+
+```typescript
+// BEFORE: view reads fields directly after logic mutates them
+this.hp -= damage;
+this.hpBar.progress = this.hp / this.maxHp;
+this.spawnDamageNumber(damage);
+
+// AFTER: logic returns result, Orchestrator distributes it
+const result = unit.receiveDamage(damage);
+await this.onUnitDamaged?.({ unit, result });
+// View hook handles hpBar and damage number
+```
+
+### Step 3 — Create logic class (no hooks, no engine deps, returns results)
+
+### Step 4 — Create Orchestrator (hooks, calls logic, sequences systems)
+
+### Step 5 — Create View (binds to Orchestrator hooks)
+
+### Step 6 — Verify headless
+
+```typescript
+// No view attached — if this runs without error, separation is correct
+const orchestrator = new BattleOrchestrator();
+orchestrator.loadLevel(config);
+await orchestrator.processAttack(unit1, unit2);
+// All hooks are undefined → ?.() skips gracefully
+```
+
+### Common pitfalls
+
+- **Hooks on entities** — the most common mistake. Move them to the Orchestrator.
+- **View touching other systems** — if the hook body calls HUD/Sound/Camera it is Orchestrator work. Move it up.
+- **`scheduleOnce`/`setTimeout` in original code** — these were animation timing. Replace with `await` on the hook.
+- **View mutating logic state** — view must only READ from result objects. Logic owns state.
+- **Engine singletons in logic** — `cc.find()`, `director.getScene()` in a logic class = view dependency. Move to view layer.
