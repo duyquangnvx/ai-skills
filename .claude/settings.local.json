@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(~/.pyenv/versions/3.12.9/bin/pip install:*)"
+    ]
+  }
+}
