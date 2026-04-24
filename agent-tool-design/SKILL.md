@@ -1,6 +1,6 @@
 ---
 name: agent-tool-design
-description: Design tools, tool sets, tool descriptions, tool responses, and multi-turn state patterns for LLM agents — whether exposed as function calls, MCP servers, or a custom ACI. Use whenever the user is drafting or refactoring an agent's tool layer, debating tool granularity ("one big tool or many small ones"), fighting schema duplication between tool definitions and system prompts, dealing with agents that hallucinate IDs or call the wrong tool, trying to fit many tools into limited context, shaping tool responses for token efficiency, handling state across conversation turns, dealing with prefix-cache issues in long agent sessions, adding safety annotations, or writing tool descriptions that steer agent behavior. Distilled from Anthropic's "Writing Effective Tools for Agents", "Effective Context Engineering", and "Building Effective Agents", plus the MCP specification and OpenAI's function-calling guidance. Trigger on phrases like "design tools for my agent", "tool schema", "MCP server design", "agent keeps calling wrong tool", "agent hallucinates IDs", "reduce agent token usage", "one tool or many tools", "partial update vs full object", "tool description", "tool response format", "agent re-queries state every turn", "prompt cache breaking", "stateful tool responses", "agent memory across turns", "thiết kế tool cho agent", "tool schema của agent", "cách viết tool cho LLM", "agent bị miss cache", even when the user doesn't explicitly say "skill" or "best practice".
+description: Use when designing or refactoring an LLM agent's tool layer, including function calls, MCP servers, custom ACIs, tool schemas, tool descriptions, response formats, safety annotations, tool granularity, token-efficient outputs, schema/prompt boundaries, hallucinated IDs, wrong tool calls, partial updates, or one-tool-vs-many-tool decisions.
 ---
 
 # Agent Tool Design
@@ -16,7 +16,6 @@ Start by reading this file end-to-end. It gives you the mental model, the five p
 Load deeper material as needed:
 
 - **`references/patterns.md`** — detailed explanations of each pillar, schema design patterns, tool-set architecture, system-prompt/schema boundaries. Read when a specific section here is too compressed for the task.
-- **`references/conversation-state.md`** — how tool responses carry state across turns, prefix-cache mechanics, the stateful-tool-responses pattern, when to fall back to message-level injection. Read when designing multi-turn agents over mutating state, or when an agent is burning tokens re-querying state every turn.
 - **`references/process.md`** — the evaluation-driven improvement loop, safety annotations, the "lethal trifecta" threat model. Read when the user wants to set up testing, iterate on tools with measurement, or is dealing with destructive/sensitive actions.
 - **`references/case-study.md`** — a concrete walkthrough applying all the principles to a visual-novel editor. Read when the user is working on something structurally similar (domain editor, CMS, story builder) and wants to see the full intervention plan.
 - **`references/sources.md`** — annotated links to the original articles. Point the user here when they want primary sources.
@@ -109,20 +108,6 @@ Deeper discussion in `references/patterns.md` § "Tool set design".
 
 ---
 
-## State across turns
-
-Multi-turn agents need to carry state across turns — the roster of characters, the list of scenes, the open tickets — without re-querying every turn. Two interlocking patterns solve this:
-
-- **Stateful tool responses.** Mutation tools return a compact current-state summary of the slice they touched, not just an ID. After `createCharacter` returns `"Characters now: Nobita, Shizuka, Suneo"`, the agent knows the roster on every subsequent turn because the summary is in conversation history. Apply to every mutation tool; apply to actionable errors as well so the agent self-corrects with full information.
-
-- **Cache-stable by default.** Prefix caching hashes from the start of the request. Anything that changes in the system prompt or earlier messages destroys the cache; tool responses that enter history normally don't, because history bytes stay stable forever after. This is why injecting state into the system prompt is expensive and stateful responses are free.
-
-When state can change outside the chat (users editing directly in the UI), either add a workflow rule telling the agent to re-orient on uncertainty, or inject a state-change notice into the latest user message — both are cache-safe escape hatches.
-
-See `references/conversation-state.md` for mechanics, the three injection points and their cache cost, cumulative-growth mitigation, and a decision recipe.
-
----
-
 ## Evaluation and safety
 
 Two operational concerns that apply to every tool system:
@@ -145,8 +130,6 @@ Two operational concerns that apply to every tool system:
 8. **Tool names describing implementation, not intent.** `parseAndInsertNodes` vs `add_nodes`.
 9. **Adding tools speculatively.** Every tool costs attention.
 10. **Skipping evaluation.** Small refinements compound only if measured.
-11. **Re-querying state every turn** because tool responses only return IDs. Make mutation responses carry a current-state summary; the agent then reads its own history as memory.
-12. **Injecting state into the system prompt or earlier messages.** Both destroy prefix caching. Inject into the latest user message if you must, or (better) put state in tool responses.
 
 ---
 
@@ -170,12 +153,6 @@ Two operational concerns that apply to every tool system:
 - [ ] `response_format` enum where the agent might want concise vs detailed.
 - [ ] Pagination/truncation defaults keep responses under a reasonable ceiling.
 - [ ] Error messages name what went wrong and how to retry.
-
-**Conversation state (multi-turn agents)**
-- [ ] Mutation tools return a compact current-state summary, not just an ID.
-- [ ] Actionable errors also carry relevant state so the agent self-corrects without re-querying.
-- [ ] No state injection into system prompt or earlier messages (cache-hostile).
-- [ ] Workflow rule or escape hatch for out-of-band state changes if the UI allows them.
 
 **Descriptions**
 - [ ] Each description covers what the tool does, does NOT do, and when to call it.
