@@ -7,17 +7,18 @@ description: Use when designing or refactoring an LLM agent's tool layer, includ
 
 How to design the tool layer for an LLM agent — the names, schemas, responses, descriptions, and boundaries that together form the **agent-computer interface (ACI)**. The tool layer is the contract between a deterministic system (your backend) and a non-deterministic system (the agent). When that contract is wrong, no amount of system-prompt tuning will save the agent.
 
-This skill synthesizes guidance from authoritative sources — primarily Anthropic's engineering blog, the MCP specification, and OpenAI's function-calling documentation.
+This skill is provider-neutral. It synthesizes recurring patterns from agent-tool engineering practice, protocol specifications, and provider documentation. Treat provider-specific details as examples to verify against the target runtime, not defaults.
 
 ## How to use this skill
 
-Start by reading this file end-to-end. It gives you the mental model, the five pillars, decision heuristics, and a review checklist — enough to critique or draft most tool sets.
+Start with the user's symptom and the review checklist. Read only the sections that match the problem, then load deeper references when the task needs more detail.
 
 Load deeper material as needed:
 
 - **`references/patterns.md`** — detailed explanations of each pillar, schema design patterns, tool-set architecture, system-prompt/schema boundaries. Read when a specific section here is too compressed for the task.
-- **`references/process.md`** — the evaluation-driven improvement loop, safety annotations, the "lethal trifecta" threat model. Read when the user wants to set up testing, iterate on tools with measurement, or is dealing with destructive/sensitive actions.
+- **`references/process.md`** — the evaluation-driven improvement loop, safety annotations, and the "lethal trifecta" threat model. Read when the user wants to set up testing, iterate on tools with measurement, or is dealing with destructive/sensitive actions.
 - **`references/case-study.md`** — a concrete walkthrough applying all the principles to a visual-novel editor. Read when the user is working on something structurally similar (domain editor, CMS, story builder) and wants to see the full intervention plan.
+- **`references/testing.md`** — pressure scenarios for testing whether this skill produces concrete, provider-neutral tool-design guidance.
 - **`references/sources.md`** — annotated links to the original articles. Point the user here when they want primary sources.
 
 ---
@@ -26,7 +27,7 @@ Load deeper material as needed:
 
 Traditional functions are contracts between deterministic systems: `getWeather("NYC")` returns the same shape every call, called by a programmer who read the docs. Tools for agents are contracts between a deterministic system and a **non-deterministic** caller that may call the wrong tool, pass wrong parameters, hallucinate IDs, ignore description hints, or process responses incorrectly.
 
-Anthropic frames this as treating the **agent-computer interface** with the same care engineers give to human-computer interfaces. Designing for agents means the "user" reads via next-token prediction, has a finite attention budget, and doesn't read docs outside its context.
+Treat the **agent-computer interface** with the same care engineers give to human-computer interfaces. Designing for agents means the "user" reads via next-token prediction, has a finite attention budget, and doesn't read docs outside its context.
 
 The practical implication: **wrapping your existing REST API one endpoint per tool is almost never right.** The right tool shape for an agent is usually different from the right endpoint shape for a programmer.
 
@@ -34,7 +35,7 @@ The practical implication: **wrapping your existing REST API one endpoint per to
 
 ## Five pillars
 
-Anthropic distilled five principles from optimizing internal tool servers on Slack and Asana MCP. When something feels off about a tool design, map the symptom to one of these — the fix almost always lives there.
+When something feels off about a tool design, map the symptom to one of these five areas — the fix almost always lives there.
 
 ### 1. Choose the right tools
 
@@ -46,11 +47,11 @@ Group related tools with consistent prefixes (`asana_search`, `jira_search`) or 
 
 ### 3. Return meaningful context
 
-Lead with human-readable fields. UUIDs cause hallucinations when the agent has to reference them in follow-up calls. Expose a `response_format: concise | detailed` enum so the agent chooses — Anthropic's Slack example used ⅓ the tokens on "concise."
+Lead with human-readable fields. UUIDs cause hallucinations when the agent has to reference them in follow-up calls. For tools with meaningfully variable response size, expose a small verbosity control such as `response_format: concise | detailed`; don't add the enum to tiny tools where it only bloats the schema.
 
 ### 4. Optimize for token efficiency
 
-Pagination, filtering, range selection, truncation — all with sensible defaults. Claude Code caps tool responses at 25,000 tokens by default. Steer behavior through error messages: every validation failure should tell the agent exactly what was wrong and how to retry.
+Pagination, filtering, range selection, truncation — all with sensible defaults. Do not rely on runtime response caps as your primary control; design tool responses to stay bounded before the provider or client truncates them. Steer behavior through error messages: every validation failure should tell the agent exactly what was wrong and how to retry.
 
 ### 5. Prompt-engineer tool descriptions
 
@@ -88,7 +89,7 @@ For worked-through examples of each pattern, see `references/patterns.md` § "Sc
 | Per-tool "what this does" | Persona, tone, domain context |
 | Per-tool return shape | Policy (confirmation for destructive actions) |
 
-The OpenAI o3/o4-mini guide frames the developer prompt as a **"centralized, durable contract"** — the place to spell out decision boundaries when tools overlap. Example: "Use `python` for general math. Use `calculate_shipping_cost` for shipping — it applies business rules. When both could apply, prefer `calculate_shipping_cost`. Fall back to `python` only if the custom tool fails."
+Use the developer/system prompt as the durable contract for decision boundaries when tools overlap. Example: "Use `python` for general math. Use `calculate_shipping_cost` for shipping — it applies business rules. When both could apply, prefer `calculate_shipping_cost`. Fall back to `python` only if the custom tool fails."
 
 Rules like this don't fit in individual tool descriptions. Put them in the prompt, once, clearly.
 
@@ -100,7 +101,7 @@ Individual tools can be perfect and the set can still fail. Think about the coll
 
 - **Read/orient layer.** Provide an `orient` tool (cheap overview), `list_*` (shallow IDs + labels), `get_*` (full detail by ID), `search_*` (keyword lookup). Document expected call order in the system prompt as workflow, not mandate.
 
-- **Just-in-time context.** Don't pre-load everything. Claude Code's example: instead of reading full database contents, Claude writes a query, stores results, uses `head`/`tail` to inspect. Lightweight identifiers + dereferencing tools scale to arbitrary data.
+- **Just-in-time context.** Don't pre-load everything. Give the agent lightweight identifiers and dereferencing tools so it can inspect the relevant slice on demand instead of pulling entire datasets into context.
 
 - **Progressive tool discovery** (past 20-30 tools): namespace aggressively first; then `tool_search` as a meta-tool; then subagent delegation. Don't reach for these prematurely — 10-15 well-named tools beat a clever discovery layer for small domains.
 
@@ -114,7 +115,7 @@ Two operational concerns that apply to every tool system:
 
 - **Evaluation-driven iteration.** The only reliable way to improve a tool layer is to run realistic multi-step eval tasks, collect metrics (accuracy, tokens, tool errors, duration), read transcripts, and iterate on descriptions. Small description edits often produce large gains. See `references/process.md` for the full loop.
 
-- **Safety annotations and the lethal trifecta.** MCP defines `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`. Treat them as hints, not guarantees. Watch for sessions that combine private data + untrusted content + external communication — that's the prompt-injection exfiltration risk surface. See `references/process.md` for detail.
+- **Safety annotations and the lethal trifecta.** If the runtime supports tool annotations, set read-only/destructive/idempotent/open-world hints, but treat them as hints, not guarantees. Watch for sessions that combine private data + untrusted content + external communication — that's the prompt-injection exfiltration risk surface. See `references/process.md` for detail.
 
 ---
 

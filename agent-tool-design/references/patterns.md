@@ -19,7 +19,7 @@ This reference expands on the five pillars, schema design patterns, system-promp
 
 The question is: **what workflows does the agent actually run?** Build tools that subdivide *those workflows* the way a thoughtful human would, given access to the same underlying resources.
 
-Concrete examples from Anthropic's own analysis:
+Concrete examples:
 
 - Instead of `list_users` + `list_events` + `create_event`, ship `schedule_event` that finds availability and creates the event in one call.
 - Instead of `read_logs` that returns everything, ship `search_logs` that returns relevant lines plus context.
@@ -41,7 +41,7 @@ As tool sets grow (especially with MCP, where an agent may load dozens of server
 - By service and resource: `asana_projects_search`, `asana_users_search`.
 - By domain: `billing_get_invoice`, `billing_refund_payment`.
 
-Anthropic reports that *prefix vs suffix* style measurably changes tool-use accuracy on their evals — the effect varies by model, so test if this matters for your use case.
+Prefix vs suffix style can affect tool-use accuracy, and the effect varies by model and runtime. Pick a consistent convention, then test if naming order matters for your use case.
 
 Consistency matters more than any specific style: pick a convention and apply it everywhere. Agents will learn the boundary if it's clearly drawn; they'll stumble if some tools follow the convention and others don't.
 
@@ -57,7 +57,7 @@ Tool responses are another form of context the agent has to reason over. Returni
 { "name": "Jane Chen", "channel": "#product-launch", "last_message_at": "2h ago" }
 ```
 
-Anthropic found that **resolving arbitrary UUIDs to natural-language names** — or even a simple 0-indexed scheme — significantly reduces hallucinations in retrieval tasks. Agents reason better over semantic identifiers than cryptic ones.
+Resolving arbitrary UUIDs to natural-language names — or even a simple numbered scheme — often reduces hallucinations in retrieval tasks. Agents reason better over semantic identifiers than cryptic ones.
 
 **The `response_format` pattern.** Sometimes the agent needs IDs (to chain into a next tool call), sometimes it just needs the content. Expose a `response_format` parameter with a small enum:
 
@@ -68,11 +68,9 @@ enum ResponseFormat {
 }
 ```
 
-In Anthropic's Slack tool example, concise responses used roughly one-third the tokens of detailed responses. The agent decides per call which it needs.
+In tools where the response can be either a compact summary or a full object, concise responses can save substantial tokens. The agent chooses per call which it needs.
 
 **Response shape matters.** XML vs JSON vs Markdown — no universal winner. LLMs are trained on next-token prediction and tend to perform better with the format they've seen most for a given kind of content. Test format on your own evals. When in doubt, match what the content would naturally look like on the open web.
-
-**Responses carry across turns.** In multi-turn agents, tool responses are not one-shot — they stay in conversation history and become the agent's self-memory. This changes what "meaningful context" should include: a mutation response that carries a compact current-state summary saves the agent from re-querying state on every subsequent turn. See `conversation-state.md` for the stateful-tool-responses pattern and how it interacts with prefix caching.
 
 ### Pillar 4 — Optimize for token efficiency
 
@@ -80,7 +78,7 @@ The context window is a finite attention budget. Every unnecessary token in a to
 
 **Bake limits into the tool:**
 
-- Pagination with sensible page sizes. Claude Code caps tool responses at 25,000 tokens by default as a backstop.
+- Pagination with sensible page sizes. Provider/client caps are backstops, not a substitute for bounded tool design.
 - Filtering parameters so the agent can ask for only what it needs.
 - Range selection for time-series or ordered data.
 - Truncation with a clear indicator that more data exists, plus instructions on how to page further.
@@ -115,7 +113,7 @@ Tool names, descriptions, and parameter names are loaded into the agent's contex
 - What to expect back — shape and meaning.
 - Any edge cases worth knowing — rate limits, pagination defaults, side effects.
 
-Anthropic reports that small description refinements produced dramatic gains in SWE-bench Verified performance. One concrete example from their own products: Claude's web search tool was spuriously appending "2025" to queries; the fix was not a model change but improving the tool description to steer against it.
+Small description refinements can produce large gains on tool-use evals. One common pattern: when a model repeatedly adds an unwanted default or uses the wrong sibling tool, a sharper tool description often fixes the behavior without changing the model.
 
 **Self-documenting parameter names:**
 
@@ -126,7 +124,7 @@ Anthropic reports that small description refinements produced dramatic gains in 
 
 A parameter name should read correctly in a tool-call trace with no surrounding context.
 
-**Use strict schemas.** Where your tool protocol supports it, use strict schemas / structured outputs. OpenAI's `strict: true` and Anthropic's tool-use schemas both let the runtime enforce that the agent's call matches your contract exactly. Strict mode requires `additionalProperties: false` and usually marking all fields required (use nullable for optional) — this forces you to be explicit, which is also good for the agent.
+**Use strict schemas.** Where your tool protocol supports it, use strict schemas / structured outputs so the runtime can enforce that the agent's call matches your contract. Exact requirements vary by provider and protocol; verify current docs for details such as additional properties and nullable optional fields.
 
 ---
 
@@ -203,7 +201,7 @@ The short answer is in the main SKILL.md table. The longer answer covers the rea
 
 **Workflow guidance** belongs in the prompt because it spans tools. A sentence like "Call `list_scenes` before creating a `choice` so targets resolve to real IDs" doesn't fit in either tool's description — it's relational.
 
-**Disambiguation between overlapping tools.** The OpenAI o3/o4-mini guide calls the developer prompt a "centralized, durable contract." A concrete pattern:
+**Disambiguation between overlapping tools.** Use the developer/system prompt as the durable contract for cross-tool decision boundaries. A concrete pattern:
 
 > "Use `python` for general math or data parsing that needs no external lookup. Use `calculate_shipping_cost` for shipping estimates — it applies business rules and live rate tables. When both could apply, prefer `calculate_shipping_cost` for policy compliance. Fall back to `python` only if the custom tool fails."
 
@@ -249,7 +247,7 @@ This gives the agent a "default path" to follow, while leaving room to deviate w
 
 ### Just-in-time context retrieval
 
-Don't pre-load everything. Let the agent load context when it needs it. Anthropic's Claude Code example: instead of reading entire database contents, Claude writes a query, stores the result, and uses `head`/`tail` to inspect portions. The full data never enters context.
+Don't pre-load everything. Let the agent load context when it needs it. Instead of reading entire datasets, provide query/search/list tools plus a way to inspect slices of the result. The full data never needs to enter context.
 
 This pattern — lightweight identifiers + tools that dereference them — scales to arbitrary data sizes and keeps attention focused on the current task.
 
@@ -258,7 +256,7 @@ This pattern — lightweight identifiers + tools that dereference them — scale
 Past 20-30 tools, the tool list itself starts costing meaningful tokens. Options, in order of increasing complexity:
 
 1. **Namespace aggressively** and rely on namespacing to make the list scannable.
-2. **Tool search** — expose a `tool_search(keywords)` meta-tool that returns relevant tool schemas on demand. The agent loads tools just-in-time. Claude's own `tool_search` and OpenAI's `tool_search` (for gpt-5.4+) follow this pattern.
+2. **Tool search** — expose a `tool_search(keywords)` meta-tool that returns relevant tool schemas on demand. The agent loads tools just-in-time. Some providers and clients ship built-in versions of this pattern; verify availability in your target runtime.
 3. **Subagent delegation** — a coordinator agent with a small tool set delegates to specialized sub-agents, each with their own focused tool set and a clean context window.
 
 Don't reach for these prematurely. A flat list of 10-15 well-named tools usually outperforms a clever discovery layer for small domains.

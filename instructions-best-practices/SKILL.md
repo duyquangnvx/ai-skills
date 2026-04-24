@@ -1,6 +1,6 @@
 ---
 name: instruction-best-practices
-description: Best practices for writing high-quality instructions, system prompts, skills, and agent configurations for LLMs. Use this skill whenever writing or reviewing a SKILL.md, system prompt, agent instructions, tool descriptions, or any structured guidance meant to shape LLM behavior. Also trigger when the user says things like "write a prompt for", "create instructions for", "design an agent", "make a skill", "review my prompt", "improve this system prompt", or is working on any document that will be consumed by an LLM as instructions — even if they don't explicitly mention "best practices."
+description: Use when writing, reviewing, or improving LLM-facing instructions, including SKILL.md files, system prompts, agent configs, tool descriptions, prompt templates, and documents meant to shape model behavior
 ---
 
 # Instruction Best Practices
@@ -9,13 +9,15 @@ A reference guide for writing high-quality instructions that shape LLM behavior 
 
 This skill is meant to be loaded alongside task-specific skills (like skill-creator) or used standalone when crafting any LLM-facing instructions.
 
+**REQUIRED SUB-SKILL:** Use `superpowers:writing-skills` when creating, editing, or reviewing `SKILL.md` files. That skill owns the test-first workflow for skill changes; this guide supplies instruction-quality criteria.
+
 ---
 
 ## Core Philosophy
 
 Two ideas underpin everything in this guide:
 
-1. **Clarity over control.** LLMs are smart. They respond better to well-explained reasoning than to rigid rules. Instead of micromanaging with ALWAYS/NEVER/MUST, explain *why* a behavior matters. The model will generalize from understanding to novel situations — brittle rules won't.
+1. **Clarity over control.** LLMs are smart. They respond better to well-explained reasoning than to rigid rules. Prefer clear motivation over micromanagement for normal behavior guidance. Use firm rules only when the instruction protects safety, prevents irreversible harm, routes required tools, or enforces a process discipline that testing shows agents otherwise skip.
 
 2. **Context is finite.** Every token competes for the model's attention. More instructions isn't better — more *signal* is better. Treat your instruction budget the way you'd treat a tight slide deck: every line must earn its place.
 
@@ -71,6 +73,20 @@ Make examples:
 
 When an instruction is hard to articulate in words, a single good example is often worth a paragraph of explanation.
 
+### Keep metadata trigger-focused
+
+For skills and tool descriptions, the short metadata field is part of the routing surface. It should describe when to load or call the capability, not summarize the workflow.
+
+```yaml
+# Weak: summarizes the process and invites shortcutting
+description: Use for skill review - checks metadata, tests scenarios, and rewrites weak sections
+
+# Strong: trigger conditions only
+description: Use when creating, editing, or reviewing SKILL.md files
+```
+
+Put workflow details in the body where the agent must read the full instructions.
+
 ---
 
 ## Structuring Instructions
@@ -103,7 +119,7 @@ This mirrors how humans work: you don't memorize the entire manual, you know whe
 
 ### Put long-form data before instructions
 
-When your prompt includes large documents or data alongside instructions, place the data at the top and your query/instructions at the bottom. This ordering can improve response quality significantly (up to 30% in Anthropic's tests) because the model attends most strongly to the end of context.
+When your prompt includes large documents or data alongside instructions, place the data at the top and your query/instructions at the bottom. This keeps the final tokens focused on the actual task, where models often place strong attention. Verify ordering with the target model when quality matters.
 
 ---
 
@@ -144,11 +160,17 @@ Rewrite noisy sections as concise, principle-based guidance. A single clear sent
 
 ### Match instructions to model capability
 
-Modern models (Claude 4.6, etc.) are significantly more capable than their predecessors. Instructions that were necessary for older models may now cause problems:
+Current high-capability models often need less defensive prompting than older or weaker models. Calibrate against the target model instead of copying old prompt patterns forward:
 
 - **Anti-laziness prompting** ("Be thorough! Don't skip steps!") can cause overtriggering and overthinking in newer models. Dial it back or remove it.
-- **Aggressive tool-use language** ("CRITICAL: You MUST use this tool when...") was needed when models undertriggered tools. Current models respond to normal language ("Use this tool when...") and may overtrigger on aggressive prompts.
+- **Aggressive tool-use language** ("CRITICAL: You MUST use this tool when...") can cause overtriggering when the tool is optional or heuristic-based.
 - **Excessive guardrails** against hallucination or laziness can make the model overly cautious or verbose. Trust the model more and add constraints only where you observe actual failure modes.
+
+### Use strong language only where failure is costly
+
+Strong terms like `MUST`, `NEVER`, `MANDATORY`, and `CRITICAL` are useful when violating the instruction would be unsafe, destructive, externally visible, or likely under pressure. They are also appropriate for discipline-enforcing skills where testing shows agents rationalize skipping required steps.
+
+Use normal language for preferences, style, heuristics, and reversible choices. If every instruction is urgent, none of them stand out.
 
 ### The Goldilocks principle for system prompts
 
@@ -168,6 +190,8 @@ The most effective approach to calibration:
 4. Re-test to make sure the fix didn't break other cases.
 
 This avoids the common trap of front-loading every possible rule and creating bloated, contradictory instructions. It also means every line in your final instructions exists because it solved an observed problem.
+
+For skills, use the `superpowers:writing-skills` RED-GREEN-REFACTOR process: create pressure scenarios, observe baseline failure without the skill or change, update the skill to address the observed failure, then re-test. A static checklist review is useful, but it is not a substitute for scenario testing.
 
 ---
 
@@ -225,7 +249,7 @@ Load essential, stable context upfront (role, core rules, key references) and en
 
 Avoid these common mistakes when writing LLM instructions:
 
-1. **Wall of MUST/NEVER** — Using aggressive capitalized commands for everything. Reserve strong language for genuine safety constraints. For everything else, explain the reasoning.
+1. **Wall of MUST/NEVER** — Using aggressive capitalized commands for everything. Reserve strong language for safety constraints, destructive or externally visible actions, required tool routing, and tested discipline rules. For everything else, explain the reasoning.
 
 2. **Exhaustive edge case listing** — Trying to enumerate every scenario instead of teaching the underlying principle. A diverse set of 3-5 examples teaches better than 20 rules.
 
@@ -235,7 +259,7 @@ Avoid these common mistakes when writing LLM instructions:
 
 5. **Over-engineering for hypotheticals** — Adding instructions for scenarios that haven't happened and may never happen. This adds noise and can create unintended interactions with real instructions.
 
-6. **Ignoring the model's baseline** — Modern models are already helpful, accurate, and follow instructions well. Don't waste tokens re-stating behaviors the model already exhibits. Focus instructions on where you need the model to differ from its defaults.
+6. **Ignoring the model's baseline** — Capable models already handle many default behaviors well. Don't waste tokens re-stating behaviors the target model already exhibits. Focus instructions on where you need the model to differ from its defaults.
 
 7. **Rigid output templates** — Forcing exact structures for every response. Provide a template when format truly matters (reports, structured data), but for general interaction, describe the *qualities* you want (concise, technical, narrative) and let the model adapt.
 
@@ -251,7 +275,9 @@ When reviewing any set of LLM instructions, verify:
 - [ ] 3-5 diverse examples for any non-obvious behavior.
 - [ ] Structured with XML tags or clear headers.
 - [ ] Long-form data placed before instructions/queries.
-- [ ] No aggressive language (MUST/NEVER/CRITICAL) unless genuinely safety-critical.
+- [ ] Aggressive language (MUST/NEVER/CRITICAL) is reserved for costly failures, not routine preferences.
+- [ ] Strong language is preserved where failure is costly or a tested discipline rule needs enforcement.
 - [ ] Tested against realistic scenarios, not just ideal ones.
+- [ ] Skill changes follow `superpowers:writing-skills` testing expectations.
 - [ ] Tools have non-overlapping purposes with clear descriptions.
 - [ ] Total instruction length is justified — every paragraph earns its place.
