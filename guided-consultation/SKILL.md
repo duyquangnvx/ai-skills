@@ -1,143 +1,160 @@
 ---
 name: guided-consultation
-description: Walk the user through a multi-decision task one question at a time, leading with a recommendation and reasoning for each choice, and confirming incrementally. Use whenever the goal depends on preferences, constraints, or trade-offs the user hasn't stated — planning a trip, choosing between approaches, scoping a project, structuring a document, making a purchase decision, picking a tool, designing a workflow, mapping out a study plan. Trigger on phrases like "help me plan", "help me decide", "walk me through", "I'm not sure where to start", "I want to X but don't know how", or any request where a good answer genuinely depends on preferences you don't yet have. Do not use for factual questions, tasks the user has already fully specified, emotional support, or when the user has said "just do X".
+description: Use when a user wants help deciding, planning, scoping, choosing, structuring, or starting a multi-decision task where useful output depends on unstated preferences, constraints, trade-offs, budget, priorities, audience, timeline, or risk tolerance.
 ---
 
 # Guided Consultation
 
-A rhythm for working through decisions with the user instead of dumping options or asking everything at once. The user gets small, clear questions; a recommendation with reasoning each time; and sees the picture come together piece by piece rather than all at the end.
+Guided consultation helps users make decisions without being flooded by options. The core pattern is: orient briefly, resolve one decision at a time, recommend a default when trade-offs exist, confirm periodically, then produce a concrete artifact as soon as there is enough context.
 
-## The core pattern
+## When to use
 
-Four behaviors, always applied together:
+Use this skill when the user asks for help with:
 
-1. **One question per message.** Not two, not a bulleted list of three options to resolve in one reply. One.
-2. **Recommend, then ask.** When a question has trade-offs, state your recommendation first with one sentence of why. The user is then choosing between a default you've argued for and the alternatives — not navigating blindly.
-3. **Multiple choice when possible.** "A, B, or C?" is easier to answer than "what do you want?". Save open-ended questions for when the answer space is truly open (e.g., "what's the budget?").
-4. **Incremental confirmation.** After every 2–4 decisions, summarize where you've landed and ask if it's right before moving on. This lets the user catch drift early, when it's cheap to fix.
+- Planning: trips, study plans, launches, events, roadmaps
+- Choosing: tools, products, approaches, stacks, vendors
+- Scoping: projects, documents, workflows, research, offers
+- Starting from uncertainty: "help me decide", "walk me through", "I don't know where to start", "I want to X but don't know how"
 
-## Why this rhythm works
+Do not use it for:
 
-Users often don't know what they want in the abstract, but they know it when they see it. Asking for full requirements upfront fails because the user hasn't thought through the trade-offs yet — they need you to show them the trade-offs so preferences can form. One-at-a-time with recommendations does exactly that: each question surfaces what's at stake in that particular decision, and the recommendation gives them something concrete to react to.
+- Factual questions: answer directly.
+- Fully specified tasks: execute the task.
+- Emotional support: respond naturally, not as a decision workflow.
+- Single-decision tasks with an obvious answer: recommend and proceed.
+- Requests where the user says "just do X", "pick for me", or "surprise me": produce a best-guess draft with assumptions.
 
-## Before you ask anything
+## Consultation loop
 
-Open with a brief orientation (1–3 sentences), not a question:
+1. Orient in 1-2 sentences.
+   - Restate the goal.
+   - Name the few decision dimensions you will cover.
+   - Ask the first decision question in the same message.
+2. Ask about one decision per message.
+   - One decision can include 2-3 choices.
+   - Do not bundle unrelated decisions such as budget, timeline, and style in one question.
+3. Recommend before asking when there is a defensible default.
+   - Frame the trade-off in one sentence.
+   - Give your recommendation and one reason.
+   - Offer 2-3 choices, with the recommended option first.
+4. Capture the user's answer and move to the next highest-impact unknown.
+5. After 2-4 decisions, summarize the current direction and ask whether it is right.
+6. Stop asking once you can produce something useful. Make reasonable assumptions for minor unknowns and label them inline.
 
-- Restate what you understand the user wants, so they can correct you before investing in answers.
-- Name the dimensions you'll walk through, so they see the shape of the conversation.
-- Then ask the first question.
+## Question format
 
-Example opener: *"Happy to help plan the trip. I'll ask about budget, travel style, and must-sees — three quick questions and then I'll draft an itinerary you can tweak. First: what's the rough budget?"*
+Use this shape for trade-off decisions:
 
-## The recommendation pattern
+```markdown
+<One sentence framing the trade-off.>
+I recommend <choice> because <reason>.
 
-When a question has a defensible default, structure it like this:
+Which direction fits?
+- A) <recommended option>
+- B) <alternative>
+- C) <alternative or "something else">
+```
 
-> *[Short context or trade-off framing — 1 sentence.]*
-> *[Your recommendation, with one sentence of why.]*
-> *[2–3 alternatives as brief bullets, or "or something else".]*
+For pure preference questions where no default is defensible, say that and ask plainly:
 
-Example:
+```markdown
+This is mostly taste, so I would not force a recommendation. Which setting sounds better: beach, mountains, city, or something else?
+```
 
-> For a 3-day trip, the usual branch point is one city in depth vs. two cities lighter.
-> I'd lean one city — 3 days is tight for two, and intercity travel eats a full half-day.
-> - A) One city, deeper
-> - B) Two cities, broader but more rushed
-> - C) Something else
+## Depth calibration
 
-If a question is purely preference-based and you genuinely have no recommendation (e.g., "beach or mountains"), say so and just ask. Don't manufacture a recommendation for the sake of format — it reads as fake.
+Silently size the consultation before starting:
 
-## Incremental confirmation
+- Low stakes or few decisions: ask 1-2 questions, then produce.
+- Medium stakes or several decisions: ask 3-6 questions, with one midpoint summary.
+- High stakes or many decisions: work in named phases and summarize after each phase.
 
-After 2–4 questions, pause and mirror back:
+Err toward fewer questions. A draft the user can react to is usually better than one more clarifying question.
 
-> *"So far: weekend trip to Kyoto, mid-range budget, food-focused, slow pace. Sound right? If yes, I'll move on to neighborhoods."*
+## Stop asking
 
-Always do this right before you start producing the actual deliverable (itinerary, plan, draft, recommendation). Confirming inputs prevents expensive rework.
+Produce the deliverable when any condition is true:
 
-## Calibrating depth
+- You have enough context for a useful first version.
+- Remaining unknowns are minor or easier to resolve by reacting to a draft.
+- The user shows impatience or asks you to choose.
+- You have asked 4-5 questions without producing anything concrete.
 
-Not every task needs the same amount of consultation. Silently size it up before starting:
+When producing, include assumptions only where they affect the result. Do not append a long questionnaire after the artifact.
 
-- **Few decisions, low stakes** — one or two questions, then produce something. ("What should I cook tonight?")
-- **Several decisions, medium stakes** — 3–6 questions with one summary midway. ("Help me plan a weekend trip.")
-- **Many decisions, high stakes** — work in named phases, summarize after each. ("Help me choose a stack for my new project.")
+## Adaptation rules
 
-Err toward fewer questions. Stop asking once you have enough to produce something useful, even if imperfect — offer it and let the user redirect. Unanswered questions are cheaper than an impatient user.
+- If the user answers with rich context, drop rigid multiple-choice scaffolding and respond naturally.
+- If the user rejects a recommendation, accept the new preference and continue.
+- If the user's answer changes the shape of the consultation, re-scope out loud in one sentence.
+- If a recommendation could be high-stakes financially, legally, medically, or safety-wise, slow down and ask for the missing constraint rather than guessing.
 
-## When to stop asking and produce
+## Review checklist
 
-Stop and deliver when any of these is true:
+Before responding, verify:
 
-- You have enough to produce something useful, even if imperfect.
-- Remaining questions are minor and better resolved by reacting to a draft.
-- The user shows impatience ("just pick", "whatever you think", "surprise me").
-- You've asked 4–5 questions without producing anything concrete — that's the ceiling for most tasks.
+- [ ] The task genuinely needs unstated preferences or constraints.
+- [ ] The opener names the goal and consultation dimensions briefly.
+- [ ] The message asks about one decision only.
+- [ ] A recommendation appears only when there is a defensible default.
+- [ ] Multiple choice options are short and mutually distinct.
+- [ ] The flow will stop and produce once enough context exists.
+- [ ] The user can override the recommendation without debate.
 
-Produce the output, flag any assumptions you made inline, and invite revision. An imperfect concrete artifact is more useful than one more question.
-
-## Adapting to the user
-
-The rhythm is for the user's benefit, not a format to enforce. Adapt in real time:
-
-- If the user answers in full paragraphs explaining their situation, drop the multiple-choice scaffolding and engage naturally.
-- If they want to skip ahead ("just tell me what you'd do"), do that — produce a draft with your best guesses, and let them react.
-- If they push back on a recommendation, update and move on — don't defend it repeatedly.
-- If their first answer reveals that the planned dimensions were wrong, re-scope the conversation out loud ("Given that, I'll skip the budget question and focus on X, Y").
-
-## What this skill is not for
-
-- **Factual questions.** "What's the capital of France?" — just answer.
-- **Fully-specified tasks.** If the user said "write a Python function that reverses a string," don't ask what language or style. They told you.
-- **Emotional support.** "I had a rough day" is not a consultation; don't structure it as one.
-- **Single-decision tasks with an obvious best answer.** Just recommend it and do it.
-- **When the user has explicitly said "just do X".** Respect the instruction.
-
-## Examples across domains
+## Examples
 
 <example>
-**Travel planning.** User: "Help me plan a weekend in Tokyo."
+User: "Help me plan a weekend in Tokyo."
 
-> *Happy to. I'll ask about pace, interests, and budget — 3 quick questions and I'll draft an itinerary.*
->
-> *First, pace. For a weekend I'd suggest 2 neighborhoods in depth rather than trying to see all of Tokyo — you'll actually remember where you went. Which fits?*
-> - *A) 2 neighborhoods, deep*
-> - *B) 3–4 highlights across the city*
-> - *C) Let me pick based on your interests*
+Response:
+Happy to. I will narrow this by pace, interests, and budget, then draft a weekend itinerary.
+
+For a weekend, the first branch is depth versus coverage. I recommend 2 neighborhoods in depth because cross-city travel can eat too much of a short trip.
+
+Which pace fits?
+- A) 2 neighborhoods, deeper
+- B) 3-4 highlights across the city
+- C) Pick for me after I share interests
 </example>
 
 <example>
-**Writing a document.** User: "Help me write a resignation letter."
+User: "Help me write a resignation letter."
 
-> *Sure. Two things to settle first: tone and reason-framing.*
->
-> *On tone: the two main directions are warm-and-grateful or brief-and-professional. I'd recommend warm-and-grateful unless the departure is tense — it preserves the relationship and costs nothing. Which fits your situation?*
+Response:
+I will settle tone first, then reason framing, then draft the letter.
+
+For most resignations, I recommend warm and professional because it preserves the relationship without overexplaining.
+
+Which tone fits?
+- A) Warm and grateful
+- B) Brief and neutral
+- C) Firm and minimal
 </example>
 
 <example>
-**Technical choice.** User: "Help me pick a database for my side project."
+User: "Help me pick a database for my side project."
 
-> *Quick scoping question first. For a side project under ~10k users, I'd default to SQLite — zero ops, fast enough for almost anything, and you can migrate later if you outgrow it. Does that fit, or are you expecting bigger scale / specific query patterns (graph, full-text search, heavy analytics)?*
+Response:
+I will narrow this by scale, data shape, and operational tolerance.
+
+For most side projects, I recommend SQLite first because it is simple, fast enough for early usage, and easy to migrate away from later.
+
+Which assumption is closest?
+- A) Small app, simple relational data
+- B) Need hosted multi-user Postgres from day one
+- C) Special data shape: search, graph, analytics, or time series
 </example>
 
 <example>
-**Purchase decision.** User: "I'm thinking about getting a new laptop."
+User: "I want to start a newsletter."
 
-> *Happy to help narrow it down. I'll ask about use case, then budget, then portability.*
->
-> *Biggest branch point is OS, which follows from what you'll mostly do. I'd lean:*
-> - *Mac for general use or creative work*
-> - *Windows for gaming or Windows-only software*
-> - *Linux if you're a developer who prefers it*
->
-> *Which describes your main use?*
-</example>
+Response:
+I will help define audience, topic scope, and publishing cadence, then turn that into a launch plan.
 
-<example>
-**Project scoping.** User: "I want to start a newsletter."
+Audience is the highest-leverage first choice. I recommend starting with people you already know because getting the first readers is much easier with an existing network.
 
-> *Nice. Three things to nail down: audience, cadence, and topic scope. I'll ask one at a time.*
->
-> *Audience first: is this for people you already know (friends, colleagues, network) or strangers on the internet? I'd suggest starting with people you know unless you already have a platform — it's much easier to get the first 20 readers that way. Which fits?*
+Who is the initial audience?
+- A) People I already know
+- B) Strangers in a niche online community
+- C) A professional audience I want to build credibility with
 </example>
