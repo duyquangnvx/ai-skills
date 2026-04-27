@@ -1,55 +1,142 @@
-# Sources
+# Verified Source Notes
 
-Primary sources the guidance in this skill is drawn from. Read these directly for the full original context.
+Use these as background, not as a substitute for checking the target runtime's current documentation.
 
-## Provider and protocol references
+## Strongly Supported Claims
 
-**Writing effective tools for agents — with agents** (Sep 2025)
-<https://www.anthropic.com/engineering/writing-tools-for-agents>
+### Tools are an ACI, not just backend endpoints
 
-Source for the five-pillar framing and prototype → eval → iterate methodology, with concrete examples from optimizing Slack and Asana tool servers. Treat product-specific limits and examples as historical context; verify current limits in your target runtime.
+Sources:
 
-**Effective context engineering for AI agents**
-<https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents>
+- Anthropic, "Writing effective tools for agents - with agents" (Sep 11, 2025): https://www.anthropic.com/engineering/writing-tools-for-agents
+- Anthropic, "Building effective agents" (Dec 2024, now under Engineering): https://www.anthropic.com/engineering/building-effective-agents
 
-Source for the "human engineer test" ("if a human engineer can't definitively say which tool should be used, an AI agent can't be expected to do better"), just-in-time retrieval patterns, and the principle of a minimum viable tool set. Also discusses the broader attention-budget framing.
+Supported guidance:
 
-**Building effective agents** (Dec 2024)
-<https://www.anthropic.com/research/building-effective-agents>
+- Tool design is a contract with a non-deterministic caller.
+- Existing API endpoints are often not the right agent tool shape.
+- Tool names, descriptions, parameters, and response formats deserve prompt-engineering attention.
+- Invest in ACI design similarly to HCI: make the action obvious from the interface.
 
-Source for the "agent-computer interface (ACI)" framing and format-choice guidance for tool I/O ("keep the format close to what the model has seen naturally occurring in text on the internet"). Also includes the workflow patterns (prompt chaining, routing, orchestrator-workers, evaluator-optimizer) that are useful background when thinking about how tools compose into systems.
+### Five recurring tool-design levers
 
-**Effective harnesses for long-running agents** (2026)
-<https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents>
+Source:
 
-Useful adjunct if the agent you're designing tools for spans many context windows. Covers compaction, cross-session state, and why testing tools (e.g., browser automation) are essential for feature verification.
+- Anthropic, "Writing effective tools for agents - with agents": https://www.anthropic.com/engineering/writing-tools-for-agents
 
-**Function calling guide**
-<https://developers.openai.com/api/docs/guides/function-calling>
+Supported guidance:
 
-Source for strict mode and structured outputs. Provider requirements change; verify current schema restrictions before relying on exact behavior.
+- Choose the right tools.
+- Namespace tools for clearer boundaries.
+- Return meaningful context.
+- Optimize responses for token efficiency.
+- Prompt-engineer tool descriptions/specs.
 
-**o3/o4-mini Function Calling Guide**
-<https://cookbook.openai.com/examples/o-series/o3o4-mini_prompting_guide>
+Notes:
 
-Source for the overlap-disambiguation pattern ("Use python for X. Use calculate_shipping_cost for Y. Prefer Y when both could apply. Fall back to python only if Y fails"). Useful as a concrete example, not a provider requirement.
+- The exact performance impact of naming schemes, response formats, and descriptions is model/runtime dependent. Treat these as eval targets, not universal constants.
 
-**Specification**
-<https://modelcontextprotocol.io/specification>
+### Responses should be high-signal and bounded
 
-Source for one protocol's tool annotations (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`), dynamic tool-list notifications, and overall protocol shape. Use when building MCP servers or clients; otherwise translate the concepts to your runtime.
+Source:
 
-**Tool Annotations as Risk Vocabulary** (MCP blog, Mar 2026)
-<https://blog.modelcontextprotocol.io/posts/2026-03-16-tool-annotations/>
+- Anthropic, "Writing effective tools for agents - with agents": https://www.anthropic.com/engineering/writing-tools-for-agents
 
-Source for the "annotations are hints, not guarantees" stance, the lethal-trifecta discussion in context of MCP, and the ongoing proposals for annotations like `reads_private_data`, `sees_untrusted_content`, `can_exfiltrate`.
+Supported guidance:
 
-## Related reading
+- Prefer contextual, human-readable fields over low-level technical identifiers as the primary response surface.
+- Cryptic identifiers such as arbitrary UUIDs can increase hallucinated references.
+- `response_format: concise | detailed` is useful when the model sometimes needs compact content and sometimes needs technical IDs for follow-up calls.
+- Pagination, filtering, range selection, and truncation help control context use.
+- Error and truncation messages can steer the next call.
 
-**Simon Willison on the lethal trifecta**
+Notes:
 
-Willison's blog coined this framing. Search his site for "lethal trifecta" — he has multiple posts with concrete prompt-injection examples and mitigations. The short version: private data + untrusted content + external communication = exfiltration risk. This is the most practical threat model for agent tool systems.
+- Do not add `response_format` to every tool by default; use it only when response verbosity meaningfully varies.
 
-**MCP tool annotation SEPs (Standards Enhancement Proposals)**
+### Format choice should minimize model burden
 
-If you want to see where the annotation story is headed, follow the MCP GitHub for open SEPs. Several active proposals cover trust, sensitivity, and preflight checks. Worth tracking if you're shipping MCP servers in production.
+Sources:
+
+- Anthropic, "Building effective agents": https://www.anthropic.com/engineering/building-effective-agents
+- OpenAI, "o3/o4-mini Function Calling Guide" (May 26, 2025): https://developers.openai.com/cookbook/examples/o-series/o3o4-mini_prompting_guide
+
+Supported guidance:
+
+- Some formats are harder for models to produce or consume than others.
+- Avoid unnecessary escaping, line-counting, or awkward nested formats.
+- Put key usage and argument rules early in tool descriptions.
+- Use strict schemas where the runtime supports them.
+
+Notes:
+
+- OpenAI's guide is model-family specific. Use the durable parts (clarity, strict schemas, disambiguation) and verify behavior for the deployed model.
+
+### Prompt/schema boundary
+
+Sources:
+
+- OpenAI, "o3/o4-mini Function Calling Guide": https://developers.openai.com/cookbook/examples/o-series/o3o4-mini_prompting_guide
+- OpenAI, "Function calling": https://developers.openai.com/api/docs/guides/function-calling
+
+Supported guidance:
+
+- Function/tool descriptions explain when and how to invoke a tool.
+- Developer/system instructions are better for cross-tool workflow, disambiguation, and policy.
+- Strict schemas can constrain argument shape in supported runtimes.
+
+Notes:
+
+- Exact JSON Schema support, strict-mode limitations, and tool-call message formats change over time. Check current docs.
+
+### Evals should measure tool behavior, not just final answers
+
+Sources:
+
+- Anthropic, "Writing effective tools for agents - with agents": https://www.anthropic.com/engineering/writing-tools-for-agents
+- Anthropic, "Effective harnesses for long-running agents": https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents
+
+Supported guidance:
+
+- Use realistic multi-step tasks.
+- Collect tool-call count, errors, token use, latency, transcripts, and final accuracy.
+- Use held-out tasks to avoid overfitting.
+- End-to-end verification catches failures that unit-style checks miss.
+
+Important adjustment:
+
+- Some provider content discusses reasoning/CoT for eval analysis. In this skill, prefer observable diagnostics and provider-exposed reasoning summaries. Do not ask models to reveal hidden chain-of-thought.
+
+### Tool annotations are hints, not guarantees
+
+Sources:
+
+- MCP specification: https://modelcontextprotocol.io/specification
+- MCP blog, "Tool Annotations as Risk Vocabulary: What Hints Can and Can't Do" (Mar 16, 2026): https://blog.modelcontextprotocol.io/posts/2026-03-16-tool-annotations/
+
+Supported guidance:
+
+- MCP-style annotations include read-only, destructive, idempotent, open-world, and title hints.
+- Annotations from untrusted servers must be treated as untrusted.
+- Annotations can inform UX and policy, but enforcement belongs in authorization, sandboxing, runtime policy, or network controls.
+
+### Lethal trifecta risk is session-level
+
+Sources:
+
+- Simon Willison, "The lethal trifecta for AI agents" (Jun 16, 2025): https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/
+- MCP blog, "Tool Annotations as Risk Vocabulary": https://blog.modelcontextprotocol.io/posts/2026-03-16-tool-annotations/
+
+Supported guidance:
+
+- High exfiltration risk appears when one session combines private data, untrusted content, and external communication.
+- The risk often comes from the combination of tools, not one tool alone.
+- Prompt instructions alone are not a reliable security boundary.
+
+## Claims Removed or Softened
+
+- "The fix almost always lives in the five pillars" became a diagnostic heuristic.
+- Provider/client token caps were removed as durable recommendations because defaults change.
+- Chain-of-thought logging was replaced with observable diagnostics.
+- Fictional case-study claims are not treated as evidence.
+- Dynamic enums are framed as a cache/reliability tradeoff, not a default recommendation.

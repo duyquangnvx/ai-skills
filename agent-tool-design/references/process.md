@@ -1,109 +1,116 @@
-# Process: evaluation and safety
+# Process: Evals and Safety
 
-Operational concerns that apply to every tool system. Read when the user is setting up evals, iterating with measurement, or dealing with destructive or sensitive actions.
+Use this when a tool design needs evidence, iteration, or safety review.
 
-## Contents
+## Evaluation Loop
 
-1. The evaluation-driven improvement loop
-2. Safety annotations (MCP)
-3. The lethal trifecta threat model
+1. **Prototype the tool set.** Wire the tools into the actual or closest available runtime. Try realistic tasks by hand before optimizing descriptions.
 
----
+2. **Write realistic eval tasks.** Prefer multi-step tasks grounded in real data over single-call smoke tests.
 
-## 1. The evaluation-driven improvement loop
+   Weak:
 
-The most reliable way to get tools right is evaluation-driven iteration. The raw model is often not the bottleneck; the tool layer is. And you can only improve what you measure.
+   ```text
+   Search the logs for customer_id=9182.
+   ```
 
-### The loop
+   Strong:
 
-1. **Prototype.** Stand up the tool quickly, wire it into a local MCP server or direct API test, try it hands-on. Collect feedback from real or realistic users to build intuition about the prompts the tool needs to serve.
+   ```text
+   Customer 9182 says they were charged three times for one purchase. Find relevant logs, determine whether other customers were affected, and summarize the likely cause.
+   ```
 
-2. **Generate eval tasks.** Realistic, multi-step tasks grounded in real data sources. Prefer tasks that exercise multiple tools and real reasoning over single-call smoke tests:
+3. **Define verifiers.** Use exact checks, regex, deterministic assertions, or an LLM judge where needed. Avoid overfitting to a single tool-call path when multiple correct strategies exist.
 
-   Weak (don't stress-test enough):
-   - "Schedule a meeting with jane@acme.corp next week."
-   - "Search the payment logs for `purchase_complete` and `customer_id=9182`."
+4. **Run programmatically.** Use an agentic loop that records task, tool calls, tool inputs, raw tool outputs, errors, final answer, token use, latency, and retry count.
 
-   Strong (exercise multiple tools and real reasoning):
-   - "Schedule a meeting with Jane next week to discuss our latest Acme Corp project. Attach the notes from our last project planning meeting and reserve a conference room."
-   - "Customer ID 9182 reported being charged three times for a single purchase attempt. Find all relevant log entries and determine if any other customers were affected by the same issue."
+5. **Log observable diagnostics, not hidden reasoning.** If the runtime exposes reasoning summaries, use what it provides. Do not require private chain-of-thought. A useful visible diagnostic block is:
 
-   Each prompt needs a verifier — exact string comparison, regex, or LLM-as-judge. Avoid over-strict verifiers that reject correct responses due to formatting differences.
+   ```text
+   Goal:
+   Selected tool:
+   Selection reason in one sentence:
+   Parameters:
+   Expected result:
+   Uncertainty:
+   Observed issue:
+   Next action:
+   ```
 
-3. **Run programmatically** with an agentic loop (while loop alternating LLM + tool calls). One loop per task. In the evaluation agent's system prompt, ask for concise observable diagnostics before and after tool calls: immediate goal, selected tool, one-sentence selection reason, parameters, expected result, uncertainty, observed issue, and next action. Do not request hidden chain-of-thought or private reasoning.
+6. **Analyze transcripts.** Look for wrong-tool calls, redundant reads, invalid arguments, oversized results, ignored errors, and places where the agent stopped early.
 
-4. **Collect metrics** beyond accuracy: total runtime per task, total tool-call count, total token consumption, tool error rate. These reveal redundant-call patterns (rightsize pagination), high-error parameters (fix descriptions), and tool-use efficiency problems.
+7. **Iterate one change at a time when practical.** Description edits, names, schemas, validation, response shape, and tool granularity can each move metrics. Re-run held-out tasks to avoid overfitting.
 
-5. **Analyze.** Read transcripts. Watch where the agent gets stumped, which tools it avoids, which ones it misuses. Agents often don't say explicitly what confused them — read between the lines. What the agent *omits* from its reasoning is often more important than what it includes.
+## Metrics
 
-6. **Iterate.** Small description edits can yield large gains. Verify the effect on your evals rather than assuming a provider example will transfer unchanged.
+Track more than final accuracy:
 
-### Let agents improve their own tools
+- Task success.
+- Tool-call count.
+- Invalid-call rate.
+- Token consumption.
+- Latency.
+- Retry count.
+- User approval prompts.
+- Safety blocks or policy escalations.
 
-Models are good at analyzing tool-use traces and proposing tool improvements. Feed eval transcripts into a capable coding or analysis agent and ask for concrete schema, description, response, and validation changes. This creates a self-improving loop on the tool layer, orthogonal to improvements in the underlying model.
+These metrics reveal different failure classes. High token use can suggest response bloat or too many chained calls. Invalid-call rate usually points to schema, naming, description, or validation-error problems.
 
-### Hold out a test set
+## Using Agents to Improve Tools
 
-Always separate training and test sets. Iteration on the training set can overfit to quirks — a tool description tuned to pass ten specific prompts may regress on everything else. Use held-out tasks to verify that gains generalized.
+Agents can review transcripts and propose tool improvements. Ask for concrete changes:
 
-### Metrics to watch
+```text
+Given these failed eval traces, propose:
+- tool name changes
+- schema changes
+- response-shape changes
+- validation/error changes
+- developer-prompt disambiguation
+- evals that would prove the fix
+```
 
-- **Accuracy** — did the agent complete the task correctly?
-- **Total tokens** — high token use with high accuracy suggests consolidation opportunities (chained calls that could be one tool).
-- **Tool-call count** — spikes suggest redundant reads (bad pagination) or confusion (wrong tool, re-try).
-- **Tool error rate** — invalid-parameter errors usually mean a description or schema needs work.
-- **Runtime** — user-experience proxy; long-tail spikes often indicate retry loops.
+Do not accept suggestions only because they sound plausible. Apply them to the eval set and compare.
 
----
+## Safety and Trust Boundaries
 
-## 2. Safety annotations
+Tool safety is not just a property of one tool. It is a property of the session and runtime.
 
-Some runtimes and protocols formalize tool annotations. The common vocabulary is worth considering in any tool system:
+### Destructive Actions
 
-- `readOnlyHint` — tool does not modify state (like a GET).
-- `destructiveHint` — tool may make significant, potentially irreversible changes.
-- `idempotentHint` — calling twice with the same arguments has the same effect as once.
-- `openWorldHint` — tool touches external systems whose state changes unpredictably between calls.
-- `title` — human-readable display name for UI.
+For delete, overwrite, send, publish, payment, permission, or external side-effect tools:
 
-### Two critical caveats
+- Make the action obvious in the name.
+- Provide dry-run or preview where useful.
+- Require user confirmation for high-stakes effects.
+- Validate permissions server-side.
+- Return clear, bounded summaries of what changed.
 
-**Annotations are hints, not guarantees.** Treat annotations from untrusted servers as untrusted. Use them to inform UI decisions (e.g., "show a confirmation prompt for destructive calls") and agent strategy — but not to enforce security. Trust the server; verify server-side.
+### MCP-Style Annotations
 
-**Clients should ignore annotations from untrusted servers entirely.** This is the compromise position that made it into the spec. A self-reported "read-only" hint from a malicious server is worthless. Base trust on how the server was installed, who runs it, and whether it's behind authentication — not on what it says about itself.
+When the runtime supports annotations, use them:
 
-### Regardless of MCP
+- `readOnlyHint`
+- `destructiveHint`
+- `idempotentHint`
+- `openWorldHint`
+- human-readable `title`
 
-Destructive tools (delete, overwrite, send-email, make-payment) should be:
+Treat these as hints, not guarantees. Annotations from untrusted servers can be wrong or malicious. Client policy, sandboxing, authorization, and network controls are where hard guarantees belong.
 
-- **Named so destructiveness is obvious.** `delete_scene`, not `update_scene(data=null)`. The agent's tool-selection reasoning reads names first.
-- **Called out in the system prompt** as "confirm before calling" where appropriate.
-- **Offered with a dry-run or preview mode** when the stakes are high. "Show me what this would delete" before "actually delete it."
+### Lethal Trifecta
 
----
+A session becomes high risk when it combines:
 
-## 3. The lethal trifecta threat model
+1. Access to private data.
+2. Exposure to untrusted content.
+3. Ability to externally communicate.
 
-Named by Simon Willison, this is now a widely-used threat model for agent tool systems:
+Do not rely on a prompt instruction alone to make this safe. Practical defenses include:
 
-> An agent session that combines **(a) access to private data**, **(b) exposure to untrusted content**, and **(c) the ability to externally communicate** is at risk of prompt-injection exfiltration.
-
-The attack mechanism is simple: LLMs follow instructions in content, and they can't reliably tell a user's instructions apart from ones an attacker embedded in a web page, email, calendar invite, or document. If all three legs are present in one session, a malicious instruction can direct the agent to read private data and send it elsewhere.
-
-### What this means for tool design
-
-The trifecta is a **property of the session**, not of any single tool. An individual tool being "safe" doesn't help if the session loads two other tools that complete the triad. Practical implications:
-
-- **Notice combinations.** A CRM integration + a web-fetch tool + an email-send tool is the triad. A code-execution tool with unrestrained shell access can single-handedly be "(c)" since shell access enables exfiltration over network.
-- **Gate the combinations, not just the tools.** Some systems add session-level policy: if the context is "tainted" (the agent has read any untrusted content), require explicit human approval before any action with exfiltration potential.
-- **Annotation proposals for this.** Some runtimes explore annotations like `reads_private_data`, `sees_untrusted_content`, `can_exfiltrate`, with runtime rules that refuse to allow all three in a single tainted execution path. Verify the current state in your target protocol; the conceptual framing is useful even without formal annotations.
-
-### Practical defenses
-
-- **Separate contexts.** Split tasks across sessions so no single context accumulates all three legs.
-- **Human-in-the-loop confirmation.** For any action with exfiltration potential after the agent has seen untrusted content, require user confirmation.
-- **Egress allowlists.** If the agent can only talk to pre-approved domains/endpoints, exfiltration is constrained.
-- **Read-only modes.** For sessions dealing with untrusted content, restrict the agent to read tools only. Where an integration supports read-only mode, make it the default for untrusted-content workflows.
-- **Principle of least authority.** Each session should have only the tools it actually needs for the task at hand, not the full set.
-
-The trifecta framing is useful because it's concrete: engineers can look at a session's tool list and ask "are all three legs present?" and know when to add a gate. That's much more actionable than generic "prompt injection is dangerous" advice.
+- Least-authority tool sets per session.
+- Read-only mode for untrusted-content workflows.
+- Explicit approval before external communication after reading untrusted content.
+- Egress allowlists.
+- Separate sessions or subagents so no single context gets all three capabilities.
+- Runtime policy that marks a session tainted after untrusted reads.
