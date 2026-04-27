@@ -1,6 +1,6 @@
 ---
 name: agent-tool-design
-description: Use when designing, reviewing, or refactoring an LLM agent's tool layer: function calls, MCP servers, tool schemas, tool descriptions, response formats, safety annotations, prompt/schema boundaries, wrong tool calls, hallucinated IDs, oversized responses, partial updates, or one-tool-vs-many-tool decisions.
+description: "Use when designing, reviewing, or refactoring an LLM agent's tool layer: function calls, MCP servers, tool schemas, tool descriptions, response formats, safety annotations, prompt/schema boundaries, wrong tool calls, hallucinated IDs, oversized responses, partial updates, or one-tool-vs-many-tool decisions."
 ---
 
 # Agent Tool Design
