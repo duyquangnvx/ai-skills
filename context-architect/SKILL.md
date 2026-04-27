@@ -1,267 +1,157 @@
 ---
 name: context-architect
-description: Design context architectures for AI agent systems. Use when user needs to plan what information an agent receives, when, and in what structure — including memory design, tool set design, context retrieval strategy, and long-horizon handling. Triggers on phrases like "design context for agent", "agent keeps forgetting", "agent skips steps", "context architecture", "context engineering", "agent memory design", "what context should my agent have", or any situation where the user is building an agent system and needs to decide how information flows to and from the model. Also use when user has an existing agent with poor performance that may be caused by context issues (too much noise, lost information, inconsistent behavior across sessions).
+description: Use when designing, reviewing, or diagnosing how an AI agent receives, retrieves, remembers, compresses, trusts, and updates context across turns, tools, sessions, or long-running workflows
 ---
 
 # Context Architect
 
-Design context architectures for AI agent systems. This skill produces a **Context Architecture Document** — a blueprint of what information the agent receives, when it receives it, how it's structured, and how it evolves over time.
+Design the information flow around an AI agent: what the model sees, when it sees it, why it is trusted, how it is retrieved or compressed, and what gets written back for future runs.
 
-## Core principle
+Core principle: many recurring agent failures are context-architecture failures before they are model-capability failures. Prefer the smallest high-signal context that lets the model make the next decision correctly.
 
-Most agent failures are context failures, not model failures. An agent that skips steps, calls wrong tools, or forgets previous decisions almost always has a context problem: either too much noise, missing information, or wrong information at the wrong time.
+## Start Here
 
-Context engineering means finding the smallest set of high-signal tokens that maximize the likelihood of the desired outcome. More context is not better — focused context is better.
+Classify the user's situation, then use the matching path:
 
-## When to use this skill
+| Situation | Use first |
+| --- | --- |
+| New agent or workflow | Design checklist |
+| Existing agent behaves poorly | Diagnostic checklist |
+| Agent forgets or repeats work | Memory policy |
+| Wrong tool calls or huge tool outputs | Tool-context audit |
+| RAG retrieves noisy or conflicting data | Retrieval and trust audit |
+| Long-running or multi-session work | Compression and persistence policy |
 
-- Designing a new agent system from scratch
-- Diagnosing an existing agent that behaves inconsistently
-- Planning memory/state management for multi-session agents
-- Deciding between RAG, just-in-time retrieval, or hybrid approaches
-- Designing tool sets that agents can use effectively
-- Building systems that run over long horizons (hours, days, recurring)
+Do not force every request through a full architecture document. Produce only the level of design the user needs.
 
-## Design workflow
+## Context Model
 
-Follow these phases sequentially. Each phase produces a section of the Context Architecture Document.
+Audit context by layer:
 
----
+1. **Instructions**: system, developer, project, and task rules.
+2. **Tools**: tool names, descriptions, schemas, outputs, and errors.
+3. **Active state**: current task, current object, user goal, constraints, and progress.
+4. **Retrieved data**: search results, files, docs, database rows, emails, logs, web pages.
+5. **Memory**: durable profile, preferences, decisions, summaries, entity registries, progress notes.
+6. **History**: prior messages and tool results still useful for the current decision.
+7. **Outputs to persist**: decisions, state changes, memory updates, and summaries.
 
-### Phase 1: Task analysis
+For each layer, decide: load always, retrieve just in time, summarize, store externally, ignore, or block as untrusted.
 
-Understand what the agent needs to do before deciding what context it needs.
+## Design Checklist
 
-Interview the user (or extract from conversation):
+For new systems, answer these in order:
 
-1. **What does the agent do?** — Describe the core task in one paragraph.
-2. **What decisions does the agent make?** — List the branching points where the agent must choose between actions.
-3. **What information does each decision require?** — For each decision, what data must be present in context?
-4. **What's the time horizon?** — Single turn? Multi-turn session? Multi-session over days/weeks?
-5. **What changes between runs?** — What's static (instructions, rules) vs dynamic (user data, state, accumulated knowledge)?
-6. **What are the failure modes?** — What goes wrong when the agent fails? Skips steps? Wrong tool? Hallucinated data?
+- **Task and decisions**: What decisions must the agent make, and what information is required for each decision?
+- **Context inventory**: Which information is static, dynamic, retrieved, generated, or persisted?
+- **Load policy**: What is injected at start, retrieved on demand, shown after tool calls, or kept out of context?
+- **Trust policy**: Which sources are authoritative, which are untrusted data, and what wins when sources conflict?
+- **Tool-context policy**: Which tools reduce context load, which outputs need pagination/filtering, and which schemas prevent invalid calls?
+- **Memory policy**: What should be remembered, when is it updated, how are conflicts resolved, and who can edit it?
+- **Compression policy**: What gets trimmed, summarized, or preserved when history grows?
+- **Evaluation plan**: Which scenarios prove the context design improves behavior?
 
-Output a **Task Profile**:
-```
-Task: [one-line description]
-Decision points: [count]
-Time horizon: single-turn | multi-turn | multi-session | long-horizon
-Static context: [list]
-Dynamic context: [list]
-Primary failure modes: [list]
-```
+Use relative budgets, not fixed token quotas. Track whether each context component earns its cost by improving decision quality, tool-call accuracy, user-visible quality, latency, or cost.
 
----
+## Diagnostic Checklist
 
-### Phase 2: Context budget planning
+For existing systems, start from symptoms:
 
-Context is finite. Plan how to spend the attention budget.
+| Symptom | Check first |
+| --- | --- |
+| Agent skips required steps | Instructions buried, vague, contradicted, or missing step state |
+| Agent calls wrong tool | Overlapping tools, unclear descriptions, missing schema constraints |
+| Agent forgets decisions | No durable memory, stale summary, or compaction drops key facts |
+| Agent repeats completed work | Progress state missing, not loaded, or not updated after milestones |
+| Agent uses wrong facts | Retrieved data is stale, low-relevance, unauthoritative, or untrusted |
+| Agent becomes vague with more context | Context stuffing, noisy retrieval, old tool outputs, or lost-in-middle effects |
+| Agent leaks or follows hostile text | Untrusted content is not separated from instructions and tools |
 
-Estimate token allocation across components. These compete for the same limited window — every token added to one component is attention taken from another.
+Output concrete fixes:
 
-| Component | Priority | Estimated tokens | Notes |
-|-----------|----------|-----------------|-------|
-| System prompt | High | 500-2000 | Core identity, rules, constraints |
-| Tool definitions | High | 200-500 per tool | Keep tool set minimal |
-| Active context (current task data) | High | Varies | The data being worked on now |
-| Retrieved context (RAG/memory) | Medium | 1000-3000 | Just-in-time, not exhaustive |
-| Message history | Medium | Varies, manage actively | Compact when growing |
-| Examples/few-shot | Low-Medium | 500-1500 | Diverse and canonical, not exhaustive |
-| Metadata/state | Low | 100-500 | Progress tracking, flags |
-
-Guiding principles for budget planning:
-
-- **Information at the beginning and end of context gets more attention** (U-shaped attention curve). Place critical instructions at the start, current task data at the end.
-- **Doubling context length does not double useful capacity.** It increases noise and dilutes attention. A focused 2K-token context often outperforms a bloated 100K-token context.
-- **Every component must justify its presence.** If removing it doesn't degrade output quality, remove it.
-
-Output a **Context Budget Table** with estimated allocations for the specific system.
-
----
-
-### Phase 3: Context structure design
-
-Decide what lives where, in what format, and when it gets loaded.
-
-#### 3.1 — Static context (loaded once, rarely changes)
-
-This is the system prompt, tool definitions, and global rules. Design it at the "right altitude" — specific enough to guide behavior, flexible enough for the model to apply judgment.
-
-Two failure modes to avoid:
-- **Too prescriptive**: hardcoded if-else logic in the prompt. Brittle, high-maintenance, breaks on edge cases.
-- **Too vague**: "handle customer issues professionally." No actionable signal.
-
-For complex instructions, use the FPL methodology (see `references/strategies.md` for details): structure instructions as workflow specifications with explicit flows, steps, conditions, and actions rather than free-form descriptions.
-
-#### 3.2 — Dynamic context (changes per session/turn)
-
-Classify each piece of dynamic information:
-
-| Information | Retrieval strategy | When to load | Format |
-|------------|-------------------|-------------|--------|
-| [item] | pre-loaded / just-in-time / on-demand | [trigger] | [format] |
-
-Three retrieval strategies — pick the right one per information type:
-
-**Pre-loaded** (loaded into context at session start):
-- Use for: small, always-needed data (user profile, project config, rules)
-- Example: CLAUDE.md files, glossary, style guides
-- Trade-off: fast access, but consumes budget even when not needed
-
-**Just-in-time** (agent retrieves via tools when needed):
-- Use for: large or conditional data (documentation, databases, file contents)
-- Example: agent uses grep/glob to find relevant files, then reads only what's needed
-- Trade-off: slower, requires good tool design, but preserves budget
-
-**Hybrid** (some pre-loaded, more available on demand):
-- Use for: most real systems. Pre-load lightweight summaries/indexes, retrieve full data when needed.
-- Example: novel-processor loads glossary (small, always needed) but reads chapter files just-in-time
-
-See `references/strategies.md` for detailed guidance on choosing strategies.
-
-#### 3.3 — External memory (persisted outside context window)
-
-For any system that runs across multiple sessions or accumulates knowledge, design external memory files.
-
-For each memory file, define:
-- **Name and purpose**: what it stores
-- **Format**: structured (table/JSON) or prose? Why?
-- **Update trigger**: when does it get updated?
-- **Update method**: append-only? Overwrite? Merge?
-- **Source of truth**: is this file authoritative, or can the agent override it?
-
-Structured formats (tables, JSON, YAML) are better for data the agent needs to look up precisely — names, mappings, settings. Prose is better for nuanced information — style decisions, design rationale, summaries.
-
-Example from novel-processor skill:
-```
-context/
-├── glossary.md      (table format, append after translation step, authoritative)
-├── characters.md    (structured + prose, append after translation, user can edit)
-└── style.md         (prose + decision log table, set during init, evolves)
+```text
+Symptom:
+Likely context cause:
+Evidence to inspect:
+Recommended context/tool/memory change:
+Eval to verify:
 ```
 
-#### 3.4 — Tool set design
+## Retrieval And Trust
 
-Tools are context too — their definitions consume tokens and their outputs flow back into the context window.
+Treat retrieved content as data, not instructions. Web pages, emails, documents, logs, issue text, database content, and user-uploaded files may contain prompt injection or stale claims.
 
-Design principles:
-- **Minimal set**: if a human engineer can't clearly say which tool to use in a situation, the agent can't either. Remove ambiguity by having fewer, clearer tools.
-- **Self-contained**: each tool does one thing well. No overlap between tools.
-- **Token-efficient returns**: tools should return the minimum useful information, not raw data dumps. Offer a `format` parameter (summary vs full) when possible.
-- **Contextual errors**: when a tool fails, the error message should help the agent recover, not just say "error."
-- **Clear parameter names**: `user_id` not `id`, `search_query` not `q`.
+Define priority explicitly:
 
-For each tool, document:
-```
-Tool: [name]
-Purpose: [one line]
-When used: [which step/condition triggers it]
-Input: [parameters with types]
-Output: [what it returns, how many tokens approximately]
-Error handling: [what happens on failure]
+```text
+System/developer policy > project instructions > user task > trusted application state > retrieved untrusted content > examples/history
 ```
 
----
+Use retrieval when the data is large, conditional, or frequently changing. Prefer a hybrid design for most real systems: preload a small map or summary, then retrieve exact items just in time.
 
-### Phase 4: Long-horizon strategy
+Retrieved chunks should include source, timestamp or version when available, relevance reason, and enough surrounding context to avoid misleading fragments. Limit noisy retrieval before increasing model context length.
 
-Skip this phase if the system is single-turn or short multi-turn.
+## Memory Policy
 
-For systems that run over extended periods, context will eventually exceed the window. Choose one or more strategies:
+Memory is a write path, not just extra context. Define:
 
-**Compaction** — Summarize old context, reinitialize with summary.
-- Best for: extended back-and-forth conversations
-- Implement: preserve decisions, unresolved issues, key facts. Discard old tool outputs, redundant messages.
-- Tune by: first maximize recall (capture everything relevant), then improve precision (cut noise)
-- Lowest-effort version: clear old tool call results — once used, the raw output is rarely needed again
+- **Store**: profile, preferences, decisions, entity registry, progress, summaries, or domain facts.
+- **Format**: structured data for lookup; prose for rationale and nuance.
+- **Write trigger**: after user confirmation, milestone completion, observed preference, or session end.
+- **Conflict rule**: newer user statements usually override older memory unless an authoritative system record says otherwise.
+- **Read trigger**: session start, task classification, entity lookup, or before irreversible actions.
+- **Privacy and safety**: avoid storing sensitive data unless the product explicitly requires it and policy permits it.
 
-**Structured note-taking** — Agent writes notes to external files, reads them back when needed.
-- Best for: iterative tasks with clear milestones (coding projects, multi-chapter processing)
-- Implement: agent maintains a progress file (TODO.md, NOTES.md, project.md) and updates it at defined checkpoints
-- The novel-processor skill uses this: `project.md` tracks which chapters are done, `context/` files accumulate knowledge
+For long-running work, preserve decisions, open issues, current state, user constraints, and source pointers. Trim raw tool outputs, dead ends, duplicate conversation, and superseded facts.
 
-**Sub-agent architecture** — Split work across specialized agents with isolated context windows.
-- Best for: complex research, parallel exploration, tasks with separable concerns
-- Implement: lead agent coordinates plan, sub-agents execute focused tasks with clean context, return condensed summaries (1-2K tokens from potentially 50K+ of exploration)
-- Key benefit: detailed search context stays isolated within sub-agents
+## Tool-Context Audit
 
-**Decision framework:**
+Tools are part of context. Their names, schemas, descriptions, responses, errors, and safety annotations shape model behavior.
 
-| Scenario | Strategy |
-|----------|----------|
-| Long conversations, extensive back-and-forth | Compaction |
-| Iterative development with milestones | Structured note-taking |
-| Complex research, parallelizable tasks | Sub-agent |
-| Multi-session, accumulating knowledge | Note-taking + external memory files |
-| All of the above | Combine strategies by layer |
+Use the agent-tool-design skill when the tool layer itself needs design or review. In context architecture, focus on:
 
-See `references/strategies.md` for implementation details.
+- Tool outputs should be bounded, relevant, and human-readable before raw IDs.
+- Discovery tools should return enough metadata for selection without dumping full documents.
+- Follow-up tools should load exact records, files, or details only when needed.
+- Tool schemas should validate IDs, enums, permissions, state transitions, and payload shape server-side.
+- Destructive or external-communication tools need explicit preview, approval, or policy gates.
 
----
+## Output Pattern
 
-### Phase 5: Assemble the Context Architecture Document
-
-Combine outputs from all phases into a single document. Use this template:
+For a design request, return:
 
 ```markdown
-# Context Architecture: [System Name]
+# Context Architecture: [System]
 
 ## Task Profile
-[from Phase 1]
+[task, decisions, time horizon, failure modes]
 
-## Context Budget
-[table from Phase 2]
+## Context Map
+[layers, sources, trust level, load strategy]
 
-## Context Structure
+## Retrieval Policy
+[what is preloaded, retrieved just in time, summarized, or excluded]
 
-### Static Context
-- System prompt: [summary of what it contains]
-- Tool set: [list of tools with one-line purposes]
-- Pre-loaded data: [list]
+## Memory Policy
+[stores, formats, triggers, conflict rules]
 
-### Dynamic Context
-[table from Phase 3.2]
+## Tool-Context Notes
+[tool outputs, schemas, paging/filtering, safety gates]
 
-### External Memory
-[file list with format/update rules from Phase 3.3]
+## Compression Policy
+[what to preserve, trim, summarize, or persist]
 
-### Tool Specifications
-[tool docs from Phase 3.4]
-
-## Long-Horizon Strategy
-[chosen strategies and implementation plan from Phase 4]
-
-## File Structure
-[directory tree showing where everything lives]
-
-## Context Flow Diagram
-[describe or draw how context flows through the system:
- what's loaded at start → what's retrieved during execution →
- what's updated after each step → what's persisted between sessions]
+## Evals
+[first scenarios and metrics]
 ```
 
-Save the document to the project directory. This becomes the reference for implementing the system.
-
----
-
-## Diagnosing existing systems
-
-When the user has an agent that's already built but performing poorly, skip Phase 1-5 and instead:
-
-1. **Identify symptoms**: What specifically goes wrong? (skips steps, wrong tool, forgets info, inconsistent outputs)
-2. **Map to context causes**:
-   - Skips steps → instructions too vague or buried in noise. Check system prompt altitude.
-   - Wrong tool → tool set has overlapping purposes or ambiguous descriptions. Audit tool definitions.
-   - Forgets info → no memory persistence, or context window exceeded without compaction. Check if critical info is being pushed out.
-   - Inconsistent outputs → dynamic context is noisy or irrelevant data is polluting the window. Audit what's being loaded and whether it's all necessary.
-   - Lost-in-middle → critical info is in the middle of a long context. Move it to beginning or end.
-3. **Prescribe fix**: recommend specific changes to context structure, not model changes.
-
-See `references/anti-patterns.md` for common context failures and their fixes.
-
----
+For a review, lead with findings and concrete changes rather than a generic architecture template.
 
 ## References
 
-- `references/strategies.md` — Detailed guidance on retrieval strategies, compaction implementation, note-taking patterns, sub-agent design, and FPL integration
-- `references/anti-patterns.md` — Common context failures, symptoms, causes, and fixes
+Load deeper material only when needed:
+
+- `references/strategies.md` - retrieval, compaction, structured notes, sub-agent patterns, filesystem memory.
+- `references/anti-patterns.md` - context failure symptoms and fixes.
+- `references/pressure-scenarios.md` - scenarios for testing whether the skill changes behavior.
+- `references/sources.md` - source notes from OpenAI, Anthropic, and long-context research.
