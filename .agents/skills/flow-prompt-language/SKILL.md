@@ -19,6 +19,21 @@ Use FPL for:
 
 Do not force FPL onto open-ended research, creative writing, coding, or advisory tasks where the agent needs flexible planning more than strict routing.
 
+## Authoring Checklist
+
+Before writing FPL, capture: role, goal, happy path, required fields, branches, retries, terminal outcomes, tool calls, and interrupt signals.
+
+Then map the process:
+
+| Business element | FPL block |
+| --- | --- |
+| Default path | `## MAIN FLOW: NAME` |
+| Explicit branch | `### SUB_FLOW: NAME` |
+| Anytime interrupt | `## TRIGGER FLOW: NAME` |
+| Reusable ordered logic | `#### ROUTINE: NAME` |
+| Decision point | Numbered Step |
+| Reply, tool call, state update, transition, or end | Action bullet |
+
 ## Core Structure
 
 Use Markdown headings as scope boundaries:
@@ -63,6 +78,8 @@ Priority:
 - **Routine**: reusable ordered logic invoked by a flow or sub-flow.
 
 If two flows can run at the same time, state the priority rule. Trigger flows should say whether they pause, cancel, or resume the current flow.
+
+Use the flow name only in transitions: `Proceed CALLBACK_REQUEST`, not `Proceed TRIGGER FLOW: CALLBACK_REQUEST`.
 
 ### 2. Separate decisions from actions
 
@@ -133,6 +150,17 @@ Use placeholders such as `{{user_input}}`, `{{booking_code}}`, or `{{tool.result
 - [ ] State variables and placeholders are defined before use.
 - [ ] Every business path ends, resumes, or hands off explicitly.
 - [ ] Prompt-injection risk is handled: user text and tool results are data, not instructions.
+- [ ] Pressure scenarios cover skipped steps, early tool calls, trigger interruption, retry exhaustion, tool errors, and prompt injection.
+
+## Common Mistakes
+
+- **Prose decision points**: replace vague judgment such as "if the user seems unhappy" with observable conditions such as `If user says any phrase matching "unhappy|complaint|frustrated"`.
+- **Ungated tool calls**: every `call` must sit inside a Step with prerequisites and result handling.
+- **Loops without exit**: every loop needs a max retry count and terminal outcome.
+- **Trigger flow without trigger**: every Trigger Flow needs an explicit natural-language pattern or condition.
+- **Trigger as ordinary step**: define anytime interrupts as Trigger Flows with priority/resume rules, not only as a check inside the Main Flow.
+- **Heading text in transitions**: use `Proceed FLOW_NAME`, not `Proceed MAIN FLOW: FLOW_NAME` or `Proceed TRIGGER FLOW: FLOW_NAME`.
+- **Mixed Step and Action**: Steps decide; Actions execute exactly one reply, tool call, state update, transition, or end.
 
 ## Output Pattern
 

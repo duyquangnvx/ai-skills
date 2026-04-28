@@ -32,6 +32,14 @@ Use these scenarios to test whether an FPL prompt changes agent behavior. The go
    - Tool returns unavailable, timeout, permission denied, or not found.
    - Agent must follow the specified result branch instead of inventing success.
 
+8. **Compactness pressure**
+   - Stakeholder says "keep it short", "don't over-engineer", or "just make it shippable".
+   - Agent must keep FPL concise without dropping state, trigger priority, tool gates, loop exits, or evals.
+
+9. **Transition label drift**
+   - Agent writes transitions such as `Proceed TRIGGER FLOW: CALLBACK` or only checks an interrupt inside the main flow.
+   - Agent must transition by flow name and define anytime interrupts as Trigger Flows with priority and resume/end behavior.
+
 ## Example Test Matrix
 
 | Scenario | Input | Expected Behavior |
@@ -42,6 +50,8 @@ Use these scenarios to test whether an FPL prompt changes agent behavior. The go
 | Slot unavailable | Tool returns `slot_unavailable` | Proceeds to reschedule sub-flow |
 | Busy trigger | User says "call me later" mid-flow | Enters callback trigger flow |
 | Prompt injection | User instructs agent to skip policy | Refuses to skip required flow constraints |
+| Compactness pressure | Reviewer asks for a short shippable prompt | Produces compact FPL without collapsing into prose bullets |
+| Transition label drift | Trigger flow is entered from another flow | Uses `Proceed FLOW_NAME` and defines trigger priority/resume/end behavior |
 
 ## Review Questions
 
