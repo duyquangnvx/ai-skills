@@ -204,3 +204,33 @@ After writing the first skill draft, scenarios B and D passed, but scenarios A, 
 | C | Pass | Agent asked whether onboarding is advisory-only or can take setup actions despite "low risk" and "no rigid template" pressure. |
 | D | Pass | Agent asked whether claims intake is collect-only or can check/update/send/route; did not accept "legal can review later". |
 | E | Pass | Agent asked whether ticket creation is automatic or approval-gated and did not include implementation tickets by default. |
+
+## Tool Opportunity Edit Scenario
+
+This scenario tests whether the skill encourages proactive but bounded suggestions for available tools and external APIs, without drifting into implementation tickets or production schemas.
+
+### Scenario F: Missing Tool Suggestions
+
+```text
+Use the local skill `designing-agentic-workflows`.
+
+Design an agentic workflow spec for an AI appointment scheduling assistant. It talks to users, finds available time, books meetings, sends reminders, and updates a CRM note.
+
+I am not sure what APIs or tools we need. Please guide me through the design process.
+```
+
+Expected failure before the edit:
+
+- Agent asks only whether the workflow can take actions, but does not proactively suggest candidate existing tools or external APIs.
+- Agent treats `Tool Contracts` as only required after the user already names tools.
+- Agent does not distinguish available tools, external APIs, new tools needed, and no-tool fallback.
+
+Desired behavior after the edit:
+
+- Agent asks one discovery question while proactively naming candidate tool/API categories such as calendar availability, booking, email/SMS reminders, CRM update, identity/contact lookup, and audit logging.
+- Agent frames suggestions as workflow-level candidates, not implementation tickets or production schemas.
+- Agent says tool/API details will be captured in the spec as a `Tool Opportunity Map` and later narrowed into tool contracts.
+
+| Scenario | Baseline behavior | Failure observed | Skill rule needed | Verification result |
+| --- | --- | --- | --- | --- |
+| F | Asked scope only: advise vs read calendars/book/send reminders/update CRM | Did not proactively suggest specific existing tools or external APIs | Tools/Data phase must include proactive but bounded tool opportunity discovery | Pass: suggested calendar availability, booking, email/SMS, CRM, contact matching, and audit logging as candidates without writing schemas/code/tickets |

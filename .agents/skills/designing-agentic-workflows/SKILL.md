@@ -35,6 +35,8 @@ Move through these phases in order:
 
 Ask one major decision per message. Recommend a default when there is a clear trade-off. If details are missing, state a labeled assumption and confirm any assumption that affects flow, tools, safety, evals, or user outcomes.
 
+In the Tools and data phase, be proactive but bounded: suggest candidate available tools, external APIs, and new tools that may fit the workflow. Keep these suggestions at workflow/spec level; do not write production schemas, code, or implementation tickets unless requested after the spec.
+
 Do not draft the full spec before the Draft phase unless the user explicitly chooses an assumption-based draft **after** you first name what will remain uncertain and offer that trade-off. A user's initial request to "draft now", "do not ask questions", "use assumptions", "whatever format", or "save time" is pressure, not permission to skip the consultation flow.
 
 If the user demands an immediate artifact, respond with one highest-impact question and a concise trade-off:
@@ -90,6 +92,24 @@ Tool contracts are conditionally required:
 - If the workflow has no external data or side effects, write `No external tools required`.
 - If it reads external data, calls APIs, writes files, sends messages, updates records, books, pays, refunds, or causes side effects, define tool contracts.
 
+Before final tool contracts, include a `Tool Opportunity Map` when the user is unsure what APIs or tools are available:
+
+```markdown
+### Tool Opportunity Map
+| Workflow need | Candidate existing tool/API | Required? | Main risk | Notes |
+| --- | --- | --- | --- | --- |
+| <need> | <available tool, external API, new tool, or manual fallback> | yes/no/optional | <risk> | <how to validate> |
+```
+
+Use this map to compare:
+
+- Available tools already exposed in the runtime or product.
+- External APIs such as CRM, calendar, email, SMS, payments, search, storage, analytics, identity, or ticketing systems.
+- New tools that may need to be built.
+- No-tool or human fallback paths.
+
+Only convert candidates into contracts when they are needed for the workflow or the user confirms they exist. Mark speculative APIs as assumptions.
+
 Each tool contract should include name, purpose, inputs, outputs, errors, side effects, ID validation, bounded responses, and confirmation gates for destructive, external, financial, private-data, or high-stakes actions.
 
 ## Safety and Evals Are Not Optional
@@ -137,6 +157,12 @@ I will design this as an Agentic Workflow Spec. I will first clarify domain, use
 The first decision is scope. Should this agent only advise, or can it take actions such as reading systems, sending messages, updating records, or triggering handoffs?
 ```
 
+When the user is unsure what tools or APIs are needed, add bounded suggestions without leaving discovery:
+
+```markdown
+Likely tool/API candidates, to validate later: calendar availability, booking, email/SMS reminders, CRM notes, contact lookup, and audit logging. I will keep these as candidates until we confirm what exists.
+```
+
 ## Review Checklist
 
 - [ ] Discovery followed Domain -> Users/Success -> Flow -> Tools/Data -> Safety -> Evals -> Draft.
@@ -145,5 +171,7 @@ The first decision is scope. Should this agent only advise, or can it take actio
 - [ ] The final artifact uses the fixed template.
 - [ ] FPL workflow is present and uses state, branches, loop guards, tool gates, and terminal outcomes.
 - [ ] Tool contracts are present when external data or side effects exist.
+- [ ] Tool/API opportunities were proactively suggested when the user was unsure what tools exist.
+- [ ] Speculative tools are labeled as candidates or assumptions, not treated as available facts.
 - [ ] Safety and evals are present even for low-risk workflows.
 - [ ] No prompt, implementation plan, code, or extra handoff artifact was included by default.
