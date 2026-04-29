@@ -104,3 +104,52 @@ Expected with skill:
 - Identifies the lethal-trifecta combination at session level.
 - Treats annotations as hints, especially if server trust is unknown.
 - Recommends least-authority sessions, tainting after untrusted reads, explicit approval before external communication, and hard runtime controls where possible.
+
+## 6. JSDoc-Style Tool Description Review
+
+Prompt:
+
+```text
+Review this tool description and tell me if it's good:
+
+"""
+sceneUpdate — Updates a scene record in the database.
+
+Implementation: Located at src/tools/scene/update.ts. Calls SceneRepository.update()
+which uses Prisma under the hood. Originally written by @alice in PR #432, refactored
+in PR #571 to support partial updates (see CHANGELOG entry 2025-08-14).
+
+How it works:
+1. Validates the scene_id format using the validateSceneId helper.
+2. Loads the scene from the database.
+3. Merges the updates object with the existing record.
+4. Persists the result and returns the updated row.
+
+Note: The legacy mutate_scene tool is deprecated as of v2.3 — do not document here,
+see internal RFC-22 for migration plan.
+
+Example:
+\`\`\`ts
+const result = await sceneUpdate({
+  scene_id: "opening",
+  updates: { title: "New Title", actors: ["Alice", "Bob"] }
+});
+console.log(result);
+\`\`\`
+"""
+```
+
+Baseline failures to watch for:
+
+- Praises the description as "thorough" or "well-documented."
+- Suggests cosmetic edits (formatting, grammar) rather than removal.
+- Treats file paths, PR numbers, and changelog entries as helpful context for the agent.
+- Keeps the long code example.
+
+Expected with skill:
+
+- Identifies the description as human documentation, not a model-facing prompt.
+- Strips implementation details (file path, repository class, Prisma), authorship/PR history, changelog, internal RFC references, and "how it works" steps.
+- Keeps or adds: purpose, when to call, important input conventions (e.g. `updates` is a partial), side effects, sibling-tool disambiguation (e.g. how it differs from `delete_scene` or `create_scene`).
+- Removes the long code example or replaces it with a one-line signature if format is non-trivial.
+- Notes that the deprecated-tool callout belongs in the developer/system prompt or release notes, not the tool description.

@@ -109,6 +109,7 @@ The tool schema should own:
 - Required vs optional.
 - Enums and structured output shape.
 - Per-field descriptions.
+- Tool-level description: what the tool does, when to call it, side effects, sibling-tool disambiguation. This is a model-facing prompt, not human documentation — drop file paths, change history, implementation notes, and "how it works" details.
 
 The developer/system prompt should own:
 

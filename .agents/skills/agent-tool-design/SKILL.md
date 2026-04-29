@@ -35,6 +35,8 @@ Test for overlap: if a human engineer cannot say which tool to use in one senten
 
 Use names and parameters that read clearly in a trace: `billing_refund_payment`, `scene_id`, `include_archived`. Tool descriptions should state what the tool does, when to call it, important input conventions, side effects, and how it differs from sibling tools.
 
+Description is a model-facing prompt read at decision time, not human documentation. Skip implementation details, file paths, change history, internal rationale, long code examples, and "how it works" internals. If a line does not help the agent decide *whether to call* or *what to pass*, cut it.
+
 Keep cross-tool workflow and disambiguation in the developer/system prompt. Keep field names, required fields, enums, and return shape in the tool schema.
 
 ### 3. Design responses for the agent reader
