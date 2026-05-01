@@ -84,6 +84,20 @@ export function placeOrderDecision(
 
 Even `now: Date` is passed in — domain never calls `new Date()` itself. Same for `Math.random()`, `crypto.randomUUID()`, and `process.env`. Determinism makes domain trivially testable.
 
+**Error style — pick one and stay consistent.** Two valid shapes for domain failure:
+
+```typescript
+// Style 1 — throw typed domain errors (TS/JS idiomatic)
+export class CouponExpired extends DomainError {}
+if (now > coupon.expiresAt) throw new CouponExpired();
+
+// Style 2 — return Result<Ok, Err> (Go/Rust-flavored, no throws)
+type Result<T, E> = { ok: true; value: T } | { ok: false; error: E };
+if (now > coupon.expiresAt) return { ok: false, error: "CouponExpired" };
+```
+
+Style 1 is lighter and matches typical TS code. Style 2 makes failures part of the type signature, harder to ignore. Either works inside FC/IS — what matters is consistency across the codebase. Mixing both forces readers to remember which use case throws and which returns.
+
 ## Step 2 — Ports: Interfaces for IO
 
 Define the **capabilities** the use case needs, in the application layer (or domain if shared widely). Never in infrastructure.
@@ -197,6 +211,23 @@ app.post("/orders", async (req, res) => {
 
 Composition root is the only place real implementations meet abstractions. Tests provide fakes here without touching production code.
 
+**Translating domain errors at the edge.** Domain throws domain errors (`CouponExpired`, `InsufficientBalance`). The use case lets them propagate. The composition root — where HTTP, queue, or CLI lives — is the only place that maps them to transport-specific shapes:
+
+```typescript
+app.post("/orders", async (req, res) => {
+  try {
+    const result = await placeOrder({ draft: req.body }, deps);
+    res.json(result);
+  } catch (e) {
+    if (e instanceof DomainError) return res.status(409).json({ error: e.code });
+    if (e instanceof NotFoundError) return res.status(404).json({ error: e.message });
+    throw e; // unknown → 500 via error middleware
+  }
+});
+```
+
+Keep this mapping in one place per transport (HTTP middleware, queue handler wrapper). Do not push HTTP status codes into use cases or domain.
+
 ## DI Style: Function Object vs Class
 
 Two equivalent shapes — pick one and stay consistent within a codebase:
@@ -235,6 +266,8 @@ After writing a draft, scan for these. Each one indicates a layer violation. Fix
 - Imports concrete adapters (`PostgresOrderWriter`) instead of port interfaces (`OrderWriter`)
 - IO call in the middle of decisions (read → decide → read → decide) — restructure or split
 - Try/catch wrapping domain logic to translate errors — let domain errors propagate, catch only IO errors
+
+Existence guards (`if (!entity) throw ...`), authorization checks (`if (caller.id !== resource.ownerId)`), and idempotency short-circuits (`if (alreadyProcessed) return`) are **not** business decisions — they are preconditions for invoking the domain at all. They belong in the shell. Only branching that depends on domain rules (tiers, thresholds, state transitions, validation) needs to move into a domain function.
 
 ### Infrastructure / adapter red flags
 
