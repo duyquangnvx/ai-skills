@@ -161,7 +161,7 @@ _none_
 
 Each structured section has exactly one fenced YAML island immediately after the header:
 
-````
+````markdown
 ## widgets
 
 ```yaml

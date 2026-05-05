@@ -8,12 +8,14 @@ These are the **only** allowed container types. No `Flex`, no `Wrap`, no `Absolu
 
 | Type | Semantics | Children sizing |
 |---|---|---|
-| `VStack` | Vertical column, top-to-bottom | per child: `height: <abs/%/flex/auto>`, `width: fill\|auto` |
-| `HStack` | Horizontal row, left-to-right | per child: `width: <abs/%/flex/auto>`, `height: fill\|auto` |
+| `VStack` | Vertical column, top-to-bottom | per child: `height: <size>` or `flex: <int>`, plus `width: fill\|auto` |
+| `HStack` | Horizontal row, left-to-right | per child: `width: <size>` or `flex: <int>`, plus `height: fill\|auto` |
 | `ZStack` | Layered, last-on-top | per child: `align: <9-position>`, optional `offset: {x, y}` |
 | `Grid` | NxM uniform cells | `cols: <int>`, `rows: <int\|auto>`, `gap: <size>` |
 | `Scroll` | Scrollable viewport, single axis | `axis: vertical\|horizontal`, single child |
 | `Spacer` | Flexible empty space | `flex: <int>` (default 1) |
+
+`flex` is a separate child-level integer key (a stack-axis weight), **not** a sizing-unit string. Either provide a fixed `width`/`height` size **or** provide `flex: <int>`, never both on the same child.
 
 ### 9-position align (for ZStack)
 
@@ -28,10 +30,11 @@ Use `offset: {x: <size>, y: <size>}` for fine adjustment from the align point. N
 | `<n>dp` | Density-independent pixels (e.g. `70dp`) |
 | `<n>%w` / `<n>%h` | % of parent width / height |
 | `<n>%sw` / `<n>%sh` | % of screen width / height (safe-area-aware when `safeArea: true`) |
-| `flex` (with int factor) | Fraction of remaining space along the stack axis |
 | `auto` | Content-driven (Text/Image natural size) |
 | `fill` | Take all available perpendicular space (only for stack cross-axis) |
 | `min(<size>, <size>)` / `max(<size>, <size>)` | Combine two sizing units. **Only these two functions; no nesting.** |
+
+For "fraction of remaining space along the stack axis", use the separate `flex: <int>` child key (see Layout primitives). It is a child-level field, not a sizing-unit string.
 
 **Banned units**: `px`, `em`, `rem`, `vw`, `vh`, arithmetic expressions like `100% - 32dp`. If you find yourself wanting arithmetic, the layout is wrong — restructure with a Spacer or split a region.
 

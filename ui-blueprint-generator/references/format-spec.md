@@ -9,7 +9,7 @@ Every blueprint file has, in this exact order:
 1. **YAML frontmatter** — required metadata (delimited by `---`)
 2. **Eight body sections** — fixed names, fixed order, lowercase headers (`## purpose`, `## layout`, ...). All required except `notes`.
 
-```markdown
+````markdown
 ---
 <frontmatter>
 ---
@@ -18,38 +18,38 @@ Every blueprint file has, in this exact order:
 <prose>
 
 ## layout
-\```yaml
+```yaml
 <layout YAML island>
-\```
+```
 
 ## widgets
-\```yaml
+```yaml
 <widgets YAML island>
-\```
+```
 
 ## states
-\```yaml
+```yaml
 <states YAML island>
-\```
+```
 
 ## actions
-\```yaml
+```yaml
 <actions YAML island>
-\```
+```
 
 ## animations
-\```yaml
+```yaml
 <animations YAML island>
-\```
+```
 
 ## acceptance
-\```yaml
+```yaml
 <acceptance YAML island>
-\```
+```
 
 ## notes
 <prose, optional content; section header is required>
-```
+````
 
 Empty sections still keep their header. Body is `_none_`.
 
@@ -72,7 +72,8 @@ safeArea: true | false                    # optional, default: true
 modal: true | false        # popup only — true blocks input behind
 dismissible: true | false  # popup only — tap-outside / back-button closes
 
-extends: <blueprint-id>    # optional — inherit base blueprint
+extends: <blueprint-id>    # optional — inherit base blueprint; bare ID,
+                           # resolved by scanning ui-blueprints/ for that id
 parents: [<id>, ...]       # screens that can navigate INTO this; required for non-root scenes/popups
 children: [<id>, ...]      # popups this screen can open; required if any are opened
 
@@ -121,25 +122,18 @@ See `vocabulary.md` for container types and sizing units.
 
 ### 3. `## widgets`
 
-Flat YAML list of widgets, each placed in a declared region.
+Flat YAML list of widgets, each placed in a declared region. The widget object's universal fields are:
 
-```yaml
-- id: <widget-id>
-  type: <widget-type>
-  region: <region-id>            # which Layout region it sits in
-  align: <9-position>            # for ZStack regions; optional otherwise
-  <widget-specific props>
-  bind: { <field>: <bind-path>, fmt: "<format>" }   # optional
-  visible: { bind: "<bool-expr>" }                  # optional
-  enabled: { bind: "<bool-expr>" }                  # optional
-  on:                                                # optional
-    <event>: [ <action-tuple>, ... ]
-  children: [ ... ]                                  # only for container-typed widgets
-```
+- `id` — unique within file; required.
+- `type` — required; must be a value from `vocabulary.md` (Widget types) or a project extension declared in `_config.md`.
+- `region` — required; must reference a region declared in `## layout`.
+- `align` — optional; required for children of `ZStack` regions, ignored otherwise.
+- `bind`, `visible`, `enabled`, `on`, `children` — optional; semantics covered below.
+- Type-specific props (e.g. `text`, `icon`, `min`/`max`, `itemTemplate`) — see `vocabulary.md` for required vs optional props per widget type.
 
-A widget tree is allowed when a widget is itself a container, but prefer flat: hoist sub-structure into Layout regions whenever possible. Diffs stay smaller.
+`bind`, `visible`, and `enabled` use bind paths and the boolean DSL (see `conventions.md`). `on` is an event-to-action-tuple map (see section 5 below). `children` is only valid when the widget itself is a container type — and even then, prefer hoisting structure into `## layout` regions for smaller diffs.
 
-See `vocabulary.md` for widget types and props.
+For the full enum of widget types and their props, see `vocabulary.md` — that file is the single source of truth.
 
 ### 4. `## states`
 
@@ -219,18 +213,20 @@ Optional prose. Edge cases, rationale, open questions, links to discussions. The
 
 ## Inheritance via `extends`
 
-A blueprint may inherit a base blueprint:
+A blueprint may inherit a base blueprint by ID:
 
 ```yaml
-extends: shared/popup-base
+extends: popupBase
 ```
+
+`extends` takes a bare blueprint `id`, not a file path. The validator resolves it by scanning the `ui-blueprints/` tree for a blueprint with matching `id`.
 
 The inheritor:
 - Inherits frontmatter fields (overrides allowed except `id`)
-- Inherits Layout regions (can add or override by region `id`)
-- Inherits Widgets, States, Actions, Animations, Acceptance (can add new entries by `id`; cannot remove inherited entries — explicit conflict if same ID with different content)
+- Inherits `## layout` regions (can add or override by region `id`)
+- Inherits `## widgets`, `## states`, `## actions`, `## animations`, `## acceptance` (can add new entries by `id`; cannot remove inherited entries — explicit conflict if same ID with different content)
 
-Use sparingly. Most reuse should go through `type: shared` blueprints referenced from Widgets via `Custom: { name: <shared-id> }` rather than inheritance.
+Use sparingly. Most reuse should go through `type: shared` blueprints referenced from `## widgets` via `Custom: { name: <shared-id> }` rather than inheritance.
 
 ## YAML island parsing
 

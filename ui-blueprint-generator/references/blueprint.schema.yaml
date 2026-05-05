@@ -245,7 +245,7 @@ properties:
       properties:
         id:
           type: string
-          pattern: "^U[A-Za-z0-9_-]*$"
+          pattern: "^U[A-Za-z0-9_-]+$"
         given: { type: string }
         when: { type: string }
         then: { type: string }
@@ -255,8 +255,11 @@ definitions:
 
   sizingUnit:
     type: string
-    # Matches: 70dp, 100%w, 100%h, 50%sw, 50%sh, flex (with int), auto, fill, min(...), max(...)
-    pattern: "^([0-9]+(\\.[0-9]+)?(dp|%w|%h|%sw|%sh)|auto|fill|flex|[0-9]+flex|min\\([^)]+\\)|max\\([^)]+\\))$"
+    # Matches: 70dp, 100%w, 100%h, 50%sw, 50%sh, auto, fill, min(...), max(...)
+    # NOTE: `flex` is NOT a sizing-unit string. It is a separate child-level integer
+    # field (region.flex / widget.flex). Compound expressions inside min()/max() are
+    # validated by a companion script, not by this regex.
+    pattern: "^([0-9]+(\\.[0-9]+)?(dp|%w|%h|%sw|%sh)|auto|fill|min\\([^)]+\\)|max\\([^)]+\\))$"
 
   alignNine:
     enum:
