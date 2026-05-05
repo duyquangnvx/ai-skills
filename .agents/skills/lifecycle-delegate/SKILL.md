@@ -1,310 +1,324 @@
 ---
 name: lifecycle-delegate
-description: "Pattern for separating game logic from view/presentation using lifecycle callbacks on an Orchestrator. Use this skill whenever Claude helps with: (1) Logic-view separation in game code, (2) Callback hooks between gameplay logic and animation/UI, (3) Refactoring tightly-coupled code that mixes gameplay state and visual updates, (4) Turn-based or sequential gameplay where logic must await animation, (5) Writing testable headless game logic, (6) Game architecture decisions about where to put hooks or callbacks. Trigger on: 'separate logic and view', 'game architecture', 'MVC for game', 'await animation', 'headless game logic', 'unit test game logic', 'lifecycle hook', 'where to put callbacks', 'game orchestrator'. Also trigger when code mixes gameplay calculations with cc.tween, spine animations, or UI updates in the same class. Trigger when user asks who should own hooks/callbacks in a game system."
+description: "Use when gameplay flow is hard to read because logic is scattered across EventBus listeners and animation timing; when you want a turn-based or sequential game flow to read as a top-to-bottom script that awaits animations between steps; when refactoring code that interleaves gameplay state with animation, sound, or UI updates; when deciding where hooks belong between game logic and the view; when writing testable headless game logic. Triggers: 'replace EventBus with hooks', 'read game flow as a script', 'await animation', 'orchestrator pattern', 'where to put callbacks', 'separate logic and view', 'unit test game logic', 'headless game logic'."
 ---
 
-# Lifecycle Delegate Pattern for Game Development
+# Lifecycle Delegate Pattern
 
-Separate game logic from view using lifecycle callbacks. Logic is pure data + rules. An **Orchestrator** exposes hooks and sequences all systems. The view binds to the Orchestrator.
+A pattern for writing turn-based / sequential gameplay so the **flow reads as a script from top to bottom** — and so logic runs headlessly without the engine.
 
-## The Three Layers
+## Why this pattern exists
 
-```
-┌──────────────────────┐     returns      ┌─────────────────────────────┐     hooks     ┌──────────────────────────┐
-│   Logic Entity       │ ──── result ───→ │      Orchestrator           │ ────────────→ │         View             │
-│                      │                  │                             │               │                          │
-│  Pure data + rules   │                  │  onUnitDamaged?()           │               │  unitView.playHurt()     │
-│  No engine deps      │                  │  onUnitDied?()              │               │  hud.updateHpBar()       │
-│  No hooks            │                  │  onMatchSuccess?()          │               │  sound.playHurt()        │
-│  Returns results     │                  │  onGameWon?()               │               │  camera.shake()          │
-│  Fully testable      │                  │                             │               │                          │
-│                      │                  │  Sequences all systems      │               │  Binds to Orchestrator   │
-│                      │                  │  Awaits animations          │               │  Not to entities         │
-│                      │                  │  Owns game flow             │               │                          │
-└──────────────────────┘                  └─────────────────────────────┘               └──────────────────────────┘
-```
+EventBus turns gameplay into a fan-out web. Reading a method tells you nothing about what happens next — you grep an event name, find five listeners that may run in any order, each with its own delay to dodge the others. Animation timing is implicit. Adding a step means adding another listener somewhere else.
 
-**Logic entities have NO hooks.** They return result objects. They run without any view.
-**Orchestrator owns ALL hooks.** It sequences systems in the correct order and awaits animations.
-**View binds to the Orchestrator only.** One Orchestrator ↔ One View.
+Two moves fix it:
 
-## Why Hooks Must Be on the Orchestrator
+1. **Concentrate flow in one method on an Orchestrator.** Reading top-to-bottom shows the entire moment: act → animate → resolve → check end. No grep needed.
+2. **`await` hooks for the in-between view work.** Order is explicit in code, not implicit in timing. Logic gates on the view finishing, not on a guessed delay.
 
-A single gameplay moment triggers many systems simultaneously:
+EventBus is no longer the spine of gameplay. It survives only for fire-and-forget side channels (analytics, achievements, ambient audio).
 
-```
-Unit takes damage
-├── Unit view  → hurt animation, knockback, blink
-├── HUD        → HP bar update, damage number
-├── Sound      → hurt SFX
-├── Camera     → shake
-└── Quest      → "take 1000 damage" tracker
-```
+## The reading test
 
-If hooks sit on the entity, the view must reach into every other system — it becomes coupled to HUD, Sound, Camera, Quest:
+The pattern's value reduces to one question: **can a new reader open the Orchestrator method and see the whole moment?**
 
-```typescript
-// ❌ Hooks on entity — view knows too much, coupled to every system
-unit.onTakeDamage = async ({ result }) => {
-    await this.playHurtAnim();
-    this.hud.updateHpBar(result);   // view không nên biết về HUD
-    this.sound.playHurt();          // view không nên biết về Sound
-    this.camera.shake();            // view không nên biết về Camera
-    this.quest.record(result);      // view không nên biết về Quest
-};
+### Before — EventBus spaghetti
 
-// ✅ Hooks on Orchestrator — each system does only its own job
-orchestrator.onUnitDamaged = async ({ unit, result }) => {
-    await unitView.playHurtAnim();  // unit view: only unit animation
-    hud.updateHpBar(result);        // hud: only UI
-    sound.play('hurt');             // sound: only audio
-    camera.shake();                 // camera: only camera
-    quest.record(result);           // quest: only tracking
-};
+```ts
+// in BattleUnit
+receiveDamage(raw: number): void {
+    this.hp = Math.max(0, this.hp - raw);
+    EventBus.emit('unit_damaged', { unit: this, value: raw });
+    if (this.hp <= 0) EventBus.emit('unit_died', { unit: this });
+}
+
+// What runs after damage? Grep 'unit_damaged' across the project:
+//   UnitView   — plays hurt anim
+//   HUD        — updates HP bar (after 50ms? before? race)
+//   Sound      — plays SFX
+//   Quest      — records progress
+//   Camera     — shakes (only sometimes — has its own filter)
+// Order between them: undefined. Timing: implicit, fragile.
+// What runs after death? Grep 'unit_died'. Repeat.
 ```
 
-The Orchestrator is the only layer with enough context to know the correct ordering and which systems to notify.
+### After — Orchestrator script
 
-## Hook Placement Rule
+```ts
+async processAttack(attacker: BattleUnit, target: BattleUnit): Promise<void> {
+    const result = target.receiveDamage(attacker.atk, attacker);
+    await this.onUnitDamaged?.({ unit: target, result });
+
+    if (target.isDead()) {
+        await this.onUnitDied?.({ unit: target });
+        this.removeUnit(target);
+        if (this.enemies.length === 0) {
+            await this.onBattleWon?.({ score: this.score });
+        }
+    }
+}
+```
+
+A new reader sees the whole moment in 10 lines. The view binds the hooks elsewhere — the **flow** lives here, in order, awaited.
+
+## The three layers
 
 ```
-Default:    Hooks go on the Orchestrator
-Exception:  Hooks go on an entity ONLY when there is a specific requirement:
-            - Object pooling where entity and view have strict 1:1 lifetime
-            - Headless replay / AI simulation needing per-entity interception
-            - A subsystem that truly has no other system involved
+Logic Entity  ── result ──→  Orchestrator  ── hook ──→  View
+  pure data                  the script               binds lambdas
+  no engine                  awaits view              animates / UI / sound
+  no hooks                   owns flow                one Orchestrator ↔ one View
 ```
 
-Most games have at least one Orchestrator. Complex games have several — one per domain (Battle, Map, UI, Shop...) — each owning hooks for its domain, never sharing hooks across domains.
+- **Logic entities** have no hooks and no engine deps. They mutate state and return result objects. They run in plain Node with no view.
+- **Orchestrator** owns the flow. Its methods read like a script. Hooks are how it pauses for the view between steps.
+- **View** binds lambdas to the Orchestrator's hooks. It is where engine APIs (animation, tween, audio, scene graph) live.
+
+## When to use
+
+Use it when **all** are true:
+
+- Gameplay is **turn-based or sequential** — logic can pause for the view between steps
+- A single moment triggers **multiple systems in a defined order** (animate → HUD → sound → camera → check end)
+- You want the flow to be **debuggable by reading one method**, not by tracing event listeners
+
+Do NOT use it for:
+
+- **Real-time loops** (action, shooter, autoplay, physics) — logic runs on a fixed timestep and cannot await per-frame.
+- **Pure data sync** — view mirrors a value (HP bar, timer, currency). Use a getter, not a hook. Hooks are for _moments_, not _state_.
+- **Trivial UI** — a button opening a popup does not need an Orchestrator.
+
+## When to add a hook
+
+Add a hook **if and only if** the Orchestrator method has to pause between two lines and the pause depends on view work the Orchestrator cannot inline. The hook exists to make `await` legible inside the script.
+
+| Situation                                                             | Hook?                         |
+| --------------------------------------------------------------------- | ----------------------------- |
+| Orchestrator must wait for animation before next logic step           | ✅ `Promise<void>`            |
+| Several systems react to the same moment in a defined order           | ✅ — view body sequences them |
+| Only one system reacts and the Orchestrator does not need to wait     | ❌ Direct method call         |
+| Visual feedback that does not gate flow (e.g. floating damage number) | ❌ Direct method call         |
+| View needs to mirror a value continuously                             | ❌ Getter, view polls         |
+
+**Test for over-hooking:** delete the hook, replace with a direct method call. If the script still reads correctly and timing still works, the hook was unnecessary.
 
 ## Implementation
 
-### Step 1 — Logic entity: pure, returns results, no hooks
+A complete pattern instance has five parts. The order below is the order a new reader should scan them — lead with the Orchestrator, because that is what makes the pattern legible.
 
-```typescript
-class BattleUnit {
-    hp: number;
-    maxHp: number;
-    atk: number;
+### 1. Orchestrator — the script
 
-    // Returns a result — does NOT fire any hook
-    receiveDamage(raw: number, attacker: BattleUnit): DamageResult {
-        const isCrit = Math.random() < 0.2;
-        const value = isCrit ? raw * 2 : raw;
-        this.hp = Math.max(0, this.hp - value);
-        return { value, isCrit, remainingHp: this.hp, maxHp: this.maxHp };
-    }
-
-    isDead(): boolean { return this.hp <= 0; }
-}
-```
-
-### Step 2 — Define result types (one per gameplay moment)
-
-```typescript
-// Bundle all context the view needs — it should never need to call back into logic
-interface DamageResult {
-    value: number;
-    isCrit: boolean;
-    remainingHp: number;
-    maxHp: number;
-    knockbackDir?: Vec3;
-    shieldAbsorbed?: number;
-}
-
-interface SkillCastResult {
-    skillId: string;
-    caster: BattleUnit;
-    targets: BattleUnit[];
-    damageResults: DamageResult[];
-}
-```
-
-### Step 3 — Orchestrator: owns hooks, calls logic, sequences systems
-
-```typescript
+```ts
 class BattleOrchestrator {
-    // All hooks live here — ~5 to 10 for a full game domain
-    onUnitDamaged?: (data: { unit: BattleUnit; result: DamageResult }) => Promise<void>;
-    onUnitDied?:    (data: { unit: BattleUnit }) => Promise<void>;
-    onSkillCast?:   (data: { result: SkillCastResult }) => Promise<void>;
-    onBattleWon?:   (data: { stars: number; score: number }) => Promise<void>;
-    onBattleLost?:  (data: { reason: 'timeout' | 'wiped' }) => Promise<void>;
+  onUnitDamaged?: (data: {
+    unit: BattleUnit;
+    result: DamageResult;
+  }) => Promise<void>;
+  onUnitDied?: (data: { unit: BattleUnit }) => Promise<void>;
+  onBattleWon?: (data: { score: number }) => Promise<void>;
+  onBattleLost?: (data: { reason: "timeout" | "wiped" }) => Promise<void>;
 
-    async processAttack(attacker: BattleUnit, target: BattleUnit): Promise<void> {
-        // 1. Logic runs, returns result
-        const result = target.receiveDamage(attacker.atk, attacker);
+  async processAttack(attacker: BattleUnit, target: BattleUnit): Promise<void> {
+    const result = target.receiveDamage(attacker.atk, attacker);
+    await this.onUnitDamaged?.({ unit: target, result });
 
-        // 2. Orchestrator fires hook — view + all systems respond in sequence
-        await this.onUnitDamaged?.({ unit: target, result });
-
-        // 3. Orchestrator continues game flow after animation completes
-        if (target.isDead()) {
-            await this.onUnitDied?.({ unit: target });
-            this.removeUnit(target);
-            await this.checkWinCondition();
-        }
+    if (target.isDead()) {
+      await this.onUnitDied?.({ unit: target });
+      this.removeUnit(target);
+      await this.checkEnd();
     }
+  }
 
-    private async checkWinCondition(): Promise<void> {
-        if (this.enemies.length === 0) {
-            const stars = this.scoreManager.calculateStars();
-            await this.onBattleWon?.({ stars, score: this.scoreManager.getScore() });
-        }
+  private async checkEnd(): Promise<void> {
+    if (this.enemies.length === 0) {
+      await this.onBattleWon?.({ score: this.score });
     }
+  }
 }
 ```
 
-### Step 4 — View: binds to Orchestrator only
+### 2. Logic entity — pure, returns results
 
-```typescript
-class BattleView extends Component {
-    private orchestrator: BattleOrchestrator | null = null;
+```ts
+class BattleUnit {
+  hp: number;
+  maxHp: number;
+  atk: number;
 
-    bind(orchestrator: BattleOrchestrator): void {
-        this.orchestrator = orchestrator;
+  receiveDamage(raw: number, attacker: BattleUnit): DamageResult {
+    const isCrit = Math.random() < 0.2;
+    const value = isCrit ? raw * 2 : raw;
+    this.hp = Math.max(0, this.hp - value);
+    return { value, isCrit, remainingHp: this.hp, maxHp: this.maxHp };
+  }
 
-        orchestrator.onUnitDamaged = async ({ unit, result }) => {
-            const view = this.getUnitView(unit);
-            // Unit animation first, then cross-system updates
-            if (result.knockbackDir) {
-                await view.playKnockback(result.knockbackDir);
-            } else {
-                await view.playSpine('hurt');
-            }
-            this.hud.updateHpBar(unit, result.remainingHp, result.maxHp);
-            this.hud.spawnDamageNumber(result.value, result.isCrit);
-            this.sound.play('hurt');
-            this.camera.shake(0.2);
-        };
-
-        orchestrator.onUnitDied = async ({ unit }) => {
-            const view = this.getUnitView(unit);
-            await view.playSpine('death');
-            await view.fadeOut(0.5);
-            this.sound.play('death');
-        };
-
-        orchestrator.onBattleWon = async ({ stars, score }) => {
-            await this.ui.showVictoryScreen(stars, score);
-        };
-    }
-
-    unbind(): void {
-        if (!this.orchestrator) return;
-        this.orchestrator.onUnitDamaged = undefined;
-        this.orchestrator.onUnitDied    = undefined;
-        this.orchestrator.onSkillCast   = undefined;
-        this.orchestrator.onBattleWon   = undefined;
-        this.orchestrator.onBattleLost  = undefined;
-        this.orchestrator = null;
-    }
-
-    // Cocos Creator lifecycle
-    onDestroy(): void { this.unbind(); }
-    // For pooled nodes: onDisable() { this.unbind(); }
-    //                   onEnable()  { if (this.orchestrator) this.bind(this.orchestrator); }
+  isDead(): boolean {
+    return this.hp <= 0;
+  }
 }
 ```
 
-### Step 5 — Scene connects everything
+The entity has no hooks, no engine imports, no `EventBus.emit`. It runs in a plain Node test.
 
-```typescript
-class BattleScene extends Component {
-    private orchestrator = new BattleOrchestrator();
+### 3. Result type — bundle full context
 
-    onLoad(): void {
-        const view = this.node.getComponent(BattleView);
-        view.bind(this.orchestrator);
-        this.orchestrator.loadLevel(config);
-        this.orchestrator.startBattle();
-    }
-
-    onDestroy(): void {
-        this.node.getComponent(BattleView)?.unbind();
-    }
+```ts
+interface DamageResult {
+  value: number;
+  isCrit: boolean;
+  remainingHp: number;
+  maxHp: number;
 }
 ```
 
-## Callback Granularity
+The view receives the full result and never queries the entity back. Adding an optional field is non-breaking.
 
-**Each hook = one gameplay "moment".** Not every field change, not every internal step.
+### 4. View — binds hooks, runs cross-system response
 
-### ❌ Too granular — caller must reassemble fragments
+```ts
+class BattleView {
+  private orchestrator: BattleOrchestrator | null = null;
 
-```typescript
-onHpChanged?:      (hp: number) => void;      // 5 callbacks
-onCritTriggered?:  () => void;                // for one
-onKnockback?:      (dir: Vec3) => void;       // single
-onShieldBroke?:    () => void;                // hit
-onDamageNumber?:   (val: number) => void;
+  constructor(
+    private unitViews: UnitViewRegistry,
+    private hud: Hud,
+    private sound: Sound,
+    private camera: Camera
+  ) {}
+
+  bind(o: BattleOrchestrator): void {
+    this.orchestrator = o;
+
+    o.onUnitDamaged = async ({ unit, result }) => {
+      const v = this.unitViews.get(unit);
+      await v.playAnimation("hurt");
+      this.hud.updateHpBar(unit, result.remainingHp, result.maxHp);
+      this.hud.spawnDamageNumber(result.value, result.isCrit);
+      this.sound.play("hurt");
+      this.camera.shake(0.2);
+    };
+
+    o.onUnitDied = async ({ unit }) => {
+      const v = this.unitViews.get(unit);
+      await v.playAnimation("death");
+      await v.fadeOut(0.5);
+      this.sound.play("death");
+    };
+
+    o.onBattleWon = async ({ score }) => {
+      await this.hud.showVictory(score);
+    };
+  }
+
+  unbind(): void {
+    if (!this.orchestrator) return;
+    this.orchestrator.onUnitDamaged = undefined;
+    this.orchestrator.onUnitDied = undefined;
+    this.orchestrator.onBattleWon = undefined;
+    this.orchestrator.onBattleLost = undefined;
+    this.orchestrator = null;
+  }
+}
 ```
 
-### ❌ Data observation — not a lifecycle moment, remove these
+Engine binding: call `bind()` when the view is created, call `unbind()` when the view is torn down. The exact lifecycle method depends on the engine — wire it into whatever "destroyed" / "disabled" callback the engine provides.
 
-```typescript
-onHpBarNeedsUpdate?: (hp: number) => void;      // view reads hp directly
-onTimerTick?:        (remaining: number) => void; // view polls in update loop
-onInventoryChanged?: (inv: Inventory) => void;    // view reads after each action
+### 5. Scene wires it together
+
+```ts
+const orchestrator = new BattleOrchestrator();
+const view = new BattleView(unitViews, hud, sound, camera);
+
+view.bind(orchestrator);
+orchestrator.loadLevel(config);
+await orchestrator.startBattle();
+
+// On scene teardown:
+view.unbind();
 ```
 
-These are not gameplay moments — they are data sync. View reads state via getters, never via hooks.
-
-### ✅ Right level — one hook per gameplay moment, full context bundled
-
-```typescript
-onUnitDamaged?: (data: { unit: BattleUnit; result: DamageResult }) => Promise<void>;
-onUnitHealed?:  (data: { unit: BattleUnit; result: HealResult })   => void;
-onSkillCast?:   (data: { result: SkillCastResult })                => Promise<void>;
-```
+## Hook signatures
 
 ### Always wrap params in a data object
 
-```typescript
-// ❌ Positional — adding a field forces every binding to update its signature
+```ts
+// ❌ Positional — adding a field breaks every binding
 onUnitDamaged?: (unit: BattleUnit, result: DamageResult) => Promise<void>;
 
 // ✅ Data object — adding an optional field breaks nothing
 onUnitDamaged?: (data: { unit: BattleUnit; result: DamageResult }) => Promise<void>;
-// Later: add sourceSkillId? — existing bindings still compile and run
 ```
 
-## Promise vs Fire-and-Forget
+### `Promise<void>` vs `void`
 
-| Situation | Type | Reason |
-|---|---|---|
-| Logic must wait for animation to complete | `Promise<void>` | Next action depends on anim finishing |
-| Visual feedback only, logic continues | `void` | No ordering dependency |
-| View must return a value to logic (rare) | `Promise<T>` | e.g., player picks a target |
+| Signature       | Meaning                              | Use when                                     |
+| --------------- | ------------------------------------ | -------------------------------------------- |
+| `Promise<void>` | Orchestrator awaits before next line | Animation must finish first                  |
+| `void`          | Orchestrator fires and forgets       | Pure visual feedback that does not gate flow |
+| `Promise<T>`    | View returns a value to logic        | Player picks a target, etc. (rare)           |
 
-## Lifecycle vs EventBus
+The signature is a contract: a `Promise<void>` hook tells the reader "this gates the flow."
 
+### Naming
+
+Use past-tense verbs on the moment that already happened in logic: `onUnitDamaged`, `onMatchSucceeded`, `onLevelLoaded`. Never name a hook for a future intent (`onAboutToDie`, `onWillDamage`) — that confuses logic and view boundaries.
+
+## EventBus is the exception
+
+Default = hook. EventBus is reserved for genuinely fire-and-forget side channels that have nothing to do with gameplay flow:
+
+- Analytics / telemetry
+- Achievement tracker (background)
+- Ambient audio / music director
+
+Everything that participates in the gameplay moment — animation, HUD, sound, camera, quest progress — goes through hooks. Otherwise the script becomes unreadable again.
+
+```ts
+private async handleUnitDied(unit: BattleUnit): Promise<void> {
+    await this.onUnitDied?.({ unit });           // ordered, awaited gameplay
+    EventBus.emit('unit_died', { unit });        // background side channels only
+}
 ```
-Orchestrator hook  →  systems that must run IN ORDER, or that must AWAIT animation
-EventBus           →  fire-and-forget broadcast where order does not matter
+
+Logic entities **must not** call EventBus. The Orchestrator is the only emitter. This keeps logic headless-testable and the script readable.
+
+## Cross-domain flow — `SceneFlow`
+
+When a flow crosses domains (battle won → unlock map node → save profile), each domain has its own Orchestrator but the _cross-domain_ flow needs a script too. Promote a `SceneFlow` at scene level — an Orchestrator-of-Orchestrators:
+
+```ts
+class AdventureSceneFlow {
+  onStageCleared?: (data: { stage: number; score: number }) => Promise<void>;
+
+  constructor(
+    private battle: BattleOrchestrator,
+    private map: MapOrchestrator,
+    private profile: ProfileOrchestrator
+  ) {}
+
+  async runStage(stage: number): Promise<void> {
+    const result = await this.battle.runBattle(stage);
+    if (!result.won) return;
+
+    await this.map.unlockNext(stage);
+    await this.profile.recordWin(stage, result.score);
+    await this.onStageCleared?.({ stage, score: result.score });
+    await this.profile.save();
+  }
+}
 ```
 
-```typescript
-// Hook: view + HUD + sound must sequence correctly after damage
-await this.onUnitDamaged?.({ unit, result });
+Same rule: read top-to-bottom. Do not glue domains with EventBus — that defeats the readability goal.
 
-// EventBus: quest, analytics, achievements don't block the game flow
-EventBus.emit('unit_damaged', { unit, result });
-```
+## Self-check (measure the goal)
 
-**Logic entities must NOT call EventBus directly.** The Orchestrator emits events after firing hooks. This keeps logic pure and headless-compatible.
+- [ ] Can a new reader open the Orchestrator method and see the whole moment without opening another file?
+- [ ] Is anything about gameplay flow (ordering, timing, win/lose) discoverable only via `EventBus.emit` or `EventBus.on`? → that part should be a hook.
+- [ ] Is there a hook the Orchestrator never `await`s and never reads a return from? → it is a disguised method call. Drop the hook, call directly.
+- [ ] Is there a hook only the View reacts to where the Orchestrator does not need to wait? → also a disguised method call.
+- [ ] Does a logic entity import engine APIs, call `EventBus`, or expose hooks? → push that out. Logic must be headless.
+- [ ] Does the flow cross multiple Orchestrators glued by EventBus? → introduce a `SceneFlow`.
 
-## Self-Check
+## More patterns
 
-- [ ] Are hooks on an entity instead of the Orchestrator? → move them up unless there is a specific reason
-- [ ] Is the view reaching into HUD/Sound/Camera inside a hook? → that is Orchestrator work, move it up
-- [ ] Does a hook fire on every frame or every field change? → not a lifecycle moment, remove it and use a getter
-- [ ] Does the Orchestrator have more than 10 hooks? → consider splitting into sub-orchestrators by domain
-- [ ] Does adding a small feature require a new hook? → the abstraction is leaking
-
-## Reference Files
-
-For advanced patterns and real project examples, read the relevant file:
-
-- `references/advanced-patterns.md` — Multi-entity sequences, ordered async pipeline, EventBus bridge, object pooling, headless testing
-- `references/common-orchestrators.md` — Templates for common game types: battle, puzzle, board game, shop/inventory
+For multi-target sequencing, request-response hooks (player input), headless tests, hook-safety guards, pooled-entity rebind, and a step-by-step migration from EventBus, see `references/extensions.md`.
