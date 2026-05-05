@@ -1,0 +1,271 @@
+# yaml-language-server: $schema=http://json-schema.org/draft-07/schema#
+# JSON Schema for UI Blueprint frontmatter and YAML islands.
+# Copy into the project (e.g. ui-blueprints/_schema/blueprint.schema.yaml) and
+# wire into a validator script if linting is wanted.
+#
+# This is the universal schema. Project-specific extensions (custom widgets,
+# project verbs, project namespaces) are layered on via _config.md.
+
+$schema: http://json-schema.org/draft-07/schema#
+title: UIBlueprint
+type: object
+description: Validates a UI blueprint document split into frontmatter + YAML island parts.
+required: [frontmatter, layout, widgets, states, actions, animations, acceptance]
+
+properties:
+
+  # ---- Frontmatter ----
+  frontmatter:
+    type: object
+    required: [id, type, title]
+    properties:
+      id:
+        type: string
+        pattern: "^[a-zA-Z][a-zA-Z0-9_]*$"
+      type:
+        enum: [scene, popup, shared]
+      title:
+        type: string
+      zIndex:
+        type: integer
+        minimum: 0
+      orientation:
+        enum: [portrait, landscape, both]
+      safeArea:
+        type: boolean
+      modal:
+        type: boolean
+      dismissible:
+        type: boolean
+      extends:
+        type: string
+      parents:
+        type: array
+        items: { type: string }
+      children:
+        type: array
+        items: { type: string }
+      gdd:
+        type: array
+        items: { type: string }
+      dataBindings:
+        type: array
+        items:
+          type: object
+          additionalProperties:
+            type: string
+      emits:
+        type: array
+        items: { type: string }
+      listens:
+        type: array
+        items: { type: string }
+    allOf:
+      # type=scene → zIndex 0..99 (typically 0)
+      - if:
+          properties: { type: { const: scene } }
+        then:
+          required: [zIndex]
+          properties:
+            zIndex: { minimum: 0, maximum: 99 }
+            modal: { not: {} }
+            dismissible: { not: {} }
+      # type=popup → zIndex 100..199
+      - if:
+          properties: { type: { const: popup } }
+        then:
+          required: [zIndex]
+          properties:
+            zIndex: { minimum: 100, maximum: 199 }
+      # type=shared → no zIndex, no modal/dismissible
+      - if:
+          properties: { type: { const: shared } }
+        then:
+          properties:
+            zIndex: { not: {} }
+            modal: { not: {} }
+            dismissible: { not: {} }
+
+  # ---- ## layout island ----
+  layout:
+    type: object
+    required: [root, regions]
+    properties:
+      root:
+        type: object
+        required: [type]
+        properties:
+          type:
+            enum: [VStack, HStack, ZStack, Grid, Scroll]
+          cols: { type: integer, minimum: 1 }
+          rows: { oneOf: [{ type: integer, minimum: 1 }, { const: auto }] }
+          gap: { $ref: "#/definitions/sizingUnit" }
+          axis: { enum: [vertical, horizontal] }
+      regions:
+        type: array
+        minItems: 1
+        items:
+          type: object
+          required: [id]
+          properties:
+            id:
+              type: string
+              pattern: "^[a-zA-Z][a-zA-Z0-9_]*$"
+            width:  { $ref: "#/definitions/sizingUnit" }
+            height: { $ref: "#/definitions/sizingUnit" }
+            flex:   { type: integer, minimum: 1 }
+            align:  { $ref: "#/definitions/alignNine" }
+            offset:
+              type: object
+              properties:
+                x: { $ref: "#/definitions/sizingUnit" }
+                y: { $ref: "#/definitions/sizingUnit" }
+
+  # ---- ## widgets island ----
+  widgets:
+    type: array
+    items:
+      type: object
+      required: [id, type, region]
+      properties:
+        id:
+          type: string
+          pattern: "^[a-zA-Z][a-zA-Z0-9_]*$"
+        type:
+          # Universal types. Project extensions added at config-merge time.
+          enum:
+            - Text
+            - Image
+            - Icon
+            - Button
+            - IconButton
+            - Toggle
+            - Slider
+            - ProgressBar
+            - List
+            - HitArea
+            - Custom
+        region: { type: string }
+        align: { $ref: "#/definitions/alignNine" }
+        bind:
+          type: object
+          additionalProperties: true
+        visible:
+          type: object
+          required: [bind]
+          properties:
+            bind: { type: string }   # boolean DSL string (separately validated)
+        enabled:
+          type: object
+          required: [bind]
+          properties:
+            bind: { type: string }
+        on:
+          type: object
+          additionalProperties:
+            type: array
+            items: { type: string }   # action tuples (separately validated)
+      allOf:
+        - if:
+            properties: { type: { const: Custom } }
+          then:
+            required: [name]
+            properties:
+              name: { type: string }
+
+  # ---- ## states island ----
+  states:
+    type: object
+    required: [states]
+    properties:
+      states:
+        type: array
+        minItems: 1
+        items:
+          type: object
+          required: [id]
+          properties:
+            id:
+              type: string
+              pattern: "^[a-zA-Z][a-zA-Z0-9_]*$"
+            description: { type: string }
+            initial: { type: boolean }
+            final: { type: boolean }
+            enter:
+              type: object
+              additionalProperties: true
+            exit:
+              type: object
+              additionalProperties: true
+
+  # ---- ## actions island ----
+  actions:
+    type: array
+    items:
+      type: object
+      required: [on, do]
+      properties:
+        on:
+          type: object
+          properties:
+            widget: { type: string }
+            event:  { type: string }
+            where:  { type: string }
+          anyOf:
+            - required: [widget]
+            - required: [event]
+        do:
+          type: array
+          minItems: 1
+          items: { type: string }   # action tuples (separately validated)
+
+  # ---- ## animations island ----
+  animations:
+    oneOf:
+      - type: array
+        items:
+          type: object
+          required: [id, trigger, duration, blocksInput]
+          properties:
+            id: { type: string }
+            trigger: { type: string }
+            spec: { type: string }
+            duration:
+              type: string
+              pattern: "^[0-9]+ms$"
+            blocksInput: { type: boolean }
+      - const: _none_
+
+  # ---- ## acceptance island ----
+  acceptance:
+    type: array
+    items:
+      type: object
+      required: [id, given, when, then]
+      properties:
+        id:
+          type: string
+          pattern: "^U[A-Za-z0-9_-]*$"
+        given: { type: string }
+        when: { type: string }
+        then: { type: string }
+        test_hint: { type: string }
+
+definitions:
+
+  sizingUnit:
+    type: string
+    # Matches: 70dp, 100%w, 100%h, 50%sw, 50%sh, flex (with int), auto, fill, min(...), max(...)
+    pattern: "^([0-9]+(\\.[0-9]+)?(dp|%w|%h|%sw|%sh)|auto|fill|flex|[0-9]+flex|min\\([^)]+\\)|max\\([^)]+\\))$"
+
+  alignNine:
+    enum:
+      - top-left
+      - top-center
+      - top-right
+      - center-left
+      - center
+      - center-right
+      - bottom-left
+      - bottom-center
+      - bottom-right
