@@ -1,0 +1,80 @@
+# Planning artifacts
+
+Entry point for this folder. If you (human or agent) just opened `docs/plans/`, read this file first, then jump to whichever sibling is relevant.
+
+## What lives here
+
+PM-level planning for the project. Not implementation, not feature specs — those live elsewhere.
+
+| File | Read when you want to know... |
+|---|---|
+| [`progression.md`](./progression.md) | Where we are right now, what's blocking, what's next |
+| [`roadmap.md`](./roadmap.md) | What ships in what order, with what acceptance bar |
+| [`decisions.md`](./decisions.md) | What has been decided and why, append-only |
+| [`architecture.md`](./architecture.md) | What kind of product this is, what it touches, hard constraints |
+
+## Reading order for first-time arrival
+
+1. **`progression.md`** — top block tells you the live state in five lines.
+2. **`roadmap.md`** — gives the full plan if you need context for the current phase.
+3. **`architecture.md`** — gives the product shape if you need to understand the product, not just the plan.
+4. **`decisions.md`** — append-only history; useful when you wonder "why is the project shaped this way?"
+
+## How these files relate
+
+```
+            architecture.md  ← what the product is (present, invariant)
+                   │
+                   ▼
+              roadmap.md     ← what we plan to build (future)
+                   │
+                   ▼
+            progression.md   ← where we are now (live)
+                   │
+                   ▼
+             decisions.md    ← why we got here (past, append-only)
+```
+
+Each file has a "How this evolves" section at the bottom describing when and how it gets updated. If you're about to change one of these files, read that section first — they're not free-form notes, they have rules.
+
+## Protocol for agents
+
+If you are an AI agent operating on this project, follow this protocol every session — the value of this folder collapses if you don't.
+
+**At session start, before any task work:**
+
+1. Open `progression.md`. Read the top block, the Current focus section, and the most recent 3-5 log entries. This is the minimum context to know what's happening.
+2. If the current phase or current focus references a section in `roadmap.md`, `architecture.md`, or a specific decision ID, load that — but only that. Don't pre-load everything.
+3. If anything in the loaded context conflicts with what the user is asking for, surface the conflict explicitly. Don't quietly pick one.
+
+**When something changes during the session:**
+
+- A **decision** is made (product-level, scope-level, process-level) → append a row to `decisions.md` with a real Source pointer, then add a one-line log entry in `progression.md` referencing the new ID.
+- The **product shape** changes (new external dependency, new accepted constraint, scope of "what's inside the boundary" shifted) → update `architecture.md`, log entry in `progression.md`.
+- A **roadmap phase's scope** changes (In/Out shifts, acceptance criteria revised, phase split or merged) → update `roadmap.md`, record rationale as a row in `decisions.md`, log entry in `progression.md`.
+- A **blocker** is hit or resolved → update the Blocker field in `progression.md`'s top block, log entry.
+
+**At session end:**
+
+- Refresh `progression.md`'s Current focus section so the next session opens warm: what was just done, what's next, any open questions surfaced.
+- Confirm any decisions or scope changes from the session were logged. A change made without a log entry is a change that didn't happen, as far as the next session is concerned.
+
+The pattern: **read narrowly, write atomically.** Don't dump everything into context at session start; don't batch updates into a "I'll log this all at the end" step that gets forgotten.
+
+## What happens after planning
+
+These artifacts answer "what to ship and why, in what order, where we are." They do NOT answer "how to ship it." That's a separate layer — feature-level specs, story breakdowns, implementation plans, code — and lives outside this folder.
+
+When a phase begins:
+
+1. Use this folder for context — what's the phase's In/Out, what's the acceptance bar, what decisions constrain the work.
+2. Break the phase into feature-level work using whichever tool or method the team uses for that. Per-feature specs, story tickets, kanban boards, ad-hoc plans — all valid; the choice belongs to the dev/team layer, not this folder.
+3. As work proceeds, keep `progression.md` honest per the protocol above. Decisions, scope changes, and product-shape changes flow back into this folder; implementation details do not.
+
+The boundary is clear: **this folder is the answer to "are we building the right thing in the right order"; feature-level work is the answer to "are we building it right."** Both matter; they live in different files for a reason.
+
+## What does NOT live here
+
+- **Feature-level specs / plans** — implementation breakdowns for individual features. Wherever those live in this project, they're a layer below this folder, not inside it.
+- **Code-level architecture** — module structure, classes, services, file layouts. Those are dev-layer concerns and live with the code.
+- **Onboarding, API docs, user-facing docs** — different audience, different folder.

@@ -25,11 +25,11 @@ Five files in `docs/plans/`. Four of them map to different time orientations, wh
 
 | File | Role | What it answers |
 |---|---|---|
-| `README.md` | Folder entry point | What's in this folder, in what order to read it |
+| `README.md` | Folder entry point + agent protocol | What's in this folder, in what order to read it, how agents should maintain it across sessions, what happens after planning ends |
 | `architecture.md` | Present (invariant) | What kind of product is this? What does it touch? What are its hard constraints? |
 | `roadmap.md` | Future (plan) | What ships, in what order, with what acceptance bar? |
 | `decisions.md` | Past (locked) | What has been decided and why, append-only? |
-| `progression.md` | Now (live) | Where are we right now, what's blocking, what's next? |
+| `progression.md` | Now (live) | Where are we right now (phase + session-level focus), what's blocking, what's next? |
 
 The five cross-reference each other. `README.md` is the folder entry point; `progression.md` is the live status.
 
@@ -80,9 +80,9 @@ Generate in this order — each later file references earlier ones, and the READ
 
 3. **`decisions.md`** — Use `assets/decisions.md.template`. Append-only table. Pre-populate only with decisions explicitly stated in the spec — give each one a sequential ID, a one-line statement, and a Source pointer. Do NOT invent decisions the spec didn't make.
 
-4. **`progression.md`** — Use `assets/progression.md.template`. Initial state: phase 1 not started, no blockers, "Next" pointing to phase 1 kickoff. The Log section starts with one entry: "<date> — planning artifacts initialized."
+4. **`progression.md`** — Use `assets/progression.md.template`. Initial state: phase 1 not started, no blockers, "Next" pointing to phase 1 kickoff. Current focus section filled with "Active work: not yet begun" and "Immediate next steps: kick off Phase 1." The Log section starts with one entry: "<date> — planning artifacts initialized."
 
-5. **`README.md`** — Use `assets/README.md.template`. Folder index. Generated last because it points to the other four. Keep it as-is from the template; per-project customization is rarely needed.
+5. **`README.md`** — Use `assets/README.md.template`. Folder index, agent protocol, and post-planning workflow notes. Generated last because it points to the other four. The Protocol for agents and What happens after planning sections are core — keep them as-is from the template; per-project customization is rarely needed for those.
 
 After each file is written, tell the user where it lives and what placeholders need filling.
 

@@ -8,6 +8,17 @@ Live status. Update at session start/end and when status genuinely changes. Anyo
 
 > Add other top-level fields below if useful for the project — e.g., a working branch name, a build/deployment status, a current owner. Skip them if they don't apply.
 
+## Current focus
+
+> Session-level detail of what's happening within the current phase. The block above answers "where are we?"; this section answers "what does the next session need to know?". Keep each bullet to one line — if you need a paragraph, link to a doc instead. Update at session end so the next session opens with a warm context.
+
+- **Active work:** {{ONE_LINE — what is currently being worked on within the current phase}}
+- **Recent changes since last session:** {{ONE_OR_TWO_BULLETS — decisions made, scope shifted, blockers resolved or hit}}
+- **Immediate next steps:** {{1-3 BULLETS — granular next actions the next session should pick up}}
+- **Open questions:** {{LIST_OR_NONE — things that need answers before progressing further}}
+
+> If the project hasn't started yet, this section can read "Active work: not yet begun. Immediate next steps: kick off Phase 1." That's fine — the section earns its keep once work is in flight.
+
 ## Phases
 
 `⏳ todo · 🚧 in progress · ✅ done · ❌ blocked`
@@ -38,8 +49,9 @@ Live status. Update at session start/end and when status genuinely changes. Anyo
 
 The whole point of this file is staying current. The rules:
 
-- **Phase start** → flip the phase to `🚧`, swap "Current phase" + "Next" at the top, log a one-line entry.
-- **Phase done** → flip to `✅`, log entry, set "Current phase" to the next one (or "v1 shipped" if last).
+- **Phase start** → flip the phase to `🚧`, swap "Current phase" + "Next" at the top, refresh "Current focus", log a one-line entry.
+- **Phase done** → flip to `✅`, log entry, set "Current phase" to the next one (or "v1 shipped" if last), reset "Current focus" for the new phase.
+- **Session end** → update "Current focus" so the next session opens warm — what was just done, what's next.
 - **Blocker hit** → flip to `❌`, fill the "Blocker" field at top, log what would unblock it. Don't leave a blocker un-noted; future sessions need to find it without reading the whole log.
 - **Decision made** → record in [`decisions.md`](./decisions.md) and append a one-line entry here pointing to the new ID.
 - **Architecture changed** → update [`architecture.md`](./architecture.md) and append a log entry. Don't update product shape silently.
@@ -48,6 +60,7 @@ The whole point of this file is staying current. The rules:
 ## Reading order for someone opening the project
 
 1. The top block — current phase, blocker, next.
-2. The phases table — colored dots tell the story at a glance.
-3. The log — recent entries for context on what just happened.
-4. From there, jump to whichever sibling file is relevant.
+2. The Current focus section — what's happening at session level.
+3. The phases table — colored dots tell the story at a glance.
+4. The log — recent entries for context on what just happened.
+5. From there, jump to whichever sibling file is relevant.

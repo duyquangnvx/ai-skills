@@ -37,8 +37,9 @@ If any check above fails, the skill drifted into implementation territory. Fix b
 
 - [ ] `Current phase` matches a phase that actually exists in `roadmap.md`.
 - [ ] The phases table mirrors `roadmap.md` exactly — same numbers, same names. They drift apart fast otherwise.
+- [ ] `Current focus` section is present with all four bullets (Active work, Recent changes, Immediate next steps, Open questions). At bootstrap, "not yet begun" is acceptable for Active work — but the structure must be there.
 - [ ] Initial state is honest: all phases `⏳`, no fake "in progress" entries, log has exactly one entry (the bootstrap event).
-- [ ] Update rules are present. A progression file without rules-for-keeping-it-current rots within a week.
+- [ ] Update rules are present and cover Phase start, Phase done, Session end, Blocker, Decision made, Architecture changed, Roadmap scope changed.
 
 ## Architecture (product) integrity
 
@@ -50,6 +51,8 @@ If any check above fails, the skill drifted into implementation territory. Fix b
 ## Cross-reference integrity
 
 - [ ] `README.md` lists all four sibling files with one-line role descriptions.
+- [ ] `README.md` has a "Protocol for agents" section with at-session-start, during-session, and at-session-end rules.
+- [ ] `README.md` has a "What happens after planning" section delineating the boundary with feature-level work.
 - [ ] `progression.md` links to `roadmap.md` and `decisions.md`.
 - [ ] `roadmap.md` links to `decisions.md` and `progression.md` in its "How this evolves" section.
 - [ ] `decisions.md` links to `progression.md` in its "How to add" section.
