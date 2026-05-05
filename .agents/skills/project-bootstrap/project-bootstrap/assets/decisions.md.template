@@ -1,0 +1,39 @@
+# Decisions
+
+Append-only. Don't delete — supersede with a new entry pointing back. Each row is a locked decision the project has made. Reading top-to-bottom should tell a coherent story of how the project arrived at its current shape.
+
+| ID    | Decision                                                              | Source                                |
+| ----- | --------------------------------------------------------------------- | ------------------------------------- |
+| D-01  | {{ONE_LINE_DECISION_IN_PRESENT_TENSE}}                                | {{POINTER_TO_SPEC_OR_CHAT_OR_DOC}}    |
+| D-02  | {{ONE_LINE_DECISION}}                                                 | {{POINTER}}                           |
+| D-03  | {{ONE_LINE_DECISION}}                                                 | {{POINTER}}                           |
+
+> Pre-populate with decisions explicitly stated in the source spec. Do not invent decisions to look complete — the value of this log is that every entry was actually decided.
+
+## How to add
+
+Append a new row above with the next sequential ID. Keep the decision text to one line — if it can't be expressed in one line, write a longer doc and link to it from the row.
+
+When superseding an earlier decision: keep the old row (don't delete), and append `superseded by D-NN` to the end of its Decision text. The new row's Source should reference the superseded ID with a brief reason.
+
+Every new row should also generate a one-line entry in [`progression.md`](./progression.md) so anyone scanning recent activity sees the decision happened.
+
+## What belongs here
+
+- Product-level commitments — what the product is, what it isn't, who it's for, what platform/surface
+- Workflow decisions that affect the whole project — where artifacts live, who reviews what, what gates exist before something ships
+- Constraints the project chooses to accept — non-functional commitments like "offline-first", "single language at launch", "no paid features at v1"
+- Rejection of alternatives, when the rejection is load-bearing — "considered X, chose not to because Y" can be a row if future contributors might re-debate it
+
+## What does NOT belong here
+
+- Implementation details — language choice, framework choice, library choice, infrastructure choice. These are dev-layer concerns and live elsewhere.
+- Decisions local to a single phase — those stay inside that phase's plan.
+- Reversible micro-decisions made and unmade in a session — log churn dilutes signal.
+- Things the spec already locked in but this project never explicitly accepted or refined — the spec is the source of truth for those.
+
+## Format conventions
+
+- IDs are sequential and never reused. If an entry is wrong, supersede with a new ID. Don't renumber.
+- Source pointers are real — section numbers, doc names, dated chats, links. Never blank, never "TBD". A row without a source has no value.
+- Decision text is short and present-tense. Long context goes in linked docs; this table is for scanning.

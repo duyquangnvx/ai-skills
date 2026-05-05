@@ -1,0 +1,53 @@
+# Progression
+
+Live status. Update at session start/end and when status genuinely changes. Anyone opening this project should be able to read this file and know exactly where things stand.
+
+**Current phase:** {{PHASE_NUMBER_AND_NAME — e.g., "Phase 1 — <name> (not started)"}}
+**Blocker:** {{ACTIVE_BLOCKER_OR_NONE}}
+**Next:** {{ONE_LINE_OF_THE_VERY_NEXT_ACTION}}
+
+> Add other top-level fields below if useful for the project — e.g., a working branch name, a build/deployment status, a current owner. Skip them if they don't apply.
+
+## Phases
+
+`⏳ todo · 🚧 in progress · ✅ done · ❌ blocked`
+
+| #   | Phase                       | Status | Notes |
+| --- | --------------------------- | ------ | ----- |
+| 1   | {{PHASE_1_NAME}}            | ⏳     |       |
+| 2   | {{PHASE_2_NAME}}            | ⏳     |       |
+| 3   | {{PHASE_3_NAME}}            | ⏳     |       |
+| ... | ...                         | ⏳     |       |
+| N   | {{LAST_PHASE_NAME}}         | ⏳     |       |
+
+> The Notes column is for short context — link to a per-phase plan once one exists, or leave a one-line status detail.
+
+## Carry-over
+
+> Things that didn't fit cleanly into a phase but are still on the project's plate. If this list grows past a handful of items, that's a signal that a phase is missing or scope drifted.
+
+- _none_
+
+## Log
+
+> Append newest on top. Keep entries terse — link rather than restate.
+
+- {{YYYY-MM-DD}} — planning artifacts initialized in `docs/plans/`.
+
+## Update rules
+
+The whole point of this file is staying current. The rules:
+
+- **Phase start** → flip the phase to `🚧`, swap "Current phase" + "Next" at the top, log a one-line entry.
+- **Phase done** → flip to `✅`, log entry, set "Current phase" to the next one (or "v1 shipped" if last).
+- **Blocker hit** → flip to `❌`, fill the "Blocker" field at top, log what would unblock it. Don't leave a blocker un-noted; future sessions need to find it without reading the whole log.
+- **Decision made** → record in [`decisions.md`](./decisions.md) and append a one-line entry here pointing to the new ID.
+- **Architecture changed** → update [`architecture.md`](./architecture.md) and append a log entry. Don't update product shape silently.
+- **Roadmap scope changed** → update [`roadmap.md`](./roadmap.md), record the rationale in [`decisions.md`](./decisions.md), log here.
+
+## Reading order for someone opening the project
+
+1. The top block — current phase, blocker, next.
+2. The phases table — colored dots tell the story at a glance.
+3. The log — recent entries for context on what just happened.
+4. From there, jump to whichever sibling file is relevant.

@@ -1,0 +1,57 @@
+# Architecture
+
+> **Product** shape — what kind of thing this project is, what it touches, what its hard constraints are. One page max. For *why* decisions were made, see [`decisions.md`](./decisions.md). For *what's coming next*, see [`roadmap.md`](./roadmap.md).
+>
+> Code-level architecture (components, modules, data flow, file layout) lives elsewhere. This file answers: "if a new contributor opens the project, what shape are they walking into?"
+
+## What this is
+
+{{ONE_OR_TWO_SENTENCES_DESCRIBING_THE_PRODUCT_IN_USER_FACING_TERMS}}
+
+## Shape
+
+- **Type:** {{ONE_LINE — e.g., the kind of product, the surface it lives on, how users reach it}}
+- **Distribution:** {{HOW_USERS_GET_IT}}
+- **Operating context:** {{ONLINE_OFFLINE_HYBRID / SINGLE_USER_MULTI_USER / OTHER_RELEVANT_OPERATING_FACT}}
+
+## What's inside the product boundary
+
+> What this project owns and ships. Describe at the feature-group level, not the code level.
+
+- {{FEATURE_GROUP_1}}
+- {{FEATURE_GROUP_2}}
+- {{FEATURE_GROUP_3}}
+
+## What's outside the boundary
+
+> External things the product depends on but does not own — distribution channels, third-party services, host platform capabilities.
+
+- {{EXTERNAL_1}}
+- {{EXTERNAL_2}}
+
+> If the product genuinely has no external dependencies at the product level, write "None at the product level." A small surface is a feature.
+
+## Product-level constraints
+
+> Hard rules at the product level — things that shape every phase and every decision. These come from the spec or from explicit entries in [`decisions.md`](./decisions.md). Each constraint must be observable, not aspirational.
+
+- {{CONSTRAINT_1}}
+- {{CONSTRAINT_2}}
+
+## Out of scope at v1
+
+> Anchor the spec's non-goals here so they don't quietly creep back in mid-project.
+
+- {{NON_GOAL_1}}
+- {{NON_GOAL_2}}
+
+## Open product questions
+
+> Product-level questions still unresolved. Each should eventually get an answer (logged in [`decisions.md`](./decisions.md)) or an explicit deferral.
+
+- {{QUESTION_1}}
+
+## How this file evolves
+
+- Product shape changes (new product type, new external dependency, new accepted constraint) → log the change as a row in [`decisions.md`](./decisions.md), update this file, note in [`progression.md`](./progression.md).
+- Don't expand into code-level detail. If you find yourself writing about classes, modules, or files in the source tree, that content belongs in a dev-layer doc, not here.

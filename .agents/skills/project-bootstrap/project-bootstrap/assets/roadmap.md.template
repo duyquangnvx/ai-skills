@@ -1,0 +1,78 @@
+# Roadmap
+
+> Phases that ship the product. Each phase is a vertical slice — independently demoable end-to-end. Order is by dependency, not by layer. For *why* decisions were made, see [`decisions.md`](./decisions.md). For *where we are right now*, see [`progression.md`](./progression.md).
+
+## Phases
+
+| #   | Phase                          | Shippable artifact                    | Refs     |
+| --- | ------------------------------ | ------------------------------------- | -------- |
+| 1   | {{PHASE_1_NAME}}               | {{ONE_LINE_OF_WHAT_DEMOS_AT_END}}     | {{REFS}} |
+| 2   | {{PHASE_2_NAME}}               | {{ONE_LINE}}                          | {{REFS}} |
+| 3   | {{PHASE_3_NAME}}               | {{ONE_LINE}}                          | {{REFS}} |
+| ... | ...                            | ...                                   | ...      |
+| N   | {{LAST_PHASE_NAME}}            | {{ONE_LINE}}                          | {{REFS}} |
+
+> One-line summary of the phasing logic if useful.
+
+---
+
+## Phase 1 — {{NAME}}
+
+**Why first:** {{ONE_OR_TWO_SENTENCES — what makes this the right phase to start with, not a later one}}
+
+**In scope:** {{LIST_OF_WHAT_THIS_PHASE_DELIVERS}}
+
+**Out of scope:** {{LIST_OF_WHAT_DELIBERATELY_LANDS_LATER}}
+
+**Acceptance:** {{OBSERVABLE_CRITERIA — what an outside observer can verify to say this phase is done}}
+
+**Refs:** {{SPEC_SECTIONS_OR_OTHER_LINKS}}
+
+## Phase 2 — {{NAME}}
+
+**Why next:** {{REASONING_FOR_THIS_PHASE_FOLLOWING_THE_PREVIOUS_ONE}}
+
+**In scope:** {{LIST}}
+
+**Out of scope:** {{LIST}}
+
+**Acceptance:** {{CRITERIA}}
+
+**Refs:** {{LINKS}}
+
+## Phase N — {{NAME}}
+
+> Continue with one section per phase. Keep each phase to a handful of lines. If a phase doesn't fit, it's probably two phases.
+
+**Why:** ...
+
+**In scope:** ...
+
+**Out of scope:** ...
+
+**Acceptance:** ...
+
+**Refs:** ...
+
+---
+
+## Dependencies
+
+> Skip this section if phases are strictly linear. If there are non-obvious cross-phase dependencies, list them here.
+
+- {{e.g., "Phase X needs Y because <reason>"}}
+
+## Definition of Done — v1
+
+> The bar for "we shipped v1." Every item must be observable. The list captures the floor — what stops us shipping if missing — not stretch goals.
+
+1. {{CRITERION_1}}
+2. {{CRITERION_2}}
+3. {{CRITERION_3}}
+
+## How this file evolves
+
+- A phase ships → flip its row in [`progression.md`](./progression.md). Don't edit this file unless scope changed.
+- A phase's scope changes mid-flight → log a row in [`decisions.md`](./decisions.md), update the In/Out here, note the change in [`progression.md`](./progression.md)'s log.
+- A new phase is needed in the middle → renumber everything after; both humans and agents look for "Phase N", numbering matters.
+- A phase is too big to ship in one go → split it. Two smaller phases beat one long phase of "almost there."

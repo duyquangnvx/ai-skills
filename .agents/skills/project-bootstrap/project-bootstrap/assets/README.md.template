@@ -1,0 +1,44 @@
+# Planning artifacts
+
+Entry point for this folder. If you (human or agent) just opened `docs/plans/`, read this file first, then jump to whichever sibling is relevant.
+
+## What lives here
+
+PM-level planning for the project. Not implementation, not feature specs — those live elsewhere.
+
+| File | Read when you want to know... |
+|---|---|
+| [`progression.md`](./progression.md) | Where we are right now, what's blocking, what's next |
+| [`roadmap.md`](./roadmap.md) | What ships in what order, with what acceptance bar |
+| [`decisions.md`](./decisions.md) | What has been decided and why, append-only |
+| [`architecture.md`](./architecture.md) | What kind of product this is, what it touches, hard constraints |
+
+## Reading order for first-time arrival
+
+1. **`progression.md`** — top block tells you the live state in five lines.
+2. **`roadmap.md`** — gives the full plan if you need context for the current phase.
+3. **`architecture.md`** — gives the product shape if you need to understand the product, not just the plan.
+4. **`decisions.md`** — append-only history; useful when you wonder "why is the project shaped this way?"
+
+## How these files relate
+
+```
+            architecture.md  ← what the product is (present, invariant)
+                   │
+                   ▼
+              roadmap.md     ← what we plan to build (future)
+                   │
+                   ▼
+            progression.md   ← where we are now (live)
+                   │
+                   ▼
+             decisions.md    ← why we got here (past, append-only)
+```
+
+Each file has a "How this evolves" section at the bottom describing when and how it gets updated. If you're about to change one of these files, read that section first — they're not free-form notes, they have rules.
+
+## What does NOT live here
+
+- **Feature-level specs / plans** — implementation breakdowns for individual features. Wherever those live in this project, they're a layer below this folder, not inside it.
+- **Code-level architecture** — module structure, classes, services, file layouts. Those are dev-layer concerns and live with the code.
+- **Onboarding, API docs, user-facing docs** — different audience, different folder.
