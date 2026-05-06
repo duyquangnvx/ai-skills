@@ -40,7 +40,7 @@ children:
     children:
       - { id: lblTimer, type: Text,   bind: { text: "state.timer", fmt: "{mm:ss}" }, style: { text: token.h1 } }
       - { id: lblGoal,  type: Text,   bind: { text: "state.goalText" },              style: { text: token.body } }
-      - { id: hearts,   type: Custom, name: HeartRow, props: { bind: "save.hearts.current" } }
+      - { id: hearts,   type: Custom, name: HeartRow, bind: "save.hearts.current" }
 
   - id: boardRegion
     type: ZStack

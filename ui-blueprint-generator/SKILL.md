@@ -33,11 +33,7 @@ When to ask vs. proceed:
 - Plain interactive context AND there is a non-trivial ambiguity you cannot assume safely (e.g. two mutually exclusive readings of the same screen) → ask one focused question after the summary.
 - Otherwise → produce summary and proceed.
 
-| Rationalization | Reality |
-|---|---|
-| "User said no need to confirm — so I'll skip the summary" | User said don't *block*, not don't *show*. The summary is visibility, not an ask. |
-| "Auto mode means skip" | Auto mode skips routine asks. The summary is transparency, not an ask. |
-| "I'll surface assumptions in artifact `## notes` later" | `## notes` is buried; the summary belongs at the top of your response where the user sees it first. |
+Always produce the summary, even in auto mode — it is visibility, not an ask.
 
 ### Step 1 — Read upstream specs
 
@@ -49,7 +45,11 @@ Check `ui-blueprints/_config.md`.
 
 **If exists:** load it. Subsequent blueprints conform to its declared bind namespaces, action verbs, style tokens.
 
-**If not:** propose one based on upstream specs + project context, save it, and surface the choice (domain + namespaces) in the visibility summary so the user can object. See `references/config-template.md` for canonical templates (game / mobile-app).
+**If not:** propose one based on upstream specs + project context. Write it to `ui-blueprints/_config.draft.md` (NOT `_config.md`) and surface the choice (domain + namespaces + verbs) in the visibility summary. Commit to `_config.md` only when:
+- the user acknowledges (interactive context), OR
+- auto-mode is active AND no `_config.md` already exists AND no objection arrives in this turn — then promote draft → `_config.md` after blueprints are drafted.
+
+This protects against silently baking wrong namespaces into N blueprints during batch generation. See `references/config-template.md` for canonical templates (game / mobile-app).
 
 ### Step 3 — Extract screen list, classify, and surface in summary
 
@@ -77,12 +77,16 @@ After drafting, verify (full list in `references/companion-checks.md`):
 
 - Every action's `goto:` target references a declared mode in this file
 - Every mode-level `widget:` resolves to a real widget id in `## ui`
-- Every binding path starts with a namespace declared in `_config.md`
+- Every binding path starts with a namespace declared in `_config.md` (or is `data.*`/`item.*`/`props.*`)
 - Every action verb is declared in `_config.md`
 - Every widget / region / mode id is unique within its file
+- Exactly one mode has `initial: true`; no `final: true` mode is the source of any `goto:`
+- Every `Include ref:` resolves to an existing `type: shared` blueprint
+- Every `data.<key>` used inside an `Include`d subtree is supplied by every consumer's `Include props:`
 - `parents` and `children` are reciprocal across files (if A lists B as a child, B should list A as a parent)
 - Every acceptance ID is unique across the project
 - Every event in frontmatter `listens` appears in some mode's `on.event`; every event used at file boundary is in `emits` or `listens`
+- Every `i18n.*` path used in `bind.text` is recorded for downstream localization
 
 If using the JSON Schema, run it. Otherwise these checks are manual.
 
@@ -102,24 +106,25 @@ List file paths inline with one-line summaries. Briefly note: how many blueprint
 
 A blueprint passes if:
 
-- A reader unfamiliar with upstream spec understands what the screen does and what its modes are from `## purpose` + `## modes` alone.
-- The `## ui` tree expresses sizing without absolute positioning — a downstream agent can implement it in any framework's stack/grid primitives.
+- `## purpose` is ≤ 3 sentences and names every top-level mode it declares.
+- The `## ui` tree expresses sizing without absolute-positioning offsets — a downstream agent can implement it in any framework's stack/grid primitives.
 - Every `## acceptance` row has Given/When/Then mapping cleanly to a test case.
 - Every container, widget type, sizing unit, and action verb appears in `references/vocabulary.md` or in the project's `_config.md` extensions.
 - All YAML islands parse cleanly (action verbs with multi-arg quoted strings use block form, not flow form).
+- Every interactive widget (`Button`, `IconButton`, `Toggle`, `Slider`, `HitArea` used as a button) has a `label` / `bind.label` OR an `accessibility.a11yLabel`.
+- Every `popup` with `modal: true` has at least one dismiss path (`goto:` to a `final:` mode, or `dismissible: true` in frontmatter).
+- No two `Scroll` nodes are nested on the same axis.
+- For list-based screens (`bind.items`), `## acceptance` covers at least empty and loading states.
+- Every `scene` and modal `popup` declares its hardware/back-gesture behavior — either `## notes` states "inherits engine default" explicitly, or a `back` event is wired in `## modes`.
 
 ## Common pitfalls
 
 - **Inventing screens not in spec.** Surface gaps in the summary; do not fill silently.
-- **Absolute positioning via `offset:`.** `offset: {x, y}` is for fine nudges (0-8dp). Writing `offset: {y: 24dp}` to place "title 24dp from top" is absolute positioning — restructure with `VStack` + `Spacer` (canonical pattern in `references/vocabulary.md`).
-- **Flow-list action verbs that break YAML.** Use block form when actions have commas between quoted args. See `references/format.md`.
-- **Free-form action strings.** `action: "open settings"` is wrong. `do: [ ui.openPopup("settings") ]` is right.
-- **Engine leakage.** Mentioning a framework's API means it stopped being engine-agnostic.
-- **Mixing imperative animation language into `## modes`.** Declare the destination mode; let engine animation handle the slide. Animation specs live in `DESIGN.md`.
 - **Skipping the summary step.** Drafting all 12 screens before user sees the list often produces 14 (extras invented) or 9 (missed).
+- **Engine leakage.** Mentioning a framework's API (e.g. `useState`, `RectTransform`, `flex-grow`) means it stopped being engine-agnostic.
 - **Hard-coding natural-language text.** Symbols (`+`, `x`, `→`) and digits are fine as `text:` literals. Anything else MUST bind to `i18n.*`.
-- **Pixel sizes / exact colors / drop shadows in blueprints.** Those belong in `DESIGN.md`. Blueprints reference style tokens by name only.
-- **Confusing `Custom` with `Include`.** `Custom` = engine code defines the widget; `Include` = another blueprint defines the structure. See `references/vocabulary.md`.
+
+Other authoring constraints (offset usage, action verb YAML form, `Custom` vs `Include`, pixel/color leakage, animation language) — see `references/vocabulary.md` and `references/companion-checks.md`.
 
 ## Reference files
 
@@ -131,6 +136,7 @@ Load these as needed:
 - `references/config-template.md` — canonical `_config.md` for game + mobile-app domains
 - `references/blueprint.schema.yaml` — JSON Schema (optional artifact; copy into project for linting)
 - `references/companion-checks.md` — cross-file checks not expressible in JSON Schema
+- `references/patterns.md` — canonical recipes for common UI patterns (forms, wizards, paged lists, tabs, search, sheets, toasts)
 
 ## Examples
 

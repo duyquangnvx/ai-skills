@@ -10,7 +10,7 @@ Cross-file and structural rules that JSON Schema cannot express. A companion val
 - **Widget references exist.** Every `widget: <id>` in mode-level `on:` resolves to a widget id in `## ui`.
 - **ZStack children require `align`.** Every direct child of a `ZStack` declares `align:` (9-position).
 - **ZStack children at most one of width/flex.** A child in a ZStack may use `width: fill` or fixed sizing, never `flex:`.
-- **`offset:` magnitude warning.** Warn when `offset.x` or `offset.y` exceeds 8dp — this is usually misuse for absolute positioning.
+- **`offset:` structural-use warning.** `offset` is for anchor-tweak on a ZStack child (badge inset, focus ring, tooltip arrow). Warn when `offset.x` or `offset.y` magnitude exceeds ~5% of the parent's resolved dimension along that axis — the value is almost always structural positioning that should be expressed via `padding` or stack restructure instead.
 - **Hard-coded `text:` literals.** `text:` in a `Text` widget may be a symbol (`+`, `x`, `→`, etc.) or digits only. Anything natural-language is a violation; use `bind: { text: "i18n.<key>" }`.
 - **`fmt` placement.** `fmt:` must live inside `bind:`, not as a sibling of `bind:`.
 - **`Custom` requires `name`.** `type: Custom` without `name:` is invalid.
@@ -24,7 +24,18 @@ Cross-file and structural rules that JSON Schema cannot express. A companion val
 - **Unique acceptance IDs.** Acceptance `id:` is unique across the project.
 - **`parents` / `children` reciprocity.** If A lists B in `children`, B must list A in `parents`. (For `type: shared`, `parents` denotes consumers — same reciprocity rule applies if the consumer uses `type: Include, ref: <shared-id>`.)
 - **`Include` references resolve.** Every `type: Include` `ref:` must point to a `type: shared` blueprint that exists in the project.
+- **`Include` props/data shape match.** Every `data.<key>` used inside a shared blueprint's subtree must correspond to a key supplied by every consumer's `Include props:`. Mismatched keys silently render empty.
 - **Wikilink targets exist.** `[[scenes/<id>]]`, `[[popups/<id>]]`, `[[shared/<id>]]`, `[[U-<...>]]` resolve to real files / acceptance IDs.
+
+## Behavior / anti-pattern checks
+
+- **Goto-self / unreachable mode loops.** A mode whose only outgoing transitions return to itself (without explicit `description:` flagging this is intentional), or any mode unreachable from the `initial: true` mode, is flagged.
+- **Final mode reachability.** At least one path from the initial mode reaches a `final: true` mode (if any final mode exists).
+- **Nested same-axis Scroll.** A `Scroll` node with the same `axis` as an ancestor `Scroll` causes gesture conflict — flagged.
+- **`data.set` + `emit` on overlapping paths.** Within a single `do:` block, a `data.set("foo.bar", ...)` followed (or preceded) by an `emit(...)` whose payload references `foo.bar` has undefined ordering across renderer batching. Flagged unless the action list has a documented ordering note.
+- **Per-frame bind on time-varying values.** A `bind: { text: "<path>" }` whose source declares `tick`-rate updates (e.g. `state.elapsedMs`) without `fmt:` quantization is flagged — bind to a quantized field (e.g. `state.timer` formatted `{mm:ss}`) instead.
+- **Modal popup dismiss path.** Every popup with `modal: true` must have at least one outgoing `goto:` to a `final:` mode OR `dismissible: true` in frontmatter — otherwise the popup can wedge.
+- **Missing i18n fallback.** Every `i18n.*` bind path used in `bind.text` should have a default-locale fallback declared somewhere in the project's i18n source. Surfaced as a warning if the project supplies an i18n key index.
 
 ## Config-conformance checks
 
@@ -42,5 +53,5 @@ Cross-file and structural rules that JSON Schema cannot express. A companion val
 ## Recommended runtime behavior
 
 - Schema-only failures fail the validator.
-- Companion warnings (e.g. `offset` > 8dp, hard-coded text not whitelisted) do not fail by default but appear in CI output. A project may promote warnings to failures via `_config.md`.
+- Companion warnings (e.g. structural-use `offset`, hard-coded text not whitelisted) do not fail by default but appear in CI output. A project may promote warnings to failures via `_config.md`.
 - A re-validation pass runs against all blueprints whenever `_config.md` changes (verb removed, namespace renamed, version bumped).

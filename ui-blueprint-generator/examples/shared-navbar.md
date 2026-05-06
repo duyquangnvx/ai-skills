@@ -2,7 +2,6 @@
 id: hudTopBar
 type: shared
 title: "HUD top bar (back, title, settings)"
-orientation: portrait
 parents: [gameplayScene, levelSelect, settingsScene, resultPopup]
 sources:
   - "specs/ux/navigation.md#top-bar"

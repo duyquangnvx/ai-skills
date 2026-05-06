@@ -133,6 +133,8 @@ visible: { bind: "feed.items.length > 0" }
 
 `where:` guards on mode-level `on:` entries can reference any declared bind path. They do **not** need to check the current mode — mode-level `on:` already runs only in that mode.
 
+The pseudo-path `$mode` (string-valued, name of the active mode) is available in widget-level `visible.bind` / `enabled.bind` for toggling sub-regions of `## ui` between modes — e.g. `visible: { bind: "$mode === \"loading\"" }`. `$mode` is renderer-provided; it is not a declared namespace and does not need to appear in `_config.md`.
+
 If you need anything outside this grammar, the computation belongs in the data source — bind to a named field.
 
 ## Section structure
@@ -159,12 +161,6 @@ In prose sections (`## purpose`, `## notes`), reference using `[[wikilink]]`:
 | `[[shared/hud]]` | A shared widget cluster |
 | `[[sources:specs/gameplay#animations]]` | A specific anchor in upstream docs |
 | `[[U-gameplayScene-1]]` | An acceptance test ID |
-
-**Why wikilinks over markdown links**:
-
-- Stable across renames (with an alias map, if used)
-- Consistent syntax LLMs get right
-- Easy to grep and validate
 
 The validator can warn on broken wikilinks if a project maintains an index of valid targets.
 

@@ -52,8 +52,14 @@ configVersion: <semver>      # optional; matches version: in _config.md frontmat
 orientation: portrait | landscape | both  # optional, default: both. Ignored for type: shared.
 safeArea: true | false                    # optional, default: true. Ignored for type: shared.
 
-modal: true | false        # popup only — true blocks input behind
-dismissible: true | false  # popup only — tap-outside / back-button closes
+behavior: modal | sheet | drawer | toast | tooltip | banner | actionSheet
+                            # popup only — overlay sub-class. default: modal
+modal: true | false         # popup only — true blocks input behind
+dismissible: true | false   # popup only — tap-outside / back-button closes
+autoDismissMs: <int>        # popup only, behavior=toast — auto-dismiss after ms
+anchorWidget: <widget-id>   # popup only, behavior=tooltip|popover — anchor widget
+snapPoints: [<size>, ...]   # popup only, behavior=sheet — height stops
+swipeToDismiss: true | false  # popup only, behavior=drawer|sheet
 
 parents: [<id>, ...]       # required for non-root scenes/popups (screens that navigate INTO this).
                            # For type: shared, parents = consumers (blueprints that include this cluster).
@@ -67,13 +73,20 @@ dataBindings:              # optional — typed data sources this screen reads
 
 emits: [<event>, ...]      # bus events this screen publishes
 listens: [<event>, ...]    # bus events this screen subscribes to
+
+accessibility:             # optional — screen-level a11y declarations
+  a11yLabel: <string|bindPath>
+  a11yRole: <role>           # e.g. dialog, navigation, list
+  a11yLiveRegion: polite | assertive | none
+  focusOrder: [<widget-id>, ...]
 ---
 ```
 
 ### Frontmatter validation rules
 
 - `id` is unique across the entire `ui-blueprints/` tree.
-- `modal` and `dismissible` are only valid when `type: popup` — error otherwise.
+- `modal`, `dismissible`, `behavior`, `autoDismissMs`, `anchorWidget`, `snapPoints`, `swipeToDismiss` are only valid when `type: popup` — error otherwise.
+- `autoDismissMs` is only valid when `behavior: toast`. `anchorWidget` is only valid when `behavior: tooltip` (or domain-specific `popover`). `snapPoints` is only valid when `behavior: sheet`. `swipeToDismiss` is only valid when `behavior: sheet | drawer`.
 - `safeArea` and `orientation` are ignored (or error, depending on validator) when `type: shared`.
 - `sources` paths must resolve to real anchors in project documentation.
 - `parents` / `children` must reference real blueprint IDs.
@@ -105,7 +118,7 @@ Universal rules:
 - Container types, sizing units, widget types and their props — see `vocabulary.md`.
 - `Spacer` is a leaf node used inside stacks for flexible empty space.
 - Children of `ZStack` require `align:` (9-position).
-- `bind:`, `visible:`, `enabled:` use bind paths and the boolean DSL — see `conventions.md`.
+- `bind:` uses bind paths (or templates with `fmt`); `visible:` / `enabled:` use the boolean DSL — see `conventions.md`.
 - `on:` is a map of event → action-tuple list. **Use only for state-independent side-effects.** Any action that triggers a state transition (`goto:`) lives in `## modes`, not on the widget.
 
 The root container always fills its parent — no explicit `fill` directive.
@@ -138,18 +151,7 @@ Declarative state machine. Transitions live with their source mode.
       goto: <mode-id>
 ```
 
-#### Action verb syntax
-
-`do:` uses YAML block form. Flow form breaks on action arguments that contain commas inside `(...)`. Single-action lists with no embedded commas may stay inline: `do: [ ui.openPopup("settings") ]`. When an action argument contains `{...}` (object literal), single-quote-wrap the whole action: `- 'ui.openPopup("x", { result: "y" })'`.
-
-Validation:
-
-- Exactly one mode has `initial: true`.
-- Modes with `final: true` cannot be the source of any `goto:`.
-- Every `goto:` target references a declared mode in this file.
-- Every `widget:` references a real widget id in `## ui`.
-- Every bus `event:` appears in frontmatter `listens`.
-- Every action verb is declared in project `_config.md`.
+Action verb YAML form — see `vocabulary.md#yaml-form-for-action-lists`. Validation rules (single `initial`, `goto` resolves, verb declared, etc.) — see `companion-checks.md`.
 
 If a screen has no state changes (e.g. a pure shared widget cluster), use `_none_`.
 

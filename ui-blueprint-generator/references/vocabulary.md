@@ -2,9 +2,9 @@
 
 Canonical lists for layout primitives, widget types, sizing units, action verbs, and style tokens. The skill enforces these as **closed sets** at the universal level. Project-specific extensions are declared in `_config.md`.
 
-## Layout primitives — 5 containers + Spacer
+## Layout primitives — 6 containers + Spacer
 
-These are the **only** allowed container types. No `Flex`, no `Wrap`, no `Absolute` — banning absolute positioning forces every spec to express constraints, eliminating resolution-dependence.
+These are the **only** allowed container types. No `Flex`, no `Absolute` — banning absolute positioning forces every spec to express constraints, eliminating resolution-dependence.
 
 | Type | Semantics | Children sizing |
 |---|---|---|
@@ -13,6 +13,7 @@ These are the **only** allowed container types. No `Flex`, no `Wrap`, no `Absolu
 | `ZStack` | Layered, last-on-top | per child: `align: <9-position>`, optional `offset: {x, y}`. May use `width: fill` and/or `height: fill` to fill the layer. |
 | `Grid` | NxM uniform cells | `cols: <int>`, `rows: <int\|auto>`, `gap: <size>` |
 | `Scroll` | Scrollable viewport, single axis | `axis: vertical\|horizontal`, single child |
+| `Wrap` | Flow layout, breaks into multiple runs when overflowing | `axis: horizontal\|vertical` (run direction), `runGap: <size>`, `itemGap: <size>` |
 
 `Spacer` is a leaf node (not a container) used inside stacks for flexible empty space:
 ```yaml
@@ -26,17 +27,18 @@ These are the **only** allowed container types. No `Flex`, no `Wrap`, no `Absolu
 
 `top-left` `top-center` `top-right` `center-left` `center` `center-right` `bottom-left` `bottom-center` `bottom-right`
 
-`offset: {x, y}` is for **fine nudge** from the align point — typical magnitudes 0-8dp (badge inset, icon kerning, focus ring). Negative values allowed for inward offsets from edges.
+`offset: {x, y}` is reserved for **anchor-tweak on a ZStack child** — small adjustments relative to the align point. Typical use cases: badge inset on an icon corner, focus-ring kerning, tooltip-arrow nudge, popover anchoring.
 
-**If you need offset > 8dp, that is absolute positioning** — restructure with `VStack` / `HStack` + `Spacer` instead. The 6 layout primitives can express every real layout; reaching for offset usually means missing a `Spacer`.
+`offset` is **not** for full-layout positioning. If you find yourself using `offset` to place a top-bar, a footer, a panel, or any structural region — restructure with `VStack`/`HStack` + `padding` (or `Spacer` for flexible empty space).
 
-| Designer spec | ❌ Wrong (absolute via offset) | ✅ Right (stack + Spacer) |
+| Designer spec | ❌ Wrong (offset for full layout) | ✅ Right |
 |---|---|---|
-| Title 24dp from top of panel | `align: top-center, offset: {y: 24dp}` | `VStack: [Spacer 24dp, title, ...]` |
-| Button 16dp from bottom-left of panel | `align: bottom-left, offset: {x: 16dp, y: -16dp}` | `VStack: [..., Spacer flex, HStack[Spacer 16dp, btn, Spacer flex, ...], Spacer 16dp]` |
-| Badge 4dp inset from icon corner | `align: top-right, offset: {x: -4dp, y: 4dp}` | (Stays as offset — magnitude ≤ 8dp.) |
+| Title 24dp from top of panel | `align: top-center, offset: {y: 24dp}` | `VStack` with `padding: {t: 24dp}` |
+| Button 16dp from bottom-left of panel | `align: bottom-left, offset: {x: 16dp, y: -16dp}` | `panel` (ZStack) with `padding: 16dp`; button has `align: bottom-left` |
+| Badge inset from icon corner | `align: top-right, offset: {x: -4dp, y: 4dp}` | Keep as-is — anchor-tweak is the right use of `offset` |
+| Tooltip arrow nudged from anchor | `align: bottom-center, offset: {y: -12dp}` | Keep as-is — anchor-tweak |
 
-The validator may warn on `offset` magnitudes > 8dp.
+Heuristic: if the offset magnitude is large relative to the parent's dimension (e.g. > ~5%), it is probably structural positioning — restructure. The validator surfaces such offsets as warnings.
 
 ## Sizing units — 7 forms
 
@@ -51,7 +53,23 @@ The validator may warn on `offset` magnitudes > 8dp.
 
 For "fraction of remaining space along the stack axis", use the `flex: <int>` child key.
 
-**Banned units**: `px`, `em`, `rem`, `vw`, `vh`, arithmetic expressions like `100% - 32dp`. If you find yourself wanting arithmetic, the layout is wrong — restructure with a `Spacer` or split a parent.
+**Banned units**: `px`, `em`, `rem`, `vw`, `vh`, arithmetic expressions like `100% - 32dp`. If you find yourself wanting arithmetic, the layout is wrong — restructure with a `Spacer`, use `padding`, or split a parent.
+
+## Spacing — padding
+
+Containers and atomic widgets accept a `padding` field for inset spacing. Prefer `padding` over wrapping a child in `Spacer` sandwiches — it maps cleanly to SwiftUI `.padding`, Flutter `Padding`, UGUI `LayoutGroup.padding`, and CSS `padding`.
+
+Forms:
+
+```yaml
+padding: 16dp                      # uniform, all 4 edges
+padding: { h: 16dp, v: 8dp }       # horizontal / vertical shortcuts
+padding: { t: 12dp, r: 16dp, b: 12dp, l: 16dp }   # per-edge
+```
+
+Values use any `dp`/`%w`/`%h`/`%sw`/`%sh` sizing unit. `h` is shorthand for `l` + `r`; `v` for `t` + `b`. Per-edge values override shortcuts when both are present.
+
+Use `padding` for "inset content N from container edge". Use `Spacer` only for distributing flexible empty space along a stack axis.
 
 ## Widget types
 
@@ -203,6 +221,18 @@ A blueprint reads data only through declared **bind namespaces**. Each namespace
 | Mobile app | `user.*`, `feed.*`, `prefs.*`, `flags.*`, `i18n.*` |
 | Generic | declare what makes sense for the project |
 
+### Reserved context namespaces
+
+These three namespaces are always available — do **not** declare them in `_config.md`:
+
+| Namespace | Where it's exposed |
+|---|---|
+| `data.*` | Inside a `type: shared` blueprint — values injected by the consumer's `Include props:`. Declared via `dataBindings:` on the shared blueprint frontmatter. |
+| `item.*` | Inside `List.itemTemplate` — refers to the current row of the bound collection. |
+| `props.*` | Alias used by some validators when describing what the parent passes into an `Include`. From the shared blueprint's perspective, read as `data.*`. |
+
+The validator does not require these to be declared in `_config.md`'s `## Bind namespaces`.
+
 ### Bind syntax in widgets
 
 ```yaml
@@ -224,10 +254,4 @@ The renderer resolves bind paths at runtime. Blueprints stay engine-agnostic.
 
 ### Event-name convention
 
-Bus events (used in `emits` / `listens` and as `event:` in modes) follow `<scope>.<verb>` in camelCase:
-
-- `level.complete`, `level.timeUp`, `level.boosterUsed`
-- `pause.resumed`, `tutorial.required`, `confirm.accepted`
-- `timer.tick`, `feed.refreshed`
-
-Scope is usually a domain or feature; verb is past tense for events that happened, present tense for commands. Stay consistent within a project.
+Bus events follow `<scope>.<verb>` in camelCase — see `conventions.md#event-names`.

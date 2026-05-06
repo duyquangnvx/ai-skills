@@ -23,7 +23,7 @@ properties:
     properties:
       id:
         type: string
-        pattern: "^[a-zA-Z][a-zA-Z0-9_]*$"
+        pattern: "^[a-z][a-zA-Z0-9]*$"
       type:
         enum: [scene, popup, shared]
       title:
@@ -38,6 +38,18 @@ properties:
       modal:
         type: boolean
       dismissible:
+        type: boolean
+      behavior:
+        enum: [modal, sheet, drawer, toast, tooltip, banner, actionSheet]
+      autoDismissMs:
+        type: integer
+        minimum: 0
+      anchorWidget:
+        type: string
+      snapPoints:
+        type: array
+        items: { $ref: "#/definitions/sizingUnit" }
+      swipeToDismiss:
         type: boolean
       parents:
         type: array
@@ -59,6 +71,15 @@ properties:
       listens:
         type: array
         items: { type: string }
+      accessibility:
+        type: object
+        properties:
+          a11yLabel: { type: string }
+          a11yRole: { type: string }
+          a11yLiveRegion: { enum: [polite, assertive, none] }
+          focusOrder:
+            type: array
+            items: { type: string }
     allOf:
       # modal/dismissible only valid for popup
       - if:
@@ -67,12 +88,22 @@ properties:
           properties:
             modal: { not: {} }
             dismissible: { not: {} }
+            behavior: { not: {} }
+            autoDismissMs: { not: {} }
+            anchorWidget: { not: {} }
+            snapPoints: { not: {} }
+            swipeToDismiss: { not: {} }
       - if:
           properties: { type: { const: shared } }
         then:
           properties:
             modal: { not: {} }
             dismissible: { not: {} }
+            behavior: { not: {} }
+            autoDismissMs: { not: {} }
+            anchorWidget: { not: {} }
+            snapPoints: { not: {} }
+            swipeToDismiss: { not: {} }
             orientation: { not: {} }
             safeArea: { not: {} }
 
@@ -91,7 +122,7 @@ properties:
           properties:
             id:
               type: string
-              pattern: "^[a-zA-Z][a-zA-Z0-9_]*$"
+              pattern: "^[a-z][a-zA-Z0-9]*$"
             description: { type: string }
             initial: { type: boolean }
             final: { type: boolean }
@@ -150,11 +181,11 @@ definitions:
     properties:
       id:
         type: string
-        pattern: "^[a-zA-Z][a-zA-Z0-9_]*$"
+        pattern: "^[a-z][a-zA-Z0-9]*$"
       type:
         oneOf:
           # Container types (and Spacer leaf)
-          - enum: [VStack, HStack, ZStack, Grid, Scroll, Spacer]
+          - enum: [VStack, HStack, ZStack, Grid, Scroll, Wrap, Spacer]
           # Widget types
           - enum:
               - Text
@@ -179,6 +210,18 @@ definitions:
         properties:
           x: { $ref: "#/definitions/sizingUnit" }
           y: { $ref: "#/definitions/sizingUnit" }
+      padding:
+        oneOf:
+          - $ref: "#/definitions/sizingUnit"
+          - type: object
+            properties:
+              t: { $ref: "#/definitions/sizingUnit" }
+              r: { $ref: "#/definitions/sizingUnit" }
+              b: { $ref: "#/definitions/sizingUnit" }
+              l: { $ref: "#/definitions/sizingUnit" }
+              h: { $ref: "#/definitions/sizingUnit" }
+              v: { $ref: "#/definitions/sizingUnit" }
+            additionalProperties: false
       # Bindings / interactions
       bind:
         oneOf:
@@ -212,6 +255,8 @@ definitions:
       rows: { oneOf: [{ type: integer, minimum: 1 }, { const: auto }] }
       gap:  { $ref: "#/definitions/sizingUnit" }
       axis: { enum: [vertical, horizontal] }
+      runGap: { $ref: "#/definitions/sizingUnit" }
+      itemGap: { $ref: "#/definitions/sizingUnit" }
       # Widget-specific props (universal subset; project widgets layer more in _config.md)
       text:    { type: string }
       label:   { type: string }
@@ -229,13 +274,14 @@ definitions:
       badge:
         type: object
         additionalProperties: true
+      a11yLabel: { type: string }
       # Custom widget
       name:    { type: string }
       props:
         type: object
         additionalProperties: true
       # Include widget — references a shared blueprint
-      ref:     { type: string, pattern: "^[a-zA-Z][a-zA-Z0-9_]*$" }
+      ref:     { type: string, pattern: "^[a-z][a-zA-Z0-9]*$" }
       itemTemplate:
         $ref: "#/definitions/uiNode"
     allOf:
