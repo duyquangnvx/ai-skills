@@ -10,7 +10,7 @@ These are the **only** allowed container types. No `Flex`, no `Wrap`, no `Absolu
 |---|---|---|
 | `VStack` | Vertical column, top-to-bottom | per child: `height: <size>` or `flex: <int>`, plus `width: fill\|auto` |
 | `HStack` | Horizontal row, left-to-right | per child: `width: <size>` or `flex: <int>`, plus `height: fill\|auto` |
-| `ZStack` | Layered, last-on-top | per child: `align: <9-position>`, optional `offset: {x, y}` |
+| `ZStack` | Layered, last-on-top | per child: `align: <9-position>`, optional `offset: {x, y}`. May use `width: fill` and/or `height: fill` to fill the layer. |
 | `Grid` | NxM uniform cells | `cols: <int>`, `rows: <int\|auto>`, `gap: <size>` |
 | `Scroll` | Scrollable viewport, single axis | `axis: vertical\|horizontal`, single child |
 
@@ -46,7 +46,7 @@ The validator may warn on `offset` magnitudes > 8dp.
 | `<n>%w` / `<n>%h` | % of parent width / height |
 | `<n>%sw` / `<n>%sh` | % of screen width / height (safe-area-aware when `safeArea: true`) |
 | `auto` | Content-driven (Text/Image natural size) |
-| `fill` | Take all available perpendicular space (only for stack cross-axis) |
+| `fill` | Take all available space along that axis. In VStack/HStack, applies to the cross-axis. In ZStack, applies to either or both axes. In Grid/Scroll, applies as the container resolves. |
 | `min(<size>, <size>)` / `max(<size>, <size>)` | Combine two sizing units. **Only these two functions; no nesting.** |
 
 For "fraction of remaining space along the stack axis", use the `flex: <int>` child key.
@@ -59,7 +59,7 @@ These are the **universal** widget types. Always available.
 
 | Type | Required props | Optional props |
 |---|---|---|
-| `Text` | `text` (literal) or `bind.text` (i18n path preferred) | `fmt`, `align`, `maxLines`, `style` |
+| `Text` | `text` (literal) or `bind.text` (i18n path preferred) | `bind.fmt`, `align`, `maxLines`, `style` |
 | `Image` | `asset` or `bind.asset` | `fit: contain\|cover\|fill`, `tint` |
 | `Icon` | `icon` (catalog key) | `size`, `tint` |
 | `Button` | `label` or `bind.label` | `variant: primary\|secondary\|ghost`, `enabled.bind`, `style` |
@@ -69,11 +69,19 @@ These are the **universal** widget types. Always available.
 | `ProgressBar` | `bind.value`, `min`, `max` | `variant` |
 | `List` | `bind.items`, `itemTemplate` | `axis`, `separator` |
 | `HitArea` | (no visual; usually inside ZStack as backdrop) | `size` |
-| `Custom` | `name` (engine widget id) | `props: {...}` — escape hatch |
+| `Include` | `ref` (id of a `type: shared` blueprint) | `props: {...}` — values forwarded to the shared cluster's `data.*` namespace |
+| `Custom` | `name` (engine widget id) | `props: {...}`, `bind` (single path) — escape hatch |
 
 ### `Text` content rule
 
 Hard-coded `text:` literals are allowed only for symbols (`"+"`, `"x"`, `"→"`) and digits. All natural-language text MUST use `bind.text` pointing to an `i18n.*` namespace path. This keeps blueprints localizable.
+
+### Bind syntax — two forms
+
+- Object form (preferred for atomic widgets binding specific properties): `bind: { text: "level.displayIndex", fmt: "Level {n}" }`, `bind: { items: "level.leaderboard" }`.
+- String form (only for `Custom` widgets that take a single bind path): `bind: "state.board"`.
+
+Object form keys are widget-specific (see the table above). `fmt` lives inside `bind:`; a sibling `fmt:` is a schema error.
 
 ### `List.itemTemplate`
 
@@ -92,25 +100,42 @@ Hard-coded `text:` literals are allowed only for symbols (`"+"`, `"x"`, `"→"`)
       - { id: score, type: Text, bind: { text: "item.score" }, width: 64dp }
 ```
 
+### `Include` — compose a shared blueprint
+
+Use `Include` to embed a `type: shared` blueprint inside another. This is the only correct way to reuse a shared cluster — do not use `Custom` for it.
+
+```yaml
+- type: Include
+  ref: hudTopBar              # id of a shared blueprint
+  props:
+    titleKey: "i18n.gameplay.title"
+    showSettings: true
+```
+
+Inside the included shared blueprint, `props.*` are exposed as `data.*` (the shared blueprint declares its expected `data` shape via `dataBindings:`).
+
 ### `Custom` — escape hatch
 
-Engine-specific complex widgets (board renderers, code editors, map views, particle systems) use `Custom`:
+Engine-specific complex widgets (board renderers, code editors, map views, particle systems) that the universal vocabulary cannot express:
 
 ```yaml
 - id: board
   type: Custom
   name: BoardView           # the implementation's widget id, defined in code
+  bind: "state.board"       # single bind path (string form is OK here)
   props:
-    bind: "state.board"
-    gravity.bind: "level.gravity"
+    mode.bind: "level.mode"
   on:
-    tap.tile: [ emit("level.tileTap", "{cell}") ]
+    tap.tile:
+      - emit("level.tileTap", "{cell}")
 ```
 
-`Custom` is for engine-implemented widgets that the universal vocabulary can't express. **For structural reuse using only universal vocabulary, use `type: shared` blueprints** referenced by id from `## ui` (the resolver maps the shared id to a Custom-like compose-time widget). Do not confuse the two:
+Difference vs `Include`:
 
-- `Custom` → engine code defines the widget; blueprint passes typed props.
-- `shared` → another blueprint defines the structure; current blueprint includes it.
+- `Custom` → **engine code** defines the widget; blueprint passes typed props.
+- `Include` → **another blueprint** defines the structure; current blueprint composes it.
+
+If you reach for `Custom` for something expressible with universal containers + widgets, you are probably skipping a refactor. Use it only when the widget's behavior cannot be decomposed into vocabulary primitives.
 
 ### Project-specific widget extensions
 
@@ -140,6 +165,10 @@ Action verbs are a **controlled enum**. The universal pattern below is project-a
 Every verb is written as `verb(args)` — including `noop()` and verbs with no args. No inline JS, no arbitrary expressions, no chained method calls.
 
 State transitions are **not** action verbs — use `goto: <mode-id>` directly on a mode's `on:` entry.
+
+### YAML form for action lists
+
+`do:` uses block form. Flow form `[ ... ]` breaks when an action contains a comma between quoted args. Single-action lists without embedded commas may stay inline: `do: [ ui.openPopup("settings") ]`. When an action argument contains `{...}`, single-quote-wrap the whole action: `- 'ui.openPopup("x", { result: "y" })'`.
 
 ### Project verb list
 
@@ -174,10 +203,6 @@ A blueprint reads data only through declared **bind namespaces**. Each namespace
 | Mobile app | `user.*`, `feed.*`, `prefs.*`, `flags.*`, `i18n.*` |
 | Generic | declare what makes sense for the project |
 
-### `$mode` pseudo-path
-
-`$mode` refers to the **current FSM mode** of the screen — useful in `where:` guards on actions to check the current mode.
-
 ### Bind syntax in widgets
 
 ```yaml
@@ -196,3 +221,13 @@ bind:
 ```
 
 The renderer resolves bind paths at runtime. Blueprints stay engine-agnostic.
+
+### Event-name convention
+
+Bus events (used in `emits` / `listens` and as `event:` in modes) follow `<scope>.<verb>` in camelCase:
+
+- `level.complete`, `level.timeUp`, `level.boosterUsed`
+- `pause.resumed`, `tutorial.required`, `confirm.accepted`
+- `timer.tick`, `feed.refreshed`
+
+Scope is usually a domain or feature; verb is past tense for events that happened, present tense for commands. Stay consistent within a project.

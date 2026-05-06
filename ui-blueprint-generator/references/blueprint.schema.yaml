@@ -5,6 +5,8 @@
 #
 # This is the universal schema. Project-specific extensions (custom widgets,
 # project verbs, project namespaces) are layered on via _config.md.
+#
+# See references/companion-checks.md for cross-file rules that this schema cannot express.
 
 $schema: http://json-schema.org/draft-07/schema#
 title: UIBlueprint
@@ -26,6 +28,9 @@ properties:
         enum: [scene, popup, shared]
       title:
         type: string
+      configVersion:
+        type: string
+        pattern: "^[0-9]+\\.[0-9]+\\.[0-9]+$"
       orientation:
         enum: [portrait, landscape, both]
       safeArea:
@@ -68,6 +73,8 @@ properties:
           properties:
             modal: { not: {} }
             dismissible: { not: {} }
+            orientation: { not: {} }
+            safeArea: { not: {} }
 
   # ---- ## ui island (nested tree) ----
   ui:
@@ -160,6 +167,7 @@ definitions:
               - ProgressBar
               - List
               - HitArea
+              - Include
               - Custom
       # Sizing
       width:  { $ref: "#/definitions/sizingUnit" }
@@ -173,8 +181,10 @@ definitions:
           y: { $ref: "#/definitions/sizingUnit" }
       # Bindings / interactions
       bind:
-        type: object
-        additionalProperties: true
+        oneOf:
+          - type: object
+            additionalProperties: true
+          - type: string
       visible:
         type: object
         required: [bind]
@@ -219,10 +229,13 @@ definitions:
       badge:
         type: object
         additionalProperties: true
+      # Custom widget
       name:    { type: string }
       props:
         type: object
         additionalProperties: true
+      # Include widget — references a shared blueprint
+      ref:     { type: string, pattern: "^[a-zA-Z][a-zA-Z0-9_]*$" }
       itemTemplate:
         $ref: "#/definitions/uiNode"
     allOf:
@@ -231,9 +244,17 @@ definitions:
           properties: { type: { const: Custom } }
         then:
           required: [name]
-      # ZStack children require `align`
-      # (note: this is a parent-side rule; enforced by a companion script,
-      #  not expressible cleanly in JSON Schema draft-7 since it's about siblings)
+      # Include requires `ref` and forbids `name`
+      - if:
+          properties: { type: { const: Include } }
+        then:
+          required: [ref]
+          properties:
+            name: { not: {} }
+      # ZStack children require `align` and Custom-on-Include cross-checks live in companion-checks.md.
+      # Forbid sibling fmt at top level — fmt belongs inside bind.
+      - properties:
+          fmt: { not: {} }
 
   sizingUnit:
     type: string

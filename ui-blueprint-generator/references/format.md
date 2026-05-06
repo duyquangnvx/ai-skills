@@ -47,14 +47,16 @@ Section headers are extractable by regex: `^## (purpose|ui|modes|acceptance|note
 id: <screen-id>              # required, camelCase, unique across project
 type: scene | popup | shared # required
 title: "<human label>"       # required
+configVersion: <semver>      # optional; matches version: in _config.md frontmatter
 
-orientation: portrait | landscape | both  # optional, default: both
-safeArea: true | false                    # optional, default: true
+orientation: portrait | landscape | both  # optional, default: both. Ignored for type: shared.
+safeArea: true | false                    # optional, default: true. Ignored for type: shared.
 
 modal: true | false        # popup only — true blocks input behind
 dismissible: true | false  # popup only — tap-outside / back-button closes
 
-parents: [<id>, ...]       # screens that navigate INTO this; required for non-root scenes/popups
+parents: [<id>, ...]       # required for non-root scenes/popups (screens that navigate INTO this).
+                           # For type: shared, parents = consumers (blueprints that include this cluster).
 children: [<id>, ...]      # popups this screen can open; required if any are opened
 
 sources:                   # optional — back-references to upstream docs
@@ -72,8 +74,10 @@ listens: [<event>, ...]    # bus events this screen subscribes to
 
 - `id` is unique across the entire `ui-blueprints/` tree.
 - `modal` and `dismissible` are only valid when `type: popup` — error otherwise.
+- `safeArea` and `orientation` are ignored (or error, depending on validator) when `type: shared`.
 - `sources` paths must resolve to real anchors in project documentation.
 - `parents` / `children` must reference real blueprint IDs.
+- `configVersion`, if present, must match the `version:` declared in `_config.md`.
 
 ## Section contracts
 
@@ -115,18 +119,28 @@ Declarative state machine. Transitions live with their source mode.
   initial: true                  # exactly one mode must have initial: true
   final: true                    # optional; final modes have no outgoing transitions
   description: "<what this mode means>"
-  enter: { do: [<action>, ...] } # optional; runs on entering this mode
-  exit:  { do: [<action>, ...] } # optional; runs on exiting this mode
+  enter:                         # optional; runs on entering this mode
+    do:
+      - <action>
+  exit:                          # optional; runs on exiting this mode
+    do:
+      - <action>
   on:                            # optional; events handled in this mode
     - widget: <widget-id>        # widget event source
       event: <event-name>
       where: "<bool-expr>"       # optional guard (boolean DSL)
-      do: [<action>, ...]        # optional side-effects
+      do:                        # optional side-effects
+        - <action>
       goto: <mode-id>            # optional transition target
     - event: <event-name>        # bus event source (must be in frontmatter listens)
-      do: [<action>, ...]
+      do:
+        - <action>
       goto: <mode-id>
 ```
+
+#### Action verb syntax
+
+`do:` uses YAML block form. Flow form breaks on action arguments that contain commas inside `(...)`. Single-action lists with no embedded commas may stay inline: `do: [ ui.openPopup("settings") ]`. When an action argument contains `{...}` (object literal), single-quote-wrap the whole action: `- 'ui.openPopup("x", { result: "y" })'`.
 
 Validation:
 
@@ -163,4 +177,14 @@ Optional prose. Edge cases, rationale, animation contracts (push to `DESIGN.md` 
 
 Each YAML island is delimited by a fenced ` ```yaml ` block immediately after a section header. There is exactly one YAML island per structured section (`ui`, `modes`, `acceptance`). Multiple islands per section are an error. Other content between header and island is also an error.
 
-The validator parses each island independently against its sub-schema in `blueprint.schema.yaml`.
+For `_none_`, write the literal token `_none_` as plain prose between the header and the next header — no fence:
+
+```markdown
+## modes
+
+_none_
+
+## acceptance
+```
+
+The validator parses each YAML island independently against its sub-schema in `blueprint.schema.yaml`.

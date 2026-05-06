@@ -38,8 +38,8 @@ children:
     type: VStack
     height: auto
     children:
-      - { id: lblTimer, type: Text,   bind: { text: "state.timer" },     style: { text: token.h1 }, fmt: "{mm:ss}" }
-      - { id: lblGoal,  type: Text,   bind: { text: "state.goalText" },  style: { text: token.body } }
+      - { id: lblTimer, type: Text,   bind: { text: "state.timer", fmt: "{mm:ss}" }, style: { text: token.h1 } }
+      - { id: lblGoal,  type: Text,   bind: { text: "state.goalText" },              style: { text: token.body } }
       - { id: hearts,   type: Custom, name: HeartRow, props: { bind: "save.hearts.current" } }
 
   - id: boardRegion
@@ -49,11 +49,12 @@ children:
       - id: board
         type: Custom
         name: BoardView
+        bind: "state.board"
         props:
-          bind: "state.board"
           mode.bind: "level.mode"
         on:
-          tap.tile: [ emit("level.action", "{cell}") ]
+          tap.tile:
+            - emit("level.action", "{cell}")
 
   - id: boosters
     type: HStack
@@ -65,21 +66,27 @@ children:
         badge: { bind: "save.boosters.hint" }
         enabled: { bind: "save.boosters.hint > 0 && state.timer > 0" }
         on:
-          tap: [ service.call("BoosterService", "useHint"), emit("level.boosterUsed", "hint") ]
+          tap:
+            - service.call("BoosterService", "useHint")
+            - emit("level.boosterUsed", "hint")
       - id: btnShuffle
         type: IconButton
         icon: shuffle
         badge: { bind: "save.boosters.shuffle" }
         enabled: { bind: "save.boosters.shuffle > 0 && state.timer > 0" }
         on:
-          tap: [ service.call("BoosterService", "useShuffle"), emit("level.boosterUsed", "shuffle") ]
+          tap:
+            - service.call("BoosterService", "useShuffle")
+            - emit("level.boosterUsed", "shuffle")
       - id: btnAddTime
         type: IconButton
         icon: clock-plus
         badge: { bind: "save.boosters.addTime" }
         enabled: { bind: "save.boosters.addTime > 0 && state.timer > 0" }
         on:
-          tap: [ service.call("BoosterService", "addTime"), emit("level.boosterUsed", "addTime") ]
+          tap:
+            - service.call("BoosterService", "addTime")
+            - emit("level.boosterUsed", "addTime")
 ```
 
 ## modes
@@ -89,25 +96,49 @@ children:
   initial: true
   description: "Timer running, board interactive"
   on:
-    - { widget: btnBack,     event: tap, do: [ ui.openPopup("pausePopup") ],                        goto: paused }
-    - { widget: btnSettings, event: tap, do: [ ui.openPopup("settingsPopup") ] }
-    - { event: level.timeUp,             do: [ ui.openPopup("resultPopup", { result: "lose" }) ],   goto: gameOver }
-    - { event: level.complete,           do: [ ui.openPopup("resultPopup", { result: "win" }) ],    goto: gameOver }
-    - { event: tutorial.required,                                                                    goto: tutorialBlocking }
+    - widget: btnBack
+      event: tap
+      do:
+        - ui.openPopup("pausePopup")
+      goto: paused
+    - widget: btnSettings
+      event: tap
+      do:
+        - ui.openPopup("settingsPopup")
+    - event: level.timeUp
+      do:
+        - 'ui.openPopup("resultPopup", { result: "lose" })'
+      goto: gameOver
+    - event: level.complete
+      do:
+        - 'ui.openPopup("resultPopup", { result: "win" })'
+      goto: gameOver
+    - event: tutorial.required
+      goto: tutorialBlocking
 
 - id: paused
   description: "Pause popup open, timer frozen, board input blocked"
-  enter: { do: [ emit("timer.pause") ] }
-  exit:  { do: [ emit("timer.resume") ] }
+  enter:
+    do:
+      - emit("timer.pause")
+  exit:
+    do:
+      - emit("timer.resume")
   on:
-    - { event: pause.resumed, goto: default }
+    - event: pause.resumed
+      goto: default
 
 - id: tutorialBlocking
   description: "First-encounter tutorial popup shown; timer paused, board frozen"
-  enter: { do: [ emit("timer.pause") ] }
-  exit:  { do: [ emit("timer.resume") ] }
+  enter:
+    do:
+      - emit("timer.pause")
+  exit:
+    do:
+      - emit("timer.resume")
   on:
-    - { event: tutorial.dismissed, goto: default }
+    - event: tutorial.dismissed
+      goto: default
 
 - id: gameOver
   final: true

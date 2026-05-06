@@ -9,6 +9,7 @@ This file shows two canonical templates — game and mobile-app. Copy the closes
 ```markdown
 ---
 domain: game | mobile | desktop
+version: <semver>      # bump on breaking changes (verb removed, namespace renamed, etc.)
 ---
 
 # Project: <name>
@@ -39,6 +40,7 @@ domain: game | mobile | desktop
 ````markdown
 ---
 domain: game
+version: 1.0.0
 ---
 
 # Project: TileMatchPro
@@ -110,6 +112,7 @@ layout:
 ````markdown
 ---
 domain: mobile
+version: 1.0.0
 ---
 
 # Project: SocialFeed
@@ -184,4 +187,5 @@ layout:
 1. `_config.md` is read at the start of every blueprint generation session.
 2. The `## Bind namespaces`, `## Action verbs`, and `## Project widget types` islands extend the universal vocabulary in `vocabulary.md` — blueprints may use any verb, namespace, or widget that is universal **or** declared here.
 3. The `## Naming overrides` island, if present, takes precedence over the defaults in `conventions.md`.
-4. Changes to `_config.md` should trigger re-validation of all blueprints in the project.
+4. Changes to `_config.md` bump `version:`. Blueprints may declare `configVersion:` in frontmatter; mismatch is a validator error so stale blueprints surface explicitly.
+5. Changes to `_config.md` should trigger re-validation of all blueprints in the project.

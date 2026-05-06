@@ -67,7 +67,7 @@ If you need an indexed item or computed value, the data source should expose it 
 
 ### Format strings
 
-The `fmt` field is a simple template:
+The `fmt` field lives **inside `bind:`** (not as a sibling). It is a simple template:
 
 - `{n}` — the bound value
 - `{<key>}` — a named field (when binding to an object)
@@ -76,8 +76,10 @@ The `fmt` field is a simple template:
 ```yaml
 bind: { text: "state.timer", fmt: "{mm:ss}" }
 bind: { text: "level.displayIndex", fmt: "Level {n}" }
-bind: { text: "{player.ammo} / {player.ammo_reserve}" }   # multi-value
+bind: { text: "{player.ammo} / {player.ammo_reserve}" }   # multi-value, no fmt needed
 ```
+
+A top-level `fmt:` sibling to `bind:` is a schema error — the validator rejects it.
 
 ## Boolean DSL grammar
 
@@ -95,7 +97,6 @@ Used in `visible.bind`, `enabled.bind`, `where`, and any boolean condition. Rest
 ### Operands (allowed)
 
 - Bind paths starting with a declared namespace: `save.hearts.current`
-- The `$mode` pseudo-path (FSM mode): `$mode === "paused"`
 - Numeric literals: `0`, `25`, `100.5`
 - String literals (double-quoted): `"paused"`, `"win"`
 - Boolean literals: `true`, `false`
@@ -125,16 +126,28 @@ No other properties are whitelisted. If you need anything else, expose it as a n
 ```yaml
 visible: { bind: "save.hearts.current === 0" }
 enabled: { bind: "save.boosters.hint > 0 && state.timer > 0" }
-where: "$mode === \"tutorialBlocking\""
+where: "save.tutorial.completed === false"
 visible: { bind: "user.role !== \"guest\" && flags.betaUI === true" }
 visible: { bind: "feed.items.length > 0" }
 ```
+
+`where:` guards on mode-level `on:` entries can reference any declared bind path. They do **not** need to check the current mode — mode-level `on:` already runs only in that mode.
 
 If you need anything outside this grammar, the computation belongs in the data source — bind to a named field.
 
 ## Section structure
 
 Section header rules, 5-section order, `_none_` for empty sections, and YAML island parsing rules live in `format.md`. Don't restate them here — this file covers naming, bind paths, DSL, wikilinks, and YAML style only.
+
+## Event names
+
+Bus events used in `emits` / `listens` and in mode-level `on.event` follow `<scope>.<verb>` in camelCase:
+
+- `level.complete`, `level.timeUp`, `level.boosterUsed`
+- `pause.resumed`, `tutorial.required`, `tutorial.dismissed`
+- `feed.refreshed`, `confirm.accepted`, `confirm.dismissed`
+
+Scope is a domain or feature; verb is past tense for things that happened, present tense for commands. Be consistent within a project.
 
 ## Cross-references — wikilinks
 

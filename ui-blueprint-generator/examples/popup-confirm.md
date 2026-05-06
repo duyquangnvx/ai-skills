@@ -43,9 +43,22 @@ children:
   initial: true
   description: "Default — both buttons enabled, awaiting input"
   on:
-    - { widget: btnConfirm,  event: tap, do: [ ui.closePopup(), emit("confirm.accepted") ],  goto: submitted }
-    - { widget: btnCancel,   event: tap, do: [ ui.closePopup(), emit("confirm.dismissed") ] }
-    - { widget: hitBackdrop, event: tap, do: [ ui.closePopup(), emit("confirm.dismissed") ] }
+    - widget: btnConfirm
+      event: tap
+      do:
+        - ui.closePopup()
+        - emit("confirm.accepted")
+      goto: submitted
+    - widget: btnCancel
+      event: tap
+      do:
+        - ui.closePopup()
+        - emit("confirm.dismissed")
+    - widget: hitBackdrop
+      event: tap
+      do:
+        - ui.closePopup()
+        - emit("confirm.dismissed")
 
 - id: submitted
   final: true

@@ -16,7 +16,7 @@ listens: []
 
 Reusable top bar widget cluster used across multiple scenes and popups. Provides a consistent back button on the left, title in the center, and optional settings icon on the right. Parents inject context via `data.titleKey` (i18n path) and `data.showSettings` (visibility flag).
 
-This is a `type: shared` blueprint — it is not navigated to directly. Parents include it via `Custom: { name: hudTopBar, props: { ... } }` (the resolver maps the shared id to a compose-time include).
+This is a `type: shared` blueprint — it is not navigated to directly. Parents include it via `{ type: Include, ref: hudTopBar, props: { ... } }` from their `## ui` tree.
 
 ## ui
 
@@ -29,7 +29,8 @@ children:
     align: center-left
     icon: chevron-left
     on:
-      tap: [ nav.back() ]
+      tap:
+        - nav.back()
 
   - id: lblTitle
     type: Text
@@ -43,7 +44,8 @@ children:
     icon: gear
     visible: { bind: "data.showSettings === true" }
     on:
-      tap: [ ui.openPopup("settingsPopup") ]
+      tap:
+        - ui.openPopup("settingsPopup")
 ```
 
 ## modes
