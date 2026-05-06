@@ -1,64 +1,57 @@
-# `_config.md` Template
+# `_config.yaml` Template
 
-Each project keeps one `ui-blueprints/_config.md` declaring its bind namespaces, action verbs, style tokens, and project-specific widget extensions. Loaded at the start of every blueprint generation session; subsequent blueprints conform to its declarations.
+Each project keeps one `ui-blueprints/_config.yaml` declaring its bind namespaces, action verbs, style tokens, and project-specific widget extensions. Loaded at the start of every blueprint generation session; subsequent blueprints conform to its declarations.
 
 This file shows two canonical templates — game and mobile-app. Copy the closest match into the project, then adjust.
 
 ## Minimal structure
 
-```markdown
----
+```yaml
 domain: game | mobile | desktop
 version: <semver>      # bump on breaking changes (verb removed, namespace renamed, etc.)
----
+project: <name>
 
-# Project: <name>
+bindNamespaces:
+  <namespace>: { source: <TypeName>, scope: <description> }
+  ...
 
-## Bind namespaces
-<yaml island>
+actionVerbs:
+  <verb>: { args: [...], maps_to?: <impl-hint> }
+  ...
 
-## Action verbs
-<yaml island>
+styleTokens: ./DESIGN.md#tokens   # or inline tokens object
 
-## Style tokens (or pointer to DESIGN.md)
-<yaml island or path>
+projectWidgets:                    # optional
+  <WidgetName>: { props: [...] }
+  ...
 
-## Project widget types (optional)
-<yaml island>
+naming:                            # optional, overrides defaults in conventions.md
+  screen_id_case: camelCase
+  widget_id_case: camelCase
+  acceptance_id_scheme: scoped     # or "sequential"
 
-## Naming overrides (optional)
-<yaml island>
-
-## File layout (optional)
-<yaml island>
+layout:                            # optional, overrides default file layout
+  scenes: ui-blueprints/scenes/
+  popups: ui-blueprints/popups/
+  shared: ui-blueprints/shared/
 ```
 
 ---
 
 ## Canonical: game (Cocos2d / Unity / Godot)
 
-````markdown
----
+```yaml
 domain: game
 version: 1.0.0
----
+project: TileMatchPro
 
-# Project: TileMatchPro
-
-## Bind namespaces
-
-```yaml
-namespaces:
+bindNamespaces:
   level: { source: LevelData,  scope: per-level config (loaded from JSON) }
   state: { source: LevelState, scope: per-session runtime }
   save:  { source: SaveData,   scope: persistent device storage }
   i18n:  { source: I18nKeys,   scope: localized strings }
-```
 
-## Action verbs
-
-```yaml
-verbs:
+actionVerbs:
   nav.gotoScene:  { args: [sceneId, data?], maps_to: "Director.runScene" }
   nav.back:       { args: [],                maps_to: "Director.popScene" }
   ui.openPopup:   { args: [popupId, data?], maps_to: "PopupManager.open" }
@@ -69,70 +62,43 @@ verbs:
   data.set:       { args: [path, value] }
   data.increment: { args: [path, by?] }
   noop:           { args: [] }
-```
 
-## Style tokens
+styleTokens: ./DESIGN.md#tokens
 
-```yaml
-style: ./DESIGN.md#tokens
-```
-
-## Project widget types
-
-```yaml
-widgets:
+projectWidgets:
   HeartRow:     { props: [bind] }
   BoosterBadge: { props: [icon, bind, count.bind] }
   Minimap:      { props: [bind, scale] }
-```
 
-## Naming
-
-```yaml
 naming:
   screen_id_case: camelCase
   widget_id_case: camelCase
-  acceptance_id_scheme: scoped   # U-<screen>-<n>
-```
+  acceptance_id_scheme: scoped     # U-<screen>-<n>
 
-## File layout
-
-```yaml
 layout:
-  scenes:  ui-blueprints/scenes/
-  popups:  ui-blueprints/popups/
-  shared:  ui-blueprints/shared/
+  scenes: ui-blueprints/scenes/
+  popups: ui-blueprints/popups/
+  shared: ui-blueprints/shared/
 ```
-````
 
 ---
 
 ## Canonical: mobile-app (React Native / SwiftUI / Flutter)
 
-````markdown
----
+```yaml
 domain: mobile
 version: 1.0.0
----
+project: SocialFeed
 
-# Project: SocialFeed
-
-## Bind namespaces
-
-```yaml
-namespaces:
+bindNamespaces:
   user:   { source: UserProfile,   scope: per-account }
   feed:   { source: FeedState,     scope: per-session feed cache }
   prefs:  { source: UserPrefs,     scope: device-local prefs }
   flags:  { source: FeatureFlags,  scope: remote-config flags }
   i18n:   { source: I18nKeys,      scope: localized strings }
   device: { source: DeviceInfo,    scope: platform/runtime }
-```
 
-## Action verbs
-
-```yaml
-verbs:
+actionVerbs:
   nav.push:      { args: [route, params?], maps_to: "router.push" }
   nav.replace:   { args: [route, params?], maps_to: "router.replace" }
   nav.back:      { args: [],                maps_to: "router.back" }
@@ -143,49 +109,32 @@ verbs:
   api.call:      { args: [endpoint, method, body?] }
   data.set:      { args: [path, value] }
   noop:          { args: [] }
-```
 
-## Style tokens
+styleTokens: ./DESIGN.md#tokens
 
-```yaml
-style: ./DESIGN.md#tokens
-```
-
-## Project widget types
-
-```yaml
-widgets:
+projectWidgets:
   Avatar:      { props: [bind, size] }
   Chip:        { props: [label, variant] }
   BottomSheet: { props: [bind.open, snapPoints] }
   SearchField: { props: [bind.value, placeholder] }
-```
 
-## Naming
-
-```yaml
 naming:
   screen_id_case: camelCase
   widget_id_case: camelCase
   acceptance_id_scheme: scoped
-```
 
-## File layout
-
-```yaml
 layout:
-  scenes:  ui-blueprints/screens/
-  popups:  ui-blueprints/sheets/
-  shared:  ui-blueprints/shared/
+  scenes: ui-blueprints/screens/
+  popups: ui-blueprints/sheets/
+  shared: ui-blueprints/shared/
 ```
-````
 
 ---
 
 ## Loading rules
 
-1. `_config.md` is read at the start of every blueprint generation session.
-2. The `## Bind namespaces`, `## Action verbs`, and `## Project widget types` islands extend the universal vocabulary in `vocabulary.md` — blueprints may use any verb, namespace, or widget that is universal **or** declared here.
-3. The `## Naming overrides` island, if present, takes precedence over the defaults in `conventions.md`.
-4. Changes to `_config.md` bump `version:`. Blueprints may declare `configVersion:` in frontmatter; mismatch is a validator error so stale blueprints surface explicitly.
-5. Changes to `_config.md` should trigger re-validation of all blueprints in the project.
+1. `_config.yaml` is read at the start of every blueprint generation session.
+2. The `bindNamespaces`, `actionVerbs`, and `projectWidgets` keys extend the universal vocabulary in `vocabulary.md` — blueprints may use any verb, namespace, or widget that is universal **or** declared here.
+3. The `naming` key, if present, takes precedence over the defaults in `conventions.md`.
+4. Changes to `_config.yaml` bump `version`. Blueprints may declare `configVersion` in `frontmatter`; mismatch is a validator error so stale blueprints surface explicitly.
+5. Changes to `_config.yaml` should trigger re-validation of all blueprints in the project.

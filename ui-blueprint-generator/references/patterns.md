@@ -1,6 +1,6 @@
 # UI Patterns — canonical recipes
 
-Recipes for common UI patterns expressed in the blueprint vocabulary. Each recipe shows only the relevant fragments (frontmatter / `## ui` / `## modes` / `## acceptance`) — copy and adapt.
+Recipes for common UI patterns expressed in the blueprint vocabulary. Each recipe shows only the relevant fragments (frontmatter / `ui` / `modes` / `acceptance`) — copy and adapt.
 
 When in doubt about how to model something, check this file before reaching for `Custom`.
 
@@ -67,7 +67,7 @@ Rule of thumb: ≤ 3 steps → model as N modes of a single screen. > 3 steps OR
       - service.call("WizardService", "submit", "{wizard.data}")
 ```
 
-`## ui` toggles step content via `visible: { bind: "$mode === \"step1\"" }`. `$mode` is a renderer-provided pseudo-namespace.
+`ui` toggles step content via `visible: { bind: "$mode === \"step1\"" }`. `$mode` is a renderer-provided pseudo-namespace.
 
 ## 3. Paged list with cursor
 
@@ -103,7 +103,7 @@ Models loading / empty / end-of-list / retry as modes — no separate screens.
       goto: loading
 ```
 
-`## ui` switches sub-regions on `$mode`. List binding stays `bind.items: feed.items` across modes.
+`ui` switches sub-regions on `$mode`. List binding stays `bind.items: feed.items` across modes.
 
 ## 4. Pull-to-refresh
 
@@ -125,7 +125,7 @@ The renderer adapts to platform conventions (iOS rubber-band, Android material i
 Two valid models:
 
 - **Mode-driven** (≤ 4 tabs, same data namespace): each tab is a mode, content sub-region toggles via `visible: { bind: "$mode === \"tabA\"" }`.
-- **Sub-blueprint** (≥ 5 tabs, distinct data needs): each tab is a `type: scene` with its own frontmatter; a parent host scene includes a `Tabs` widget that switches via `nav.replace`.
+- **Sub-blueprint** (≥ 5 tabs, distinct data needs): each tab is a `type: scene` with its own `frontmatter`; a parent host scene includes a `Tabs` widget that switches via `nav.replace`.
 
 Default to mode-driven unless tabs have very different data shapes.
 
@@ -173,7 +173,7 @@ For any screen that fetches data: model these as modes of the same screen, not s
       goto: loading
 ```
 
-Sub-regions in `## ui` toggle visibility on `$mode`. Acceptance covers all 4 reachable modes.
+Sub-regions in `ui` toggle visibility on `$mode`. Acceptance covers all 4 reachable modes.
 
 ## 8. Inline banner / notification
 
@@ -223,4 +223,4 @@ emits: [toast.actionTapped]
 ---
 ```
 
-Toast does not take input focus. `autoDismissMs` is the auto-close timer. If the toast has an action (Undo, Retry), declare it as a button in `## ui` and wire `tap → emit("toast.actionTapped") + ui.closePopup()`.
+Toast does not take input focus. `autoDismissMs` is the auto-close timer. If the toast has an action (Undo, Retry), declare it as a button in `ui` and wire `tap → emit("toast.actionTapped") + ui.closePopup()`.

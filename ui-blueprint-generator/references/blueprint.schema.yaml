@@ -1,20 +1,31 @@
 # yaml-language-server: $schema=http://json-schema.org/draft-07/schema#
-# JSON Schema for UI Blueprint frontmatter and YAML islands.
+# JSON Schema for UI Blueprint files (`<screen-id>.blueprint.yaml`).
 # Copy into the project (e.g. ui-blueprints/_schema/blueprint.schema.yaml) and
 # wire into a validator script if linting is wanted.
 #
 # This is the universal schema. Project-specific extensions (custom widgets,
-# project verbs, project namespaces) are layered on via _config.md.
+# project verbs, project namespaces) are layered on via _config.yaml.
+#
+# Note: blueprints are pure YAML documents (single yaml.load). This schema
+# validates the loaded object directly. There are no embedded YAML islands.
 #
 # See references/companion-checks.md for cross-file rules that this schema cannot express.
 
 $schema: http://json-schema.org/draft-07/schema#
 title: UIBlueprint
 type: object
-description: Validates a UI blueprint document split into frontmatter + YAML island parts.
-required: [frontmatter, ui, modes, acceptance]
+description: A UI blueprint — single YAML document with 6 top-level keys.
+required: [frontmatter, purpose, ui, modes, acceptance]
+additionalProperties: false
 
 properties:
+
+  purpose:
+    type: string
+  notes:
+    oneOf:
+      - type: string
+      - type: "null"
 
   # ---- Frontmatter ----
   frontmatter:
@@ -107,11 +118,11 @@ properties:
             orientation: { not: {} }
             safeArea: { not: {} }
 
-  # ---- ## ui island (nested tree) ----
+  # ---- ui (nested tree) ----
   ui:
     $ref: "#/definitions/uiNode"
 
-  # ---- ## modes island ----
+  # ---- modes ----
   modes:
     oneOf:
       - type: array
@@ -154,9 +165,9 @@ properties:
                 anyOf:
                   - required: [widget]
                   - required: [event]
-      - const: _none_
+      - type: "null"
 
-  # ---- ## acceptance island ----
+  # ---- acceptance ----
   acceptance:
     oneOf:
       - type: array
@@ -171,7 +182,7 @@ properties:
             when: { type: string }
             then: { type: string }
             test_hint: { type: string }
-      - const: _none_
+      - type: "null"
 
 definitions:
 
@@ -257,7 +268,7 @@ definitions:
       axis: { enum: [vertical, horizontal] }
       runGap: { $ref: "#/definitions/sizingUnit" }
       itemGap: { $ref: "#/definitions/sizingUnit" }
-      # Widget-specific props (universal subset; project widgets layer more in _config.md)
+      # Widget-specific props (universal subset; project widgets layer more in _config.yaml)
       text:    { type: string }
       label:   { type: string }
       icon:    { type: string }

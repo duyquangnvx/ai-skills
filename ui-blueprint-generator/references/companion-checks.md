@@ -4,10 +4,10 @@ Cross-file and structural rules that JSON Schema cannot express. A companion val
 
 ## Per-blueprint structural checks
 
-- **Single `initial` mode.** Exactly one entry in `## modes` has `initial: true`.
+- **Single `initial` mode.** Exactly one entry in `modes` has `initial: true`.
 - **Final modes have no outgoing transitions.** A mode with `final: true` must not appear as a `goto:` source.
 - **`goto:` targets exist.** Every `goto: <id>` references a mode declared in the same file.
-- **Widget references exist.** Every `widget: <id>` in mode-level `on:` resolves to a widget id in `## ui`.
+- **Widget references exist.** Every `widget: <id>` in mode-level `on:` resolves to a widget id in `ui`.
 - **ZStack children require `align`.** Every direct child of a `ZStack` declares `align:` (9-position).
 - **ZStack children at most one of width/flex.** A child in a ZStack may use `width: fill` or fixed sizing, never `flex:`.
 - **`offset:` structural-use warning.** `offset` is for anchor-tweak on a ZStack child (badge inset, focus ring, tooltip arrow). Warn when `offset.x` or `offset.y` magnitude exceeds ~5% of the parent's resolved dimension along that axis — the value is almost always structural positioning that should be expressed via `padding` or stack restructure instead.
@@ -16,7 +16,7 @@ Cross-file and structural rules that JSON Schema cannot express. A companion val
 - **`Custom` requires `name`.** `type: Custom` without `name:` is invalid.
 - **`Include` requires `ref`, forbids `name`.** `type: Include` must have `ref:`; presence of `name:` is invalid.
 - **Unique IDs within file.** Every `id:` (widget, region, mode, acceptance) is unique per file.
-- **YAML island count.** Each of `## ui`, `## modes`, `## acceptance` has exactly one fenced ```yaml island, OR the body is `_none_` (no fence).
+- **Empty `modes` / `acceptance` use `null`.** Use the YAML literal `null` (not `[]`, not the legacy `_none_` token).
 
 ## Project-wide checks
 
@@ -39,11 +39,11 @@ Cross-file and structural rules that JSON Schema cannot express. A companion val
 
 ## Config-conformance checks
 
-- **Action verbs declared.** Every verb used in `do:`, `enter.do:`, `exit.do:` is in `_config.md` `## Action verbs`.
-- **Bind namespaces declared.** Every bind path's leading namespace is declared in `_config.md` `## Bind namespaces` (or is `data`/`item`/`props` for shared / list / include contexts).
-- **Widget types in scope.** Every `type:` in `## ui` is either universal (see `vocabulary.md`) or declared in `_config.md` `## Project widget types` (or is `Custom` / `Include`).
+- **Action verbs declared.** Every verb used in `do:`, `enter.do:`, `exit.do:` is in `_config.yaml` `actionVerbs`.
+- **Bind namespaces declared.** Every bind path's leading namespace is declared in `_config.yaml` `bindNamespaces` (or is `data`/`item`/`props` for shared / list / include contexts).
+- **Widget types in scope.** Every `type:` in `ui` is either universal (see `vocabulary.md`) or declared in `_config.yaml` `projectWidgets` (or is `Custom` / `Include`).
 - **Style tokens resolve.** Every token referenced in `style:` exists in the project's token catalog (or `DESIGN.md`).
-- **Config version match.** When a blueprint declares `configVersion:`, it must equal `_config.md` `version:`. Mismatch is a stale-blueprint signal.
+- **Config version match.** When a blueprint declares `configVersion:`, it must equal `_config.yaml` `version:`. Mismatch is a stale-blueprint signal.
 
 ## Bus-event checks
 
@@ -53,5 +53,5 @@ Cross-file and structural rules that JSON Schema cannot express. A companion val
 ## Recommended runtime behavior
 
 - Schema-only failures fail the validator.
-- Companion warnings (e.g. structural-use `offset`, hard-coded text not whitelisted) do not fail by default but appear in CI output. A project may promote warnings to failures via `_config.md`.
-- A re-validation pass runs against all blueprints whenever `_config.md` changes (verb removed, namespace renamed, version bumped).
+- Companion warnings (e.g. structural-use `offset`, hard-coded text not whitelisted) do not fail by default but appear in CI output. A project may promote warnings to failures via `_config.yaml`.
+- A re-validation pass runs against all blueprints whenever `_config.yaml` changes (verb removed, namespace renamed, version bumped).

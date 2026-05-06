@@ -1,6 +1,6 @@
 # Blueprint Vocabulary
 
-Canonical lists for layout primitives, widget types, sizing units, action verbs, and style tokens. The skill enforces these as **closed sets** at the universal level. Project-specific extensions are declared in `_config.md`.
+Canonical lists for layout primitives, widget types, sizing units, action verbs, and style tokens. The skill enforces these as **closed sets** at the universal level. Project-specific extensions are declared in `_config.yaml`.
 
 ## Layout primitives — 6 containers + Spacer
 
@@ -157,17 +157,17 @@ If you reach for `Custom` for something expressible with universal containers + 
 
 ### Project-specific widget extensions
 
-Some domains commonly need additional atomic widgets. List them in `_config.md`:
+Some domains commonly need additional atomic widgets. List them in `_config.yaml`:
 
 - **Game UI**: `Minimap`, `PromptIndicator`, `HeartRow`, `BoosterBadge`
 - **Mobile**: `Avatar`, `Chip`, `BottomSheet`, `Tabs`, `SearchField`
 - **Forms-heavy**: `DatePicker`, `Combobox`, `Stepper`
 
-If declared in `_config.md`, they may be used as if universal. If not declared, use `Custom`.
+If declared in `_config.yaml`, they may be used as if universal. If not declared, use `Custom`.
 
 ## Action verbs — universal pattern
 
-Action verbs are a **controlled enum**. The universal pattern below is project-agnostic; the project's actual verb list lives in `_config.md`.
+Action verbs are a **controlled enum**. The universal pattern below is project-agnostic; the project's actual verb list lives in `_config.yaml`.
 
 ### Universal verb categories
 
@@ -190,7 +190,7 @@ State transitions are **not** action verbs — use `goto: <mode-id>` directly on
 
 ### Project verb list
 
-The project picks which universal verbs apply and adds project-specific ones in `_config.md`. See `references/config-template.md` for canonical examples (game + mobile-app).
+The project picks which universal verbs apply and adds project-specific ones in `_config.yaml`. See `references/config-template.md` for canonical examples (game + mobile-app).
 
 A blueprint can only use verbs declared in the project's verb list. The validator checks this.
 
@@ -207,7 +207,7 @@ style:
   spacing: token.s1 | token.s2 | token.s3 | token.s4 | token.s5
 ```
 
-Project token catalog declared in `_config.md` (or referenced from `DESIGN.md`). If no design system exists yet, omit `style` entirely from blueprints — let downstream pick defaults rather than inventing tokens.
+Project token catalog declared in `_config.yaml` (or referenced from `DESIGN.md`). If no design system exists yet, omit `style` entirely from blueprints — let downstream pick defaults rather than inventing tokens.
 
 ## Bind namespaces
 
@@ -223,7 +223,7 @@ A blueprint reads data only through declared **bind namespaces**. Each namespace
 
 ### Reserved context namespaces
 
-These three namespaces are always available — do **not** declare them in `_config.md`:
+These three namespaces are always available — do **not** declare them in `_config.yaml`:
 
 | Namespace | Where it's exposed |
 |---|---|
@@ -231,7 +231,7 @@ These three namespaces are always available — do **not** declare them in `_con
 | `item.*` | Inside `List.itemTemplate` — refers to the current row of the bound collection. |
 | `props.*` | Alias used by some validators when describing what the parent passes into an `Include`. From the shared blueprint's perspective, read as `data.*`. |
 
-The validator does not require these to be declared in `_config.md`'s `## Bind namespaces`.
+The validator does not require these to be declared in `_config.yaml` `bindNamespaces`.
 
 ### Bind syntax in widgets
 

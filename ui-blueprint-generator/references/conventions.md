@@ -22,7 +22,7 @@ Mechanical rules for IDs, binding paths, boolean DSL, YAML style, and cross-refe
 - For container regions, use descriptive role names: `topBar`, `hud`, `boosters`, `content`, `footer`, `sidebar`.
 - For `Custom` widgets, the id follows the implementation widget id (e.g. `board`, `hearts`, `minimap`).
 
-### Mode IDs (within `## modes`)
+### Mode IDs (within `modes`)
 
 - `camelCase`, descriptive: `default`, `paused`, `gameOver`, `loading`, `error`, `confirmQuit`.
 - `goto: <id>` references must resolve to a declared mode in the same file.
@@ -133,13 +133,13 @@ visible: { bind: "feed.items.length > 0" }
 
 `where:` guards on mode-level `on:` entries can reference any declared bind path. They do **not** need to check the current mode — mode-level `on:` already runs only in that mode.
 
-The pseudo-path `$mode` (string-valued, name of the active mode) is available in widget-level `visible.bind` / `enabled.bind` for toggling sub-regions of `## ui` between modes — e.g. `visible: { bind: "$mode === \"loading\"" }`. `$mode` is renderer-provided; it is not a declared namespace and does not need to appear in `_config.md`.
+The pseudo-path `$mode` (string-valued, name of the active mode) is available in widget-level `visible.bind` / `enabled.bind` for toggling sub-regions of `ui` between modes — e.g. `visible: { bind: "$mode === \"loading\"" }`. `$mode` is renderer-provided; it is not a declared namespace and does not need to appear in `_config.yaml`.
 
 If you need anything outside this grammar, the computation belongs in the data source — bind to a named field.
 
 ## Section structure
 
-Section header rules, 5-section order, `_none_` for empty sections, and YAML island parsing rules live in `format.md`. Don't restate them here — this file covers naming, bind paths, DSL, wikilinks, and YAML style only.
+Top-level keys, the role of each, and the use of `null` for empty `modes`/`acceptance` live in `format.md`. Don't restate them here — this file covers naming, bind paths, DSL, wikilinks, and YAML style only.
 
 ## Event names
 
@@ -153,7 +153,7 @@ Scope is a domain or feature; verb is past tense for things that happened, prese
 
 ## Cross-references — wikilinks
 
-In prose sections (`## purpose`, `## notes`), reference using `[[wikilink]]`:
+In prose keys (`purpose`, `notes`), reference using `[[wikilink]]`:
 
 | Form | Resolves to |
 |---|---|
