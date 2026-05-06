@@ -26,7 +26,17 @@ These are the **only** allowed container types. No `Flex`, no `Wrap`, no `Absolu
 
 `top-left` `top-center` `top-right` `center-left` `center` `center-right` `bottom-left` `bottom-center` `bottom-right`
 
-Use `offset: {x: <size>, y: <size>}` for fine adjustment from the align point. Negative offsets allowed for inward offsets from edges.
+`offset: {x, y}` is for **fine nudge** from the align point — typical magnitudes 0-8dp (badge inset, icon kerning, focus ring). Negative values allowed for inward offsets from edges.
+
+**If you need offset > 8dp, that is absolute positioning** — restructure with `VStack` / `HStack` + `Spacer` instead. The 6 layout primitives can express every real layout; reaching for offset usually means missing a `Spacer`.
+
+| Designer spec | ❌ Wrong (absolute via offset) | ✅ Right (stack + Spacer) |
+|---|---|---|
+| Title 24dp from top of panel | `align: top-center, offset: {y: 24dp}` | `VStack: [Spacer 24dp, title, ...]` |
+| Button 16dp from bottom-left of panel | `align: bottom-left, offset: {x: 16dp, y: -16dp}` | `VStack: [..., Spacer flex, HStack[Spacer 16dp, btn, Spacer flex, ...], Spacer 16dp]` |
+| Badge 4dp inset from icon corner | `align: top-right, offset: {x: -4dp, y: 4dp}` | (Stays as offset — magnitude ≤ 8dp.) |
+
+The validator may warn on `offset` magnitudes > 8dp.
 
 ## Sizing units — 7 forms
 
