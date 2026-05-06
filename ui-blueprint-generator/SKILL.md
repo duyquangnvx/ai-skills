@@ -79,15 +79,10 @@ List file paths inline with one-line summaries. Briefly note: how many blueprint
 ## Output rules
 
 - **One screen per file.** Do not combine, even if related.
-- **Frontmatter required**, with type-conditional constraints (see `references/format.md`).
-- **5 body sections in fixed order**: `## purpose`, `## ui`, `## modes`, `## acceptance`, `## notes`. All required except `notes`. Empty `modes` or `acceptance` use body `_none_`.
-- **`## ui` is a single nested tree.** Containers nest; widgets sit inside. No separate region list.
-- **`## modes` holds the FSM.** Transitions live with their source mode via `goto:`. State-independent side-effects can live on widgets via `on:`. Anything that triggers `goto:` MUST be in a mode.
+- **File structure**: frontmatter + 5 sections in fixed order — see `references/format.md`.
 - **No engine-specific syntax.** No `useState`, `RectTransform`, `cc.Sprite`, `flex-grow`. Use only vocabulary from `references/vocabulary.md`.
-- **Bindings are paths** in declared namespaces (`level.displayIndex`, not `1` or `{{level.displayIndex}}`).
-- **Actions are verb tuples**: `ui.openPopup("pauseMenu")`, not `() => openPopup('pauseMenu')`.
-- **`Custom` for engine-specific widgets** (board renderer, code editor, map view) — escape hatch.
-- **Text content uses bind paths to i18n keys**, not literal strings (except for symbols / digits).
+- **IDs, bind paths, boolean DSL, wikilinks** — see `references/conventions.md`.
+- **Conflict resolution**: when `_config.md` extensions and the universal vocabulary disagree, `_config.md` wins. Project specificity beats universal default.
 
 ## Quality bar
 

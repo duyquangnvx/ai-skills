@@ -132,42 +132,9 @@ visible: { bind: "feed.items.length > 0" }
 
 If you need anything outside this grammar, the computation belongs in the data source — bind to a named field.
 
-## Section headers
+## Section structure
 
-Body sections use exact lowercase headers, no numbering, no punctuation:
-
-```
-## purpose
-## ui
-## modes
-## acceptance
-## notes
-```
-
-Extractable by regex: `^## (purpose|ui|modes|acceptance|notes)$`.
-
-All headers required (except `notes`), in this exact order. Empty `modes` / `acceptance` use `_none_`:
-
-```
-## modes
-
-_none_
-```
-
-## YAML islands
-
-Each structured section has exactly one fenced YAML island immediately after the header:
-
-````markdown
-## ui
-
-```yaml
-type: VStack
-children: [...]
-```
-````
-
-Multiple islands per section are an error. Other content (prose) between header and island is also an error — the island must come immediately after the header.
+Section header rules, 5-section order, `_none_` for empty sections, and YAML island parsing rules live in `format.md`. Don't restate them here — this file covers naming, bind paths, DSL, wikilinks, and YAML style only.
 
 ## Cross-references — wikilinks
 

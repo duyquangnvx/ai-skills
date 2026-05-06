@@ -186,14 +186,3 @@ bind:
 ```
 
 The renderer resolves bind paths at runtime. Blueprints stay engine-agnostic.
-
-## What goes where — quick reference
-
-| Concern | Lives in |
-|---|---|
-| Container structure + atomic widgets + bindings + state-independent interactions | `## ui` |
-| Modes / variants of the screen + transitions + state-dependent actions | `## modes` |
-| Test cases | `## acceptance` |
-| Edge cases, rationale, animation contracts | `## notes` (long animation specs → `DESIGN.md`) |
-| Concrete colors / fonts / pixel values | `DESIGN.md` |
-| Engine APIs / framework-specific code | code repo |

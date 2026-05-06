@@ -98,12 +98,10 @@ children:
 
 Universal rules:
 
-- Container types: `VStack`, `HStack`, `ZStack`, `Grid`, `Scroll`. See `vocabulary.md`.
+- Container types, sizing units, widget types and their props — see `vocabulary.md`.
 - `Spacer` is a leaf node used inside stacks for flexible empty space.
 - Children of `ZStack` require `align:` (9-position).
-- Sizing on the stack axis is one of: `<n>dp`, `<n>%w`, `<n>%h`, `<n>%sw`, `<n>%sh`, `auto`, `fill`, or `flex: <int>`. See `vocabulary.md`.
-- Widget types: `Text`, `Image`, `Icon`, `Button`, `IconButton`, `Toggle`, `Slider`, `ProgressBar`, `List`, `HitArea`, `Custom`. Type-specific props in `vocabulary.md`.
-- `bind:`, `visible:`, `enabled:` use bind paths and the boolean DSL (see `conventions.md`).
+- `bind:`, `visible:`, `enabled:` use bind paths and the boolean DSL — see `conventions.md`.
 - `on:` is a map of event → action-tuple list. **Use only for state-independent side-effects.** Any action that triggers a state transition (`goto:`) lives in `## modes`, not on the widget.
 
 The root container always fills its parent — no explicit `fill` directive.
