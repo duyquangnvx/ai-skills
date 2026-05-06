@@ -10,7 +10,7 @@ $schema: http://json-schema.org/draft-07/schema#
 title: UIBlueprint
 type: object
 description: Validates a UI blueprint document split into frontmatter + YAML island parts.
-required: [frontmatter, layout, widgets, states, actions, animations, acceptance]
+required: [frontmatter, ui, modes, acceptance]
 
 properties:
 
@@ -26,9 +26,6 @@ properties:
         enum: [scene, popup, shared]
       title:
         type: string
-      zIndex:
-        type: integer
-        minimum: 0
       orientation:
         enum: [portrait, landscape, both]
       safeArea:
@@ -37,23 +34,20 @@ properties:
         type: boolean
       dismissible:
         type: boolean
-      extends:
-        type: string
       parents:
         type: array
         items: { type: string }
       children:
         type: array
         items: { type: string }
-      gdd:
+      sources:
         type: array
         items: { type: string }
       dataBindings:
         type: array
         items:
           type: object
-          additionalProperties:
-            type: string
+          additionalProperties: { type: string }
       emits:
         type: array
         items: { type: string }
@@ -61,125 +55,28 @@ properties:
         type: array
         items: { type: string }
     allOf:
-      # type=scene → zIndex 0..99 (typically 0)
+      # modal/dismissible only valid for popup
       - if:
           properties: { type: { const: scene } }
         then:
-          required: [zIndex]
           properties:
-            zIndex: { minimum: 0, maximum: 99 }
             modal: { not: {} }
             dismissible: { not: {} }
-      # type=popup → zIndex 100..199
-      - if:
-          properties: { type: { const: popup } }
-        then:
-          required: [zIndex]
-          properties:
-            zIndex: { minimum: 100, maximum: 199 }
-      # type=shared → no zIndex, no modal/dismissible
       - if:
           properties: { type: { const: shared } }
         then:
           properties:
-            zIndex: { not: {} }
             modal: { not: {} }
             dismissible: { not: {} }
 
-  # ---- ## layout island ----
-  layout:
-    type: object
-    required: [root, regions]
-    properties:
-      root:
-        type: object
-        required: [type]
-        properties:
-          type:
-            enum: [VStack, HStack, ZStack, Grid, Scroll]
-          cols: { type: integer, minimum: 1 }
-          rows: { oneOf: [{ type: integer, minimum: 1 }, { const: auto }] }
-          gap: { $ref: "#/definitions/sizingUnit" }
-          axis: { enum: [vertical, horizontal] }
-      regions:
-        type: array
-        minItems: 1
-        items:
-          type: object
-          required: [id]
-          properties:
-            id:
-              type: string
-              pattern: "^[a-zA-Z][a-zA-Z0-9_]*$"
-            width:  { $ref: "#/definitions/sizingUnit" }
-            height: { $ref: "#/definitions/sizingUnit" }
-            flex:   { type: integer, minimum: 1 }
-            align:  { $ref: "#/definitions/alignNine" }
-            offset:
-              type: object
-              properties:
-                x: { $ref: "#/definitions/sizingUnit" }
-                y: { $ref: "#/definitions/sizingUnit" }
+  # ---- ## ui island (nested tree) ----
+  ui:
+    $ref: "#/definitions/uiNode"
 
-  # ---- ## widgets island ----
-  widgets:
-    type: array
-    items:
-      type: object
-      required: [id, type, region]
-      properties:
-        id:
-          type: string
-          pattern: "^[a-zA-Z][a-zA-Z0-9_]*$"
-        type:
-          # Universal types. Project extensions added at config-merge time.
-          enum:
-            - Text
-            - Image
-            - Icon
-            - Button
-            - IconButton
-            - Toggle
-            - Slider
-            - ProgressBar
-            - List
-            - HitArea
-            - Custom
-        region: { type: string }
-        align: { $ref: "#/definitions/alignNine" }
-        bind:
-          type: object
-          additionalProperties: true
-        visible:
-          type: object
-          required: [bind]
-          properties:
-            bind: { type: string }   # boolean DSL string (separately validated)
-        enabled:
-          type: object
-          required: [bind]
-          properties:
-            bind: { type: string }
-        on:
-          type: object
-          additionalProperties:
-            type: array
-            items: { type: string }   # action tuples (separately validated)
-      allOf:
-        - if:
-            properties: { type: { const: Custom } }
-          then:
-            required: [name]
-            properties:
-              name: { type: string }
-
-  # ---- ## states island ----
-  states:
-    type: object
-    required: [states]
-    properties:
-      states:
-        type: array
+  # ---- ## modes island ----
+  modes:
+    oneOf:
+      - type: array
         minItems: 1
         items:
           type: object
@@ -193,72 +90,155 @@ properties:
             final: { type: boolean }
             enter:
               type: object
-              additionalProperties: true
+              properties:
+                do:
+                  type: array
+                  items: { type: string }
             exit:
               type: object
-              additionalProperties: true
-
-  # ---- ## actions island ----
-  actions:
-    type: array
-    items:
-      type: object
-      required: [on, do]
-      properties:
-        on:
-          type: object
-          properties:
-            widget: { type: string }
-            event:  { type: string }
-            where:  { type: string }
-          anyOf:
-            - required: [widget]
-            - required: [event]
-        do:
-          type: array
-          minItems: 1
-          items: { type: string }   # action tuples (separately validated)
-
-  # ---- ## animations island ----
-  animations:
-    oneOf:
-      - type: array
-        items:
-          type: object
-          required: [id, trigger, duration, blocksInput]
-          properties:
-            id: { type: string }
-            trigger: { type: string }
-            spec: { type: string }
-            duration:
-              type: string
-              pattern: "^[0-9]+ms$"
-            blocksInput: { type: boolean }
+              properties:
+                do:
+                  type: array
+                  items: { type: string }
+            on:
+              type: array
+              items:
+                type: object
+                properties:
+                  widget: { type: string }
+                  event:  { type: string }
+                  where:  { type: string }
+                  do:
+                    type: array
+                    items: { type: string }
+                  goto:
+                    type: string
+                anyOf:
+                  - required: [widget]
+                  - required: [event]
       - const: _none_
 
   # ---- ## acceptance island ----
   acceptance:
-    type: array
-    items:
-      type: object
-      required: [id, given, when, then]
-      properties:
-        id:
-          type: string
-          pattern: "^U[A-Za-z0-9_-]+$"
-        given: { type: string }
-        when: { type: string }
-        then: { type: string }
-        test_hint: { type: string }
+    oneOf:
+      - type: array
+        items:
+          type: object
+          required: [id, given, when, then]
+          properties:
+            id:
+              type: string
+              pattern: "^U[A-Za-z0-9_-]+$"
+            given: { type: string }
+            when: { type: string }
+            then: { type: string }
+            test_hint: { type: string }
+      - const: _none_
 
 definitions:
+
+  uiNode:
+    type: object
+    required: [type]
+    properties:
+      id:
+        type: string
+        pattern: "^[a-zA-Z][a-zA-Z0-9_]*$"
+      type:
+        oneOf:
+          # Container types (and Spacer leaf)
+          - enum: [VStack, HStack, ZStack, Grid, Scroll, Spacer]
+          # Widget types
+          - enum:
+              - Text
+              - Image
+              - Icon
+              - Button
+              - IconButton
+              - Toggle
+              - Slider
+              - ProgressBar
+              - List
+              - HitArea
+              - Custom
+      # Sizing
+      width:  { $ref: "#/definitions/sizingUnit" }
+      height: { $ref: "#/definitions/sizingUnit" }
+      flex:   { type: integer, minimum: 1 }
+      align:  { $ref: "#/definitions/alignNine" }
+      offset:
+        type: object
+        properties:
+          x: { $ref: "#/definitions/sizingUnit" }
+          y: { $ref: "#/definitions/sizingUnit" }
+      # Bindings / interactions
+      bind:
+        type: object
+        additionalProperties: true
+      visible:
+        type: object
+        required: [bind]
+        properties:
+          bind: { type: string }
+      enabled:
+        type: object
+        required: [bind]
+        properties:
+          bind: { type: string }
+      on:
+        type: object
+        additionalProperties:
+          type: array
+          items: { type: string }
+      style:
+        type: object
+        additionalProperties: true
+      # Container nesting
+      children:
+        type: array
+        items: { $ref: "#/definitions/uiNode" }
+      # Container-specific options
+      cols: { type: integer, minimum: 1 }
+      rows: { oneOf: [{ type: integer, minimum: 1 }, { const: auto }] }
+      gap:  { $ref: "#/definitions/sizingUnit" }
+      axis: { enum: [vertical, horizontal] }
+      # Widget-specific props (universal subset; project widgets layer more in _config.md)
+      text:    { type: string }
+      label:   { type: string }
+      icon:    { type: string }
+      asset:   { type: string }
+      fit:     { enum: [contain, cover, fill] }
+      tint:    { type: string }
+      size:    { $ref: "#/definitions/sizingUnit" }
+      maxLines: { type: integer, minimum: 1 }
+      min:     { type: number }
+      max:     { type: number }
+      step:    { type: number }
+      variant: { type: string }
+      separator: { type: boolean }
+      badge:
+        type: object
+        additionalProperties: true
+      name:    { type: string }
+      props:
+        type: object
+        additionalProperties: true
+      itemTemplate:
+        $ref: "#/definitions/uiNode"
+    allOf:
+      # Custom requires `name`
+      - if:
+          properties: { type: { const: Custom } }
+        then:
+          required: [name]
+      # ZStack children require `align`
+      # (note: this is a parent-side rule; enforced by a companion script,
+      #  not expressible cleanly in JSON Schema draft-7 since it's about siblings)
 
   sizingUnit:
     type: string
     # Matches: 70dp, 100%w, 100%h, 50%sw, 50%sh, auto, fill, min(...), max(...)
-    # NOTE: `flex` is NOT a sizing-unit string. It is a separate child-level integer
-    # field (region.flex / widget.flex). Compound expressions inside min()/max() are
-    # validated by a companion script, not by this regex.
+    # Compound expressions inside min()/max() validated by a companion script.
     pattern: "^([0-9]+(\\.[0-9]+)?(dp|%w|%h|%sw|%sh)|auto|fill|min\\([^)]+\\)|max\\([^)]+\\))$"
 
   alignNine:

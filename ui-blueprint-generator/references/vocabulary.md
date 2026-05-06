@@ -1,8 +1,8 @@
 # Blueprint Vocabulary
 
-Canonical lists for layout primitives, widget types, sizing units, action verbs, and style tokens. The skill enforces these as **closed sets** at the universal level. Project-specific extensions (custom widgets, custom action verbs) are declared in `_config.md` per project.
+Canonical lists for layout primitives, widget types, sizing units, action verbs, and style tokens. The skill enforces these as **closed sets** at the universal level. Project-specific extensions are declared in `_config.md`.
 
-## Layout primitives — 6 containers
+## Layout primitives — 5 containers + Spacer
 
 These are the **only** allowed container types. No `Flex`, no `Wrap`, no `Absolute` — banning absolute positioning forces every spec to express constraints, eliminating resolution-dependence.
 
@@ -13,11 +13,16 @@ These are the **only** allowed container types. No `Flex`, no `Wrap`, no `Absolu
 | `ZStack` | Layered, last-on-top | per child: `align: <9-position>`, optional `offset: {x, y}` |
 | `Grid` | NxM uniform cells | `cols: <int>`, `rows: <int\|auto>`, `gap: <size>` |
 | `Scroll` | Scrollable viewport, single axis | `axis: vertical\|horizontal`, single child |
-| `Spacer` | Flexible empty space | `flex: <int>` (default 1) |
 
-`flex` is a separate child-level integer key (a stack-axis weight), **not** a sizing-unit string. Either provide a fixed `width`/`height` size **or** provide `flex: <int>`, never both on the same child.
+`Spacer` is a leaf node (not a container) used inside stacks for flexible empty space:
+```yaml
+- type: Spacer
+  flex: 1
+```
 
-### 9-position align (for ZStack)
+`flex` is a child-level integer key (a stack-axis weight), **not** a sizing-unit string. Either fixed `width`/`height` size **or** `flex: <int>`, never both on the same child.
+
+### 9-position align (for ZStack children)
 
 `top-left` `top-center` `top-right` `center-left` `center` `center-right` `bottom-left` `bottom-center` `bottom-right`
 
@@ -34,37 +39,57 @@ Use `offset: {x: <size>, y: <size>}` for fine adjustment from the align point. N
 | `fill` | Take all available perpendicular space (only for stack cross-axis) |
 | `min(<size>, <size>)` / `max(<size>, <size>)` | Combine two sizing units. **Only these two functions; no nesting.** |
 
-For "fraction of remaining space along the stack axis", use the separate `flex: <int>` child key (see Layout primitives). It is a child-level field, not a sizing-unit string.
+For "fraction of remaining space along the stack axis", use the `flex: <int>` child key.
 
-**Banned units**: `px`, `em`, `rem`, `vw`, `vh`, arithmetic expressions like `100% - 32dp`. If you find yourself wanting arithmetic, the layout is wrong — restructure with a Spacer or split a region.
+**Banned units**: `px`, `em`, `rem`, `vw`, `vh`, arithmetic expressions like `100% - 32dp`. If you find yourself wanting arithmetic, the layout is wrong — restructure with a `Spacer` or split a parent.
 
-## Widget types — atomic / leaf
+## Widget types
 
 These are the **universal** widget types. Always available.
 
 | Type | Required props | Optional props |
 |---|---|---|
-| `Text` | `text` or `bind.text` | `fmt`, `align`, `maxLines`, `style` |
+| `Text` | `text` (literal) or `bind.text` (i18n path preferred) | `fmt`, `align`, `maxLines`, `style` |
 | `Image` | `asset` or `bind.asset` | `fit: contain\|cover\|fill`, `tint` |
 | `Icon` | `icon` (catalog key) | `size`, `tint` |
-| `Button` | `label` or `child`, `on.tap` | `variant: primary\|secondary\|ghost`, `enabled.bind` |
-| `IconButton` | `icon`, `on.tap` | `enabled.bind`, `badge.bind` |
-| `Toggle` | `bind.value`, `on.change` | `label` |
-| `Slider` | `bind.value`, `on.change`, `min`, `max` | `step` |
+| `Button` | `label` or `bind.label` | `variant: primary\|secondary\|ghost`, `enabled.bind`, `style` |
+| `IconButton` | `icon` | `enabled.bind`, `badge.bind` |
+| `Toggle` | `bind.value` | `label` |
+| `Slider` | `bind.value`, `min`, `max` | `step` |
 | `ProgressBar` | `bind.value`, `min`, `max` | `variant` |
 | `List` | `bind.items`, `itemTemplate` | `axis`, `separator` |
-| `HitArea` | `on.tap` (no visual) | `size` |
+| `HitArea` | (no visual; usually inside ZStack as backdrop) | `size` |
 | `Custom` | `name` (engine widget id) | `props: {...}` — escape hatch |
+
+### `Text` content rule
+
+Hard-coded `text:` literals are allowed only for symbols (`"+"`, `"x"`, `"→"`) and digits. All natural-language text MUST use `bind.text` pointing to an `i18n.*` namespace path. This keeps blueprints localizable.
+
+### `List.itemTemplate`
+
+`itemTemplate` is a single-widget or single-container subtree describing how each item is rendered. Bind paths inside the template start with `item.*` referring to the current row.
+
+```yaml
+- id: lstLeaderboard
+  type: List
+  bind: { items: "level.leaderboard" }
+  itemTemplate:
+    type: HStack
+    height: 48dp
+    children:
+      - { id: rank,  type: Text, bind: { text: "item.rank" },  width: 32dp }
+      - { id: name,  type: Text, bind: { text: "item.name" },  flex: 1 }
+      - { id: score, type: Text, bind: { text: "item.score" }, width: 64dp }
+```
 
 ### `Custom` — escape hatch
 
-Engine-specific complex widgets (board renderers, code editors, map views, particle systems, custom game widgets) use `Custom`:
+Engine-specific complex widgets (board renderers, code editors, map views, particle systems) use `Custom`:
 
 ```yaml
 - id: board
   type: Custom
   name: BoardView           # the implementation's widget id, defined in code
-  region: board
   props:
     bind: "state.board"
     gravity.bind: "level.gravity"
@@ -72,17 +97,20 @@ Engine-specific complex widgets (board renderers, code editors, map views, parti
     tap.tile: [ emit("level.tileTap", "{cell}") ]
 ```
 
-The blueprint references the Custom widget by `name` and passes typed `props`. The implementation lives in code (e.g. `src/features/board/`). This is the only legitimate way to spec something the universal vocabulary can't express.
+`Custom` is for engine-implemented widgets that the universal vocabulary can't express. **For structural reuse using only universal vocabulary, use `type: shared` blueprints** referenced by id from `## ui` (the resolver maps the shared id to a Custom-like compose-time widget). Do not confuse the two:
+
+- `Custom` → engine code defines the widget; blueprint passes typed props.
+- `shared` → another blueprint defines the structure; current blueprint includes it.
 
 ### Project-specific widget extensions
 
 Some domains commonly need additional atomic widgets. List them in `_config.md`:
 
-- **Game UI**: `Minimap`, `PromptIndicator` (input-mode-aware glyph), `HeartRow`, `BoosterBadge`
-- **Web/mobile**: `Avatar`, `Chip`, `BottomSheet`, `Tabs`, `SearchField`
+- **Game UI**: `Minimap`, `PromptIndicator`, `HeartRow`, `BoosterBadge`
+- **Mobile**: `Avatar`, `Chip`, `BottomSheet`, `Tabs`, `SearchField`
 - **Forms-heavy**: `DatePicker`, `Combobox`, `Stepper`
 
-If declared in `_config.md`, they may be used as if universal. If not declared, use `Custom` instead.
+If declared in `_config.md`, they may be used as if universal. If not declared, use `Custom`.
 
 ## Action verbs — universal pattern
 
@@ -92,9 +120,8 @@ Action verbs are a **controlled enum**. The universal pattern below is project-a
 
 | Category | Pattern | Examples |
 |---|---|---|
-| Navigation | `nav.*` | `nav.gotoScene`, `nav.back`, `nav.replace` |
+| Navigation | `nav.*` | `nav.gotoScene`, `nav.back`, `nav.replace`, `nav.push` |
 | UI overlay | `ui.*` | `ui.openPopup`, `ui.closePopup`, `ui.showToast` |
-| State machine | `state.*` | `state.set` |
 | Event bus | `emit` | `emit(<event>, <payload>?)` |
 | Service call | `service.call` | `service.call(<service>, <method>, <args>?)` |
 | Data write | `data.*` | `data.set(<path>, <value>)`, `data.increment(<path>)` |
@@ -102,36 +129,11 @@ Action verbs are a **controlled enum**. The universal pattern below is project-a
 
 Every verb is written as `verb(args)` — including `noop()` and verbs with no args. No inline JS, no arbitrary expressions, no chained method calls.
 
-### Project verb list (declared in `_config.md`)
+State transitions are **not** action verbs — use `goto: <mode-id>` directly on a mode's `on:` entry.
 
-The project picks which universal verbs apply and adds project-specific ones. Example for a Cocos game:
+### Project verb list
 
-```yaml
-verbs:
-  nav.gotoScene: { args: [sceneId, data?], maps_to: "ui.gotoScene" }
-  nav.back:      { args: [], maps_to: "ui.back" }
-  ui.openPopup:  { args: [popupId, data?], maps_to: "ui.openPopup" }
-  ui.closePopup: { args: [popupId?], maps_to: "ui.closePopup" }
-  state.set:     { args: [stateId] }
-  emit:          { args: [eventName, payload?] }
-  service.call:  { args: [serviceKey, method, args?] }
-  noop:          { args: [] }
-```
-
-Example for a React web app:
-
-```yaml
-verbs:
-  nav.push:    { args: [route, params?], maps_to: "router.push" }
-  nav.replace: { args: [route, params?], maps_to: "router.replace" }
-  nav.back:    { args: [], maps_to: "router.back" }
-  ui.openModal:  { args: [modalId, data?] }
-  ui.closeModal: { args: [modalId?] }
-  state.set:     { args: [stateId] }
-  emit:          { args: [eventName, payload?] }
-  api.call:      { args: [endpoint, method, body?] }
-  noop:          { args: [] }
-```
+The project picks which universal verbs apply and adds project-specific ones in `_config.md`. See `references/config-template.md` for canonical examples (game + mobile-app).
 
 A blueprint can only use verbs declared in the project's verb list. The validator checks this.
 
@@ -154,29 +156,19 @@ Project token catalog declared in `_config.md` (or referenced from `DESIGN.md`).
 
 A blueprint reads data only through declared **bind namespaces**. Each namespace has a typed source.
 
-### Universal pattern
-
-```yaml
-namespaces:
-  <name>: { source: <TypeName>, scope: <where the data lives> }
-```
-
 ### Common namespace patterns
 
 | Domain | Typical namespaces |
 |---|---|
 | Game | `level.*`, `state.*`, `save.*`, `i18n.*` |
-| Web app | `user.*`, `route.*`, `flags.*`, `session.*`, `i18n.*` |
-| Mobile app | `user.*`, `device.*`, `prefs.*`, `i18n.*` |
+| Mobile app | `user.*`, `feed.*`, `prefs.*`, `flags.*`, `i18n.*` |
 | Generic | declare what makes sense for the project |
 
-### `$state` pseudo-path
+### `$mode` pseudo-path
 
-`$state` is **not** a data namespace. It refers to the **FSM state ID** of the current screen — useful in `where` guards on actions to check the current state-machine state.
+`$mode` refers to the **current FSM mode** of the screen — useful in `where:` guards on actions to check the current mode.
 
-Distinct from the `state.*` data namespace. A typical game has both: `state.timer` (data) and `$state === "paused"` (FSM).
-
-## Bind syntax in widgets
+### Bind syntax in widgets
 
 ```yaml
 bind:
@@ -199,12 +191,9 @@ The renderer resolves bind paths at runtime. Blueprints stay engine-agnostic.
 
 | Concern | Lives in |
 |---|---|
-| Container structure | `## layout` |
-| Atomic widgets, content, bindings, interactions | `## widgets` |
-| Modes / variants of the screen | `## states` |
-| What input does what (with optional state guard) | `## actions` |
-| Animation contracts (trigger / duration / blocksInput) | `## animations` |
+| Container structure + atomic widgets + bindings + state-independent interactions | `## ui` |
+| Modes / variants of the screen + transitions + state-dependent actions | `## modes` |
 | Test cases | `## acceptance` |
-| Edge cases, rationale | `## notes` |
-| Concrete colors / fonts / pixel values | `DESIGN.md` (NOT in blueprint) |
-| Engine APIs / framework-specific code | code repo (NOT in blueprint) |
+| Edge cases, rationale, animation contracts | `## notes` (long animation specs → `DESIGN.md`) |
+| Concrete colors / fonts / pixel values | `DESIGN.md` |
+| Engine APIs / framework-specific code | code repo |
