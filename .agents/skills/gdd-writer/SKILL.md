@@ -1,6 +1,6 @@
 ---
 name: gdd-writer
-description: Use when the user wants to write, draft, generate, scaffold, or structure any game design document — GDD, design doc, game pitch doc, game concept doc, or design spec — for any genre (mobile, PC, console, indie, AAA, multiplayer, F2P, narrative, puzzle, etc.) or scope (one-pager, standard, comprehensive). Also use when the user describes a game idea and asks to turn it into a structured document, or asks to "document the design" of a game concept.
+description: Use when the user wants to write, draft, generate, scaffold, or structure any game design document — GDD, design doc, game pitch doc, game concept doc, design spec, functional spec, engineering spec, or implementation-ready GDD — for any genre (mobile, PC, console, indie, AAA, multiplayer, F2P, narrative, puzzle, match-3, hyper-casual, etc.) or scope (one-pager, standard, comprehensive, MVP). Also use when the user describes a game idea and asks to turn it into a structured document, asks to "document the design" of a game concept, or asks for an engineer-ready spec with data models, algorithms, balance numbers, and edge cases.
 ---
 
 # GDD Writer
@@ -36,24 +36,41 @@ Before writing, you need to know enough to fill in the **mandatory** sections co
 
 If the user has already given a rich brief, **skip the interview** and go straight to drafting. Don't ask redundant questions when the answer is already in context.
 
+**Extra prerequisite for the Functional Spec tier.** Before drafting, also do a quick prior-art pass:
+- Identify 2–3 top games in the same sub-genre (use the user's reference titles if given).
+- Skim store reviews for those games and surface 3–5 recurring complaints (resource decrement on crash, predatory ads, soft-locks, save-loss, opaque difficulty). These complaints feed §3.6 (failure/recovery), §6.3 (resource anti-frustration), and §7.4 (monetization anti-frustration) — they are the bugs your team should not repeat.
+- If you cannot do this research in-session, mark it as the first row of §12 Open Questions with the user as owner.
+
 ### Step 2: Pick the tier
 
-Choose one of three tiers based on the project's stated scope and the depth of input you have. Read the corresponding template file from `templates/` — it is the source of truth for structure and section order.
+Choose one of four tiers based on the project's stated scope, the primary reader of the deliverable, and the depth of input you have. Read the corresponding template file from `templates/` — it is the source of truth for structure and section order.
 
 | Tier | When to use | Template file |
 |---|---|---|
 | **Lean** | Solo dev, game jam, prototype, early pitch, "one-pager" requested, or input is minimal | `templates/lean.md` |
 | **Standard** | Default for most indie/small-team projects. ~10–15 sections, covers gameplay, art, UI, scope, but skips deep technical/AI breakdowns | `templates/standard.md` |
-| **Comprehensive** | Full production, multi-team, publisher pitch, AAA-style, or user explicitly asks for "complete/full/detailed GDD" | `templates/comprehensive.md` |
+| **Comprehensive** | Full production, multi-team, publisher pitch, AAA-style, or user explicitly asks for "complete/full/detailed GDD" — broad coverage across design, narrative, art, audio, business, live ops | `templates/comprehensive.md` |
+| **Functional Spec** | Engineer-ready spec. Primary reader is Engineering / QA / Level Design. User asks for "functional spec", "engineering spec", "implementation-ready GDD", "MVP spec", or describes a mobile/casual/F2P/multiplayer game where data models, algorithms, balance numbers, and edge cases matter more than vision/narrative. Output uses MUST/SHOULD/MAY/TBD, TypeScript pseudo-code, and an explicit acceptance-criteria checklist | `templates/functional-spec.md` |
 
 If unsure between two tiers, **pick the smaller one** and offer to expand later. Bloat is the more common failure mode.
 
+Functional Spec is orthogonal to the other three: it can replace Standard/Comprehensive when the primary deliverable is implementation guidance rather than a pitch / vision doc. Use it when the user emphasizes engineering rigor; use Comprehensive when they emphasize breadth (story, art direction, marketing, live ops).
+
 ### Step 3: Apply conditional sections
 
-Three sections are **mandatory in every tier** (per the skill's design intent):
+**For Lean / Standard / Comprehensive tiers**, three sections are mandatory:
 - **Pitch + Core Loop + Design Pillars** (the "what and why")
 - **Mechanics** (detailed enough that an engineer could start prototyping)
 - **Art Direction + UI/UX** (enough that an artist understands the visual target)
+
+**For the Functional Spec tier**, the mandatory backbone is different — Art/UI are reference-only, and the engineering structure replaces them:
+- **§0 Document conventions** (the MUST/SHOULD/MAY/TBD legend)
+- **§1 Overview** (pillars + references + audience + platform)
+- **§2 Core gameplay loop** (pitch + state diagram + win/lose/quit)
+- **§3 Core systems spec** (data model + rules + algorithms + state transitions + failure/recovery + edge cases)
+- **§10 Edge cases & failure modes** (interruption, save state, network)
+- **§12 Open questions** (every TBD with owner + deadline)
+- **§13 Acceptance criteria** (objective verification checklist)
 
 All other sections are conditional. Add a section only if you have real input or the genre demands it. Consult `references/conditional-sections.md` for the decision rules per genre (when to add Story, Multiplayer, Monetization, Levels, AI, Audio, Tech, Accessibility, Localization, etc.).
 
@@ -63,9 +80,12 @@ Open the chosen template, then fill it in. Follow the writing rules in `referenc
 
 For prose voice and the level of concreteness expected, look at the filled-in examples in `examples/` — `possessable-GDD.md` shows a Lean-tier game-jam doc, and `echoes-of-the-tideborne-GDD.md` shows a Standard-tier indie production doc. Match their tone, density, and use of specific numbers / named systems / TBD blockquotes.
 
+The Functional Spec template has its own embedded writing rules at the top of the file (under "WRITING RULES" in the leading HTML comment). Follow those in addition to `references/writing-rules.md` — they cover MUST/SHOULD/MAY ontology, TypeScript pseudo-code style, "numbers are starting values", and the tracked Open Questions register.
+
 Critically:
-- **Never leave the template's placeholder text** (e.g. `[describe X here]`) in the final output. Either fill it with real content from the user, fill it with a clearly-marked TBD with a follow-up question, or remove the line entirely.
-- **Mark TBDs explicitly.** Use `> **TBD:** [specific question to resolve this]` as a blockquote so they're easy to grep for later.
+- **Never leave the template's placeholder text** (e.g. `{{describe X here}}`, `<Influence #1>`) in the final output. Either fill it with real content from the user, fill it with a clearly-marked TBD with a follow-up question, or remove the line entirely.
+- **Remove the leading instruction comment block** from any template that has one (Functional Spec ships with one). It's scaffolding for you, not for the reader.
+- **Mark TBDs explicitly.** Use `> **TBD:** [specific question to resolve this]` as a blockquote so they're easy to grep for later. For Functional Spec, also add a row to the §12 Open Questions table with owner + deadline — an untracked TBD becomes a silent decision.
 - **Keep prose tight.** A bullet beats a paragraph. A concrete example beats abstract description.
 
 ### Step 5: Save and present
@@ -87,6 +107,10 @@ User: "We're a 6-person indie studio kicking off a year-long roguelike deckbuild
 **Example 3:**
 User: "I'm pitching a AAA open-world RPG to a publisher. I need the full design document."
 → **Comprehensive tier.** Explicit "full" + publisher pitch + AAA = include everything: overview, mechanics, story, world, characters, levels, AI, multiplayer if applicable, UI, audio, tech, art, monetization, accessibility, localization, scope, risks, team, schedule.
+
+**Example 4:**
+User: "I'm leading the engineering team for a new mobile match-3 game. I need a functional spec the engineers can implement against — data models, the match-detection algorithm, lives regen rules, ad placements, edge cases. Skip the marketing fluff."
+→ **Functional Spec tier.** "Functional spec", "implement against", explicit data-model / algorithm / edge-case request, plus engineering team as primary reader. Use `templates/functional-spec.md`. Include §3 data model + match algorithm pseudo-code with complexity, §6.3 lives rules (MUST NOT decrement on crash/OS-kill/network drop), §7 monetization with anti-frustration rules, §10 edge cases, §13 acceptance criteria. Skip §9 story/narrative, §10.4 anti-cheat (single-player casual → minimal).
 
 ## What not to do
 

@@ -1,6 +1,6 @@
 {
   "skill_name": "gdd-writer",
-  "notes": "Three test prompts covering Lean / Standard / Comprehensive tiers. Each prompt is intentionally rich enough that the skill should skip the clarifying-question step (Step 1 of the workflow) and go straight to drafting. Assertions are objectively verifiable by inspecting the produced Markdown file in the run's output directory.",
+  "notes": "Four test prompts covering Lean / Standard / Comprehensive / Functional-Spec tiers. Each prompt is intentionally rich enough that the skill should skip the clarifying-question step (Step 1 of the workflow) and go straight to drafting. Assertions are objectively verifiable by inspecting the produced Markdown file in the run's output directory.",
   "evals": [
     {
       "id": 1,
@@ -194,6 +194,87 @@
         {
           "name": "respects_comprehensive_tier_size",
           "description": "Document has 17 or more top-level (## level) sections — full production scope."
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "functional-spec-mobile-match3",
+      "prompt": "I'm the lead engineer on a new mobile match-3 puzzle game called Tideglass for iOS 15+ and Android 10+, portrait orientation. We're a 4-person team, MVP target in 6 months. Hybrid network (offline-first play, cloud save sync when online). Free-to-play with rewarded ads + IAP. Reference titles: Royal Match (level pacing + meta progression), Candy Crush Saga (core match mechanics), Toon Blast (booster economy). I need a FUNCTIONAL SPEC the engineers can implement against — data models for board/tile/level, the match-detection algorithm with complexity, lives/energy regen rules, ad placement matrix with anti-frustration commitments, save-state schema with versioning, edge cases for OS-kill and network drop, and a clear acceptance-criteria checklist. Skip marketing fluff, skip detailed narrative (there isn't one), skip multiplayer (single-player only). Numbers can be starting values for playtesting.",
+      "expected_output": "A Functional-Spec tier Markdown GDD saved as `tideglass-GDD.md` (or similar slug). Uses the §0–§13 structure from templates/functional-spec.md. Contains: §0 conventions, §1 overview with pillars and references, §2 core loop with state diagram and win/lose/quit table, §3 data model in TypeScript pseudo-code + match-detection algorithm with O() complexity + state transitions + §3.6 failure/recovery with zero-cost-to-player rule + §3.7 edge case table, §4 content schema + difficulty tiers, §6 currencies including §6.3 lives MUST NOT decrement on crash/OS-kill, §7 ads matrix + §7.4 anti-frustration MUST/MUST NOT rules, §10.1 interruption table + §10.2 save state schema with `version` field, §12 Open Questions with owner+deadline columns, §13 acceptance criteria checklist. Skips story/narrative sections, skips multiplayer/networking sub-sections, keeps §10.4 anti-cheat minimal.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "output_file_saved_to_cwd_not_sandbox",
+          "description": "A .md file is written to the working directory, not /mnt/user-data/outputs/."
+        },
+        {
+          "name": "filename_is_slugified",
+          "description": "Filename uses lowercase letters, digits, hyphens only."
+        },
+        {
+          "name": "leading_instruction_comment_removed",
+          "description": "Document does NOT contain the leading 'FUNCTIONAL-SPEC TIER — AGENT INSTRUCTIONS' HTML comment block from the template — it must be stripped before delivery."
+        },
+        {
+          "name": "uses_must_should_may_ontology",
+          "description": "Document contains explicit MUST and MUST NOT statements (RFC-style) in monetization or resource sections — not vague 'we will' phrasing."
+        },
+        {
+          "name": "data_model_uses_typescript_pseudo_code",
+          "description": "Section 3 (Core systems spec) contains a TypeScript-style `type` declaration with at least one field — e.g. `type Tile = { ... }` or `type Board = { ... }`."
+        },
+        {
+          "name": "algorithm_has_complexity_annotation",
+          "description": "Section 3.4 includes an O() complexity annotation (e.g. `O(n)`, `O(rows * cols)`) for the match-detection algorithm."
+        },
+        {
+          "name": "failure_recovery_zero_cost_documented",
+          "description": "Section 3.6 explicitly states that recovery from system-caused failure costs the player zero (or contains the rule that the player MUST NOT be penalized for crashes / OS-kill / network drops)."
+        },
+        {
+          "name": "lives_section_lists_must_not_decrement_scenarios",
+          "description": "Section 6.3 enumerates scenarios where lives MUST NOT decrement (crash, OS-kill, network drop, or similar system-caused state changes)."
+        },
+        {
+          "name": "ad_matrix_present",
+          "description": "Section 7 contains an Ads Placement table with at least columns for Placement, Type, Frequency."
+        },
+        {
+          "name": "anti_frustration_rules_present",
+          "description": "Section 7.4 lists at least one MUST or MUST NOT anti-frustration commitment (e.g. 'MUST NOT show ads during active gameplay', 'MUST honor remove-ads purchase')."
+        },
+        {
+          "name": "save_state_has_version_field",
+          "description": "Section 10.2 SavedSession type contains a `version: number` field with a comment indicating it exists for schema migration."
+        },
+        {
+          "name": "interruption_table_covers_critical_events",
+          "description": "Section 10.1 interruption table includes rows for at least: home button / app backgrounding, OS-killed app, crash, and network drop."
+        },
+        {
+          "name": "open_questions_has_owner_and_deadline_columns",
+          "description": "Section 12 Open Questions is a table with at least Question, Owner, and Deadline columns (not just TBD blockquotes)."
+        },
+        {
+          "name": "acceptance_criteria_section_present",
+          "description": "Section 13 Acceptance Criteria exists with markdown checkboxes (`- [ ]`) under at least Gameplay, Technical, and Monetization headings."
+        },
+        {
+          "name": "numbers_marked_as_starting_values",
+          "description": "At least one numeric value (regen rate, drop rate, price, threshold) is annotated as a starting value / 'needs playtest tune' / similar — not presented as final."
+        },
+        {
+          "name": "no_multiplayer_or_networking_subsection",
+          "description": "Document does NOT contain a Multiplayer or Networking-architecture section — user said single-player only."
+        },
+        {
+          "name": "no_deep_narrative_sections",
+          "description": "Document does NOT contain Story / Themes / Characters / Plot Structure sections — user said there is no narrative."
+        },
+        {
+          "name": "no_placeholder_text_leaked",
+          "description": "Document contains no `{{...}}` template scaffolding, no literal `[describe`, no `<Influence #`, no unfilled placeholder lines."
         }
       ]
     }

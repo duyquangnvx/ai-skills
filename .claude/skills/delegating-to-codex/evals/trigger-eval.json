@@ -1,0 +1,82 @@
+[
+  {
+    "query": "ok i've been fighting this race condition in src/payments/queue.ts for like 90 min straight. my latest attempt was wrapping the dequeue in a Mutex from async-mutex and it still fails maybe 1 in 8 times. fresh eyes please?",
+    "should_trigger": true
+  },
+  {
+    "query": "QA dropped this in slack — screenshot of the checkout sheet on iPad portrait, the 'Pay Now' button is rendering ~12px off-center vs the totals row. file's at /Users/me/Downloads/checkout-ipad.png. component is somewhere in src/components/checkout/ but i can't find which one",
+    "should_trigger": true
+  },
+  {
+    "query": "need a placeholder icon for the new daily-streak feature in our casual mobile game. 512x512 png, transparent background, flat colours (warm palette — orange/red flame motif). save to assets/icons/daily-streak.png. designer will replace it eventually",
+    "should_trigger": true
+  },
+  {
+    "query": "can you whip up a quick hero banner for the docs landing page? 1920x600, dark theme, with the words 'API Reference' rendered in it. save to docs/static/hero.png",
+    "should_trigger": true
+  },
+  {
+    "query": "i refactored the booster service to use the new EventBus pattern but the resulting shape feels weird — too much wiring at construction time. can you try an alternative approach in a separate branch so i can diff the two and pick?",
+    "should_trigger": true
+  },
+  {
+    "query": "we're ripping out the old auth middleware and consolidating the 3 session helpers (sessionStore, sessionManager, sessionUtils) into one. about 20 files affected. i don't want to context-switch into this — can it be delegated end-to-end in an isolated worktree?",
+    "should_trigger": true
+  },
+  {
+    "query": "i have the figma mockup at /tmp/figma-checkout.png and a screenshot of what we shipped at /tmp/prod-checkout.png. compare them pixel by pixel and tell me every visible difference, ranked by user impact",
+    "should_trigger": true
+  },
+  {
+    "query": "i want to scan every TODO/FIXME comment in src/ and classify it as {category: tech-debt|feature|bug|doc, priority: low|med|high, file, line}. need the result as a JSON file so my dashboard script can ingest it. who handles this?",
+    "should_trigger": true
+  },
+  {
+    "query": "before i push this branch and open a PR can you run a codex review pass on the diff against main? especially want eyes on the new payments/refund handler",
+    "should_trigger": true
+  },
+  {
+    "query": "ok i just ran `pnpm run build` and got 47 typescript errors. pasting the full output below — somewhere in the migration to strictNullChecks i broke a bunch of stuff. <error log starts here>",
+    "should_trigger": true
+  },
+  {
+    "query": "rename the `usrId` variable in src/auth/login.ts to `userId` everywhere it appears in that file",
+    "should_trigger": false
+  },
+  {
+    "query": "what's the canonical way to set up vitest with React Testing Library in 2026? just give me the latest official setup",
+    "should_trigger": false
+  },
+  {
+    "query": "there's a typo on line 42 of src/utils/format.ts — it says 'recieve' instead of 'receive'. just fix it real quick",
+    "should_trigger": false
+  },
+  {
+    "query": "run our test suite and tell me if anything's failing",
+    "should_trigger": false
+  },
+  {
+    "query": "i don't understand this regex on line 28 of src/parsers/url.ts — `/^https?:\\/\\/([^\\/]+)(\\/.*)?$/`. can you walk me through what each part does?",
+    "should_trigger": false
+  },
+  {
+    "query": "add a vitest unit test for the formatPrice() function in src/utils/format.ts that covers the negative-zero edge case (i.e. formatPrice(-0) should return '$0.00' not '-$0.00')",
+    "should_trigger": false
+  },
+  {
+    "query": "codex already gave me a verdict: 'ROOT CAUSE: missing await on line 88 of session.ts; FIX: add await before refreshToken() call'. just apply that and run the tests",
+    "should_trigger": false
+  },
+  {
+    "query": "squash the last 3 commits on this branch into one and rewrite the message to say 'fix(payments): resolve refund race condition'",
+    "should_trigger": false
+  },
+  {
+    "query": "in our design tokens at src/styles/tokens.ts, change the value of `colors.primary` from '#3b82f6' (blue-500) to '#6366f1' (indigo-500)",
+    "should_trigger": false
+  },
+  {
+    "query": "summarise what the README.md in the repo root says about the project's architecture — i don't want to read the whole thing",
+    "should_trigger": false
+  }
+]
