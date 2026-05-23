@@ -10,15 +10,17 @@ PM-level planning for the project. Not implementation, not feature specs — tho
 |---|---|
 | [`progression.md`](./progression.md) | Where we are right now, what's blocking, what's next |
 | [`roadmap.md`](./roadmap.md) | What ships in what order, with what acceptance bar |
-| [`decisions.md`](./decisions.md) | What has been decided and why, append-only |
+| [`decisions.md`](./decisions.md) | What has been decided and why (revisable — a row is replaced when its choice is overridden) |
 | [`architecture.md`](./architecture.md) | What kind of product this is, what it touches, hard constraints |
+
+> `architecture.md` and `decisions.md` are optional. If the project maintains an equivalent doc elsewhere, this table links there instead of duplicating it here.
 
 ## Reading order for first-time arrival
 
 1. **`progression.md`** — top block tells you the live state in five lines.
 2. **`roadmap.md`** — gives the full plan if you need context for the current phase.
 3. **`architecture.md`** — gives the product shape if you need to understand the product, not just the plan.
-4. **`decisions.md`** — append-only history; useful when you wonder "why is the project shaped this way?"
+4. **`decisions.md`** — the active decisions and their rationale; useful when you wonder "why is the project shaped this way?"
 
 ## How these files relate
 
@@ -32,7 +34,7 @@ PM-level planning for the project. Not implementation, not feature specs — tho
             progression.md   ← where we are now (live)
                    │
                    ▼
-             decisions.md    ← why we got here (past, append-only)
+             decisions.md    ← why we got here (past, revisable)
 ```
 
 Each file has a "How this evolves" section at the bottom describing when and how it gets updated. If you're about to change one of these files, read that section first — they're not free-form notes, they have rules.
@@ -49,7 +51,7 @@ If you are an AI agent operating on this project, follow this protocol every ses
 
 **When something changes during the session:**
 
-- A **decision** is made (product-level, scope-level, process-level) → append a row to `decisions.md` with a real Source pointer, then add a one-line log entry in `progression.md` referencing the new ID.
+- A **decision** is made or changed (product-level, scope-level, process-level) → add or update its row in `decisions.md` with a real Source pointer, then add a one-line log entry in `progression.md` referencing the ID.
 - The **product shape** changes (new external dependency, new accepted constraint, scope of "what's inside the boundary" shifted) → update `architecture.md`, log entry in `progression.md`.
 - A **roadmap phase's scope** changes (In/Out shifts, acceptance criteria revised, phase split or merged) → update `roadmap.md`, record rationale as a row in `decisions.md`, log entry in `progression.md`.
 - A **blocker** is hit or resolved → update the Blocker field in `progression.md`'s top block, log entry.

@@ -50,7 +50,7 @@ If any check above fails, the skill drifted into implementation territory. Fix b
 
 ## Cross-reference integrity
 
-- [ ] `README.md` lists all four sibling files with one-line role descriptions.
+- [ ] `README.md` lists every sibling file present with one-line role descriptions (`architecture.md` and `decisions.md` may be omitted when owned elsewhere; then the table links out to them).
 - [ ] `README.md` has a "Protocol for agents" section with at-session-start, during-session, and at-session-end rules.
 - [ ] `README.md` has a "What happens after planning" section delineating the boundary with feature-level work.
 - [ ] `progression.md` links to `roadmap.md` and `decisions.md`.

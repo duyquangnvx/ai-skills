@@ -1,6 +1,6 @@
 # Roadmap
 
-> Phases that ship the product. Each phase is a vertical slice — independently demoable end-to-end. Order is by dependency, not by layer. For *why* decisions were made, see [`decisions.md`](./decisions.md). For *where we are right now*, see [`progression.md`](./progression.md).
+> Phases that ship the product. Each phase is a vertical slice — independently demoable end-to-end. Order is by dependency, not by layer. **This is a provisional best guess, not a contract** — detail the next phase or two; leave later ones as a name plus one line, and re-plan as implementation reveals what you couldn't know up front. For *why* decisions were made, see [`decisions.md`](./decisions.md). For *where we are right now*, see [`progression.md`](./progression.md).
 
 ## Phases
 

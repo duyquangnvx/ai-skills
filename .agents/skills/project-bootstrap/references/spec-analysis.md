@@ -18,9 +18,9 @@ This is a PM-layer analysis. Anything purely implementation lives at the dev lay
 - **What is explicitly out of scope?** (every "we will not", "later", "v2", "no <thing> at v1")
 - **What does success look like?** (metrics, qualitative goals, "shippable when X")
 
-### 2. Locked decisions (the spec already made)
+### 2. Decisions the spec already made
 
-Things in the spec that are not negotiable — these become rows in `decisions.md` immediately.
+Choices the spec states explicitly — these become rows in `decisions.md` immediately (still revisable later if the spec changes).
 
 Look for language like: "we will", "the product is", "v1 ships with", "must support", "is not". Each is a decision someone made, even if not framed as one.
 
@@ -96,7 +96,7 @@ After running the checklist, produce a structured summary like this and show it 
 **For:** <target user>
 **Out of scope:** <2-3 most important non-goals>
 
-**Locked decisions (will pre-populate decisions.md):**
+**Decisions the spec already made (will pre-populate decisions.md):**
 - <decision 1> — <spec ref>
 - <decision 2> — <spec ref>
 ... (typically several of these)

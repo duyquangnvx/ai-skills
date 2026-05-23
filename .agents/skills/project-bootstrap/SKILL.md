@@ -1,6 +1,6 @@
 ---
 name: project-bootstrap
-description: Bootstrap a project's PM-level planning artifacts — roadmap, decisions log, progression tracker, and product architecture sketch — from an existing top-level spec, PRD, vision doc, or design brief. Use this skill at day-zero of a project to produce the planning surface that anchors a product across many sessions and many contributors. The output is "what ships, why, in what order, and where we are right now" — distinct from the spec above (which says what the product is) and from feature-level planning below (which says how a feature gets built). Trigger on requests like "bootstrap planning docs from this spec", "set up roadmap and decisions log", "scaffold the planning files from this PRD", "turn this vision doc into a phased plan". Use this skill even when the user does not explicitly mention "roadmap" or "decisions log" — the trigger is the day-zero PM-bootstrap intent itself. Do NOT use for feature-level planning. Do NOT use to produce code-level architecture, component diagrams, file structures, or task breakdowns — those are dev concerns. Do NOT use when the project already has planning artifacts — propose gap-filling instead of overwriting.
+description: Bootstrap a project's PM-level planning artifacts — roadmap, decisions log, progression tracker, and product architecture sketch — from an existing top-level spec, PRD, vision doc, or design brief. Use this skill at day-zero of a project to produce the planning surface that anchors a product across many sessions, whether solo or team. The output is "what ships, why, in what order, and where we are right now" — distinct from the spec above (which says what the product is) and from feature-level planning below (which says how a feature gets built). Trigger on requests like "bootstrap planning docs from this spec", "set up roadmap and decisions log", "scaffold the planning files from this PRD", "turn this vision doc into a phased plan". Use this skill even when the user does not explicitly mention "roadmap" or "decisions log" — the trigger is the day-zero PM-bootstrap intent itself. Do NOT use for feature-level planning. Do NOT use to produce code-level architecture, component diagrams, file structures, or task breakdowns — those are dev concerns. Do NOT use when the project already has planning artifacts — propose gap-filling instead of overwriting.
 ---
 
 # Project Bootstrap (PM Planning Layer)
@@ -21,14 +21,14 @@ The skill must NOT generate implementation tasks, code structure, file paths, fr
 
 ## Outputs
 
-Five files in `docs/plans/`. Four of them map to different time orientations, which is why each exists separately. The fifth is the folder index.
+Up to five files in `docs/plans/`. Four map to different time orientations, which is why each exists separately; the fifth is the folder index. `architecture.md` and `decisions.md` are optional — if the project already maintains an equivalent doc elsewhere, link to it from `README.md` instead of creating a duplicate here. The unique contribution of this skill is the forward view (`roadmap.md`) and the live status (`progression.md`).
 
 | File | Role | What it answers |
 |---|---|---|
 | `README.md` | Folder entry point + agent protocol | What's in this folder, in what order to read it, how agents should maintain it across sessions, what happens after planning ends |
 | `architecture.md` | Present (invariant) | What kind of product is this? What does it touch? What are its hard constraints? |
-| `roadmap.md` | Future (plan) | What ships, in what order, with what acceptance bar? |
-| `decisions.md` | Past (locked) | What has been decided and why, append-only? |
+| `roadmap.md` | Future (provisional) | What ships, in what order, with what acceptance bar — a best guess that re-plans as you learn |
+| `decisions.md` | Past (revisable) | What has been decided and why — replaced and linked when a choice is overridden |
 | `progression.md` | Now (live) | Where are we right now (phase + session-level focus), what's blocking, what's next? |
 
 The five cross-reference each other. `README.md` is the folder entry point; `progression.md` is the live status.
@@ -64,11 +64,13 @@ For each `[GAP]` in the analysis that blocks bootstrap, ASK the user. Common PM-
 
 - Phasing horizon — is v1 the only horizon, or is there v2/v3 thinking?
 - Success threshold — what's the qualitative or quantitative bar for "we shipped"?
-- Hard deadlines — anything from outside the team forcing a date?
-- External dependencies — other teams, vendors, approvals
+- Hard deadlines — anything from outside forcing a date?
 - Reversibility appetite — willing to rip and replace later, or is v1 commitment heavy?
+- External dependencies — other teams, vendors, approvals. *Skip this one for a solo project with no external commitments.*
 
-End phase 2 with explicit confirmation: "I'll generate 4 files in `docs/plans/`. Proceed?"
+Solo project? Keep this phase light — most coordination gaps don't apply. Confirm the phasing and the success bar, then move on.
+
+End phase 2 with explicit confirmation: "I'll generate the files in `docs/plans/`. Proceed?"
 
 ### Phase 3: Generate the planning set
 
@@ -76,9 +78,9 @@ Generate in this order — each later file references earlier ones, and the READ
 
 1. **`architecture.md`** — Use `assets/architecture.md.template`. Product shape only: kind of product, major external dependencies, product-level constraints. One page max. Mark unknowns as `> TBD:`.
 
-2. **`roadmap.md`** — Use `assets/roadmap.md.template`. Phases that match the spec's natural shape, each with Why / In / Out / Acceptance. Phases must be vertical slices — each phase ships something demoable end-to-end, not "build the data layer first, then the UI." Order by dependency. Include a Definition of Done for v1.
+2. **`roadmap.md`** — Use `assets/roadmap.md.template`. Phases that match the spec's natural shape, each with Why / In / Out / Acceptance. Phases must be vertical slices — each phase ships something demoable end-to-end, not "build the data layer first, then the UI." Order by dependency. Include a Definition of Done for v1. **Plan to your horizon, not past it:** detail the next phase or two concretely; leave later phases as a name plus one line. The roadmap is a provisional best guess, not a contract — expect to rewrite it as implementation surfaces what you couldn't know up front.
 
-3. **`decisions.md`** — Use `assets/decisions.md.template`. Append-only table. Pre-populate only with decisions explicitly stated in the spec — give each one a sequential ID, a one-line statement, and a Source pointer. Do NOT invent decisions the spec didn't make.
+3. **`decisions.md`** — Use `assets/decisions.md.template`. A table of currently-active decisions, each revisable, not binding. Pre-populate only with decisions explicitly stated in the spec — give each one a sequential ID, a one-line statement, and a Source pointer. Do NOT invent decisions the spec didn't make.
 
 4. **`progression.md`** — Use `assets/progression.md.template`. Initial state: phase 1 not started, no blockers, "Next" pointing to phase 1 kickoff. Current focus section filled with "Active work: not yet begun" and "Immediate next steps: kick off Phase 1." The Log section starts with one entry: "<date> — planning artifacts initialized."
 
