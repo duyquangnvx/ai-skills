@@ -11,14 +11,16 @@ Reach for a dependency only when the built-in is insufficient. Modern Node cover
 - **Env files**: `node --env-file=.env`, `process.loadEnvFile()`, `util.parseEnv` — replace `dotenv` for most uses.
 - **Subprocess**: `node:child_process` exists, but a wrapper (below) is far more ergonomic for real use.
 - **Async flow**: `AbortController`/`AbortSignal` handle cancellation and timeouts; `Promise.allSettled` handles fan-out. Reach for a concurrency/retry library only beyond these.
+- **HTTP**: `fetch` is global — add a client library only for retry/timeout/instrumentation ergonomics.
+- **Signals**: `process.on('SIGINT' | 'SIGTERM')` covers graceful shutdown and cleanup; a helper is only needed to restore terminal state (cursor) on exit.
 
 ## Where each category lives
 
 Map every supporting library to a layer; never import any of them into `core/`.
 
-- `ui/`: color, spinners, progress, tables, prompts, diff rendering.
-- `lib/`: logger, config loader, path resolution.
-- `adapters/`: subprocess, HTTP, filesystem helpers.
+- `ui/`: color, spinners, progress, tables, prompts, diff rendering, human-readable formatting, terminal string handling.
+- `lib/`: logger, config loader, path resolution, process lifecycle and cleanup.
+- `adapters/`: subprocess, HTTP, filesystem, file watching, opening URLs/files.
 
 **Gate all TTY-dependent output behind `ui/`** so a single place can disable spinners/color/progress/prompts when output is not a TTY, or when `--json` / `--quiet` is set. Do not call spinner/color libraries directly from command handlers.
 
@@ -46,7 +48,15 @@ Some CLI frameworks bundle color, table, spinner, and prompt helpers (e.g. an `u
 | Schema validation | Validate args/flags/config at the boundary | `zod`, `valibot` |
 | Diff rendering | Text diff for previews and approval flows | `diff` (jsdiff) |
 | Filesystem / globbing | Globbing, recursive ops beyond stdlib | `fast-glob` / `globby`, `fs-extra` |
+| HTTP client | Retry, timeout, typed responses over `fetch` | global `fetch`; `ky`, `got`, `undici` |
+| Open URLs / files | Launch the default browser or app (OAuth, reveal output) | `open` |
+| File watching | `--watch` mode: rerun on change | stdlib `fs.watch`; `chokidar` |
+| Human-readable formatting | Durations, byte sizes, relative times for display | `pretty-ms`, `pretty-bytes`, `ms` |
+| Process lifecycle & cleanup | Graceful `SIGINT`/`SIGTERM` shutdown; restore cursor/terminal after spinners | stdlib `process.on(...)`; `signal-exit`, `restore-cursor` |
+| Terminal string handling | Correct display width (CJK/emoji), strip ANSI, cursor escapes for custom rendering | `string-width`, `strip-ansi`, `ansi-escapes` |
+| Command suggestions | "Did you mean?" on typos; fuzzy command/option matching | `leven`, `didyoumean2` (often built into frameworks) |
 | UX polish (optional) | Small touches added when needed | `boxen`, `figures` (cross-platform symbols), `terminal-link`, `wrap-ansi`, `cli-truncate`, `update-notifier` |
+| Situational | Add only when the use case calls for it | `node-notifier` (desktop notify), `clipboardy` (clipboard), `marked` + `marked-terminal` (render markdown), `eta`/`handlebars` (templating for scaffolders) |
 
 ## Selection principles
 
