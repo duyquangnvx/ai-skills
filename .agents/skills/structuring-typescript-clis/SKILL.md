@@ -51,6 +51,14 @@ src/
 - `adapters/`: the only place performing I/O across process boundaries. Core depends on adapter *interfaces*, not concrete implementations, so it tests with fakes.
 - `ui/`: all terminal rendering and interaction, kept out of core and out of command control flow.
 
+## Cross-cutting concerns: base command and errors
+
+Define behavior shared by every command once — on a base command or middleware — so command files stay thin instead of re-wiring the same plumbing:
+
+- Global flags (`--json`, `--verbose`, `--quiet`, `--no-color`, `--config`), config loading, and a single top-level error boundary live here, not copy-pasted per command.
+- Define typed domain errors in `core/`; core throws them and never calls `process.exit` or `console`.
+- The boundary catches errors, maps each type to an exit code, and renders through `ui/` — clean message to stderr by default, full detail/stack only under `--verbose`, structured under `--json`. One mapping, not a `try/catch` in every command.
+
 ## Command naming and discoverability
 
 - Use **noun-verb (resource-first)** when there are many resources: `mycli user create`. Scales without action-name collisions across resources. Verb-noun (`mycli create user`) fits only small CLIs with few resources.
@@ -58,6 +66,7 @@ src/
 - One file per command; the directory tree mirrors the command tree, so a large surface stays navigable.
 - **Lazy-load command modules** so startup time stays flat regardless of command count.
 - Keep flag names consistent across the whole CLI (not `--output` here, `--out` there); add short aliases for frequent flags.
+- Provide `--help` at every level (root, topic, command) with at least one usage example — help text is the primary discovery surface for a large CLI.
 
 ## Scaling to a monorepo
 
@@ -116,6 +125,7 @@ These keep the tool scriptable and composable:
 - Unit-test `core/` heavily — fast, no process spawn, no terminal mocking. Most coverage belongs here.
 - Integration-test commands by invoking the parser with an argv array and asserting on the result and exit behavior.
 - Snapshot-test `ui/` rendering (help text, tables) when output stability matters.
+- Smoke-test end-to-end against the **built binary** on a handful of happy paths only: this exercises the shebang, `bin` wiring, bundle, and runtime module resolution that in-process command tests bypass, and verifies real process exit codes. Keep this layer thin — it is slow and brittle.
 
 ## Common mistakes
 
@@ -123,6 +133,8 @@ These keep the tool scriptable and composable:
 |---|---|
 | Business logic in a command handler | Move it to `core/`; the handler only parses, delegates, formats. |
 | `core/` importing the parsing framework or `ui/` | Invert the dependency; core takes plain data and interfaces. |
+| `core/` calling `process.exit` or `console` | Throw typed errors; let the CLI boundary map them to exit codes and render. |
+| Repeating flag/error/config wiring in each command | Centralize on a base command or middleware with one error boundary. |
 | One giant `commands.ts` / `index.ts` | One file per command, directory mirroring the command tree. |
 | Logs mixed into stdout | Results to stdout, everything else to stderr. |
 | No machine-readable output | Add `--json` early; retrofitting every command later is costly. |
