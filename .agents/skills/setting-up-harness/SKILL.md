@@ -36,6 +36,7 @@ applies this.
 | File | Role | Update mode |
 |------|------|-------------|
 | `CLAUDE.md` | Always-loaded project brief: commands + non-inferable conventions | Override |
+| `README.md` | Human-facing onboarding: overview, setup, how to run | Override |
 | `.claude/rules/project/*.md` | Project-specific rules, scoped to file paths | Override |
 | `docs/architecture.md` | How the system is **now** (state doc) | Override |
 | `docs/decisions.md` | Active choices + why (revisable, not binding) | Override; link on change |
@@ -57,10 +58,11 @@ deliberately skipped).
 
 1. Interview for the non-inferable basics.
 2. Write a lean root `CLAUDE.md`.
-3. Create `.claude/rules/project/` for path-scoped project rules.
-4. Create `docs/` — `architecture.md` (state) and `decisions.md` (record).
-5. Create the working-memory files.
-6. Prune pass and verify.
+3. Write a human-facing `README.md`.
+4. Create `.claude/rules/project/` for path-scoped project rules.
+5. Create `docs/` — `architecture.md` (state) and `decisions.md` (record).
+6. Create the working-memory files.
+7. Prune pass and verify.
 
 ---
 
@@ -73,6 +75,9 @@ cannot be inferred and is not already stated. Keep it short:
 - Tech stack and intended directory layout.
 - The real commands for test, type-check, build, lint/format.
 - Any conventions or gotchas already decided that an agent could not guess.
+- Any project-specific tuning of the plan/implement workflow — what counts as a
+  "large" task here, when to skip planning, review batching, guardrails. Skip if
+  the defaults are used.
 - Will it publish user-visible releases? (decides whether `CHANGELOG.md` exists)
 
 Do not ask about defaults the model already knows, or anything inferable from a
@@ -110,6 +115,12 @@ row the project has no command for.
 
 - <Only project-specific, non-inferable rules and gotchas. Leave empty if none yet.>
 
+## Workflow (optional — omit if you use the defaults)
+
+- <Only deviations from the default plan/implement workflow: the "large task"
+  threshold, when to skip planning, review batching, or guardrails. Do not
+  restate the workflow itself — the tooling already drives it.>
+
 ## Docs
 
 - Architecture (current state): docs/architecture.md
@@ -120,7 +131,48 @@ row the project has no command for.
 
 Keep the `Conventions` section honest: an empty section beats invented rules.
 
-### 3. .claude/rules/project/
+**Fill the `Workflow` section conditionally.** The available-skills list already
+shows whether a workflow plugin such as superpowers (brainstorming,
+writing-plans, executing-plans) is present — you do not need to search for it. If
+it is, leave the section to project-specific tuning only and let the plugin drive
+interview → plan → implement → doc updates. If no such plugin is present, replace
+the section with a brief explicit pointer so the discipline is not lost: for
+large or multi-file tasks, explore → plan → implement → verify → commit, then
+update docs per the rules below.
+
+### 3. README
+
+The human-facing entry point: overview, setup, how to run. It is for people; the
+agent reads `CLAUDE.md`, not this. To stop the two from drifting apart, do not
+duplicate prose between them — README owns overview and setup, `CLAUDE.md` owns
+the command table and agent-only conventions, and either may point to the other.
+
+```markdown
+# <Project name>
+
+<One or two sentences: what this project is and who it is for.>
+
+## Setup
+
+<Prerequisites, then install steps.>
+
+## Usage
+
+<How to run and develop. Point to the command table in CLAUDE.md instead of
+restating every command.>
+
+## Structure
+
+<Brief layout — only the parts a newcomer needs to navigate.>
+
+## More
+
+- Architecture: docs/architecture.md
+- Decisions: docs/decisions.md
+- Agent config: CLAUDE.md
+```
+
+### 4. .claude/rules/project/
 
 Create the directory. Add a rule file **only** when there is a genuine
 project-specific rule, and scope it to the paths it applies to so it loads only
@@ -140,7 +192,7 @@ Language or tech-stack rules do **not** go here — they are not specific to thi
 project and are loaded on demand from elsewhere. Putting them here duplicates
 context for no benefit.
 
-### 4. docs/
+### 5. docs/
 
 `docs/architecture.md` — state doc, describes the system as it is now:
 
@@ -183,7 +235,7 @@ the commit or PR. git holds the full history; this file stays scannable.
 `CHANGELOG.md` — create only if the project ships user-visible releases; use the
 Keep a Changelog format. Otherwise skip it.
 
-### 5. Working-memory files
+### 6. Working-memory files
 
 `progress.md` — a snapshot for fast resume across cleared context or a new
 session. Overwrite it; it is not a task log:
@@ -210,11 +262,13 @@ session. Overwrite it; it is not a task log:
      then clear this file back to empty. -->
 ```
 
-### 6. Prune and verify
+### 7. Prune and verify
 
 - Re-read `CLAUDE.md` and delete any line that restates the stack, a config
   file, or a default the model already follows — except the curated `Commands`
   table (the deliberate exception; see step 2).
+- Confirm `README.md` and `CLAUDE.md` do not duplicate the same overview or
+  command list — one owns it, the other points to it.
 - Confirm every file created has real content or was deliberately skipped — no
   fabricated placeholders.
 - Confirm no language/tech-stack rule leaked into `.claude/rules/project/`.
@@ -228,7 +282,7 @@ Two update modes (the table above tags each file):
 
 - **Override (latest only):** describes the present; git keeps the history.
   `decisions.md` is the nuance — point-in-time context, not standing law; its
-  supersede-and-link rule lives in step 4.
+  supersede-and-link rule lives in step 5.
 - **Accumulate (record):** `CHANGELOG.md`, if present. The append-only record of
   user-visible change. Together with git it is the project's durable history; the
   override docs are only its current snapshot.
@@ -262,5 +316,8 @@ empty — short enough to scan, never a second unmaintained history.
   truth for what is used and are read on demand; a `tech-stack.md` only
   duplicates them and drifts. Record the *choice* of stack — when it carried a
   real tradeoff — in `docs/decisions.md` instead.
+- **README and CLAUDE.md saying the same thing.** Duplicated overview or command
+  lists drift apart over time. Keep one source and let the other point to it:
+  README for humans, CLAUDE.md for the agent.
 - **Placeholder docs.** Create the structure, but only fill sections that have
   genuine, non-inferable content.
