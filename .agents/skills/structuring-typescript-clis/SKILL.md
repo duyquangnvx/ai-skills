@@ -127,6 +127,10 @@ These keep the tool scriptable and composable:
 - Snapshot-test `ui/` rendering (help text, tables) when output stability matters.
 - Smoke-test end-to-end against the **built binary** on a handful of happy paths only: this exercises the shebang, `bin` wiring, bundle, and runtime module resolution that in-process command tests bypass, and verifies real process exit codes. Keep this layer thin — it is slow and brittle.
 
+## Supporting libraries
+
+A CLI needs leaf libraries for color, spinners, progress, tables, prompts, logging, config, paths, subprocess, and diff rendering. These belong in `ui/`, `lib/`, and `adapters/` — never in `core/` — and any TTY-dependent output stays gated behind `ui/`. Check the Node standard library before adding one (`util.styleText`, `util.parseArgs`, `--env-file`). For category-by-category selection criteria and representative packages, see `references/cli-libraries.md`.
+
 ## Common mistakes
 
 | Mistake | Fix |
