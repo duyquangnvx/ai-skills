@@ -10,6 +10,7 @@ Reach for a dependency only when the built-in is insufficient. Modern Node cover
 - **Arg parsing**: `util.parseArgs` — fine for basic flags; reach for a framework or heavier parser only for subcommands, validation, and help generation.
 - **Env files**: `node --env-file=.env`, `process.loadEnvFile()`, `util.parseEnv` — replace `dotenv` for most uses.
 - **Subprocess**: `node:child_process` exists, but a wrapper (below) is far more ergonomic for real use.
+- **Async flow**: `AbortController`/`AbortSignal` handle cancellation and timeouts; `Promise.allSettled` handles fan-out. Reach for a concurrency/retry library only beyond these.
 
 ## Where each category lives
 
@@ -41,6 +42,7 @@ Some CLI frameworks bundle color, table, spinner, and prompt helpers (e.g. an `u
 | Persistent config store | Read/write a user config that survives runs | `conf` |
 | Cross-platform paths | Correct config/data/cache dirs per OS (XDG, AppData, Library) | `env-paths` |
 | Subprocess execution | Ergonomic spawn, piping, typed errors, cancellation | `execa` |
+| Async concurrency & resilience | Bounded parallelism, retry with backoff, timeouts for batch/network work | `p-limit`, `p-queue`, `p-map`, `p-retry`, `p-timeout` |
 | Schema validation | Validate args/flags/config at the boundary | `zod`, `valibot` |
 | Diff rendering | Text diff for previews and approval flows | `diff` (jsdiff) |
 | Filesystem / globbing | Globbing, recursive ops beyond stdlib | `fast-glob` / `globby`, `fs-extra` |
