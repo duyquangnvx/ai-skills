@@ -145,3 +145,7 @@ A CLI needs leaf libraries for color, spinners, progress, tables, prompts, loggi
 | Eager-loading all commands | Lazy-load modules to keep startup fast. |
 | Monorepo or plugins built upfront | Stay single-package until a part needs its own lifecycle. |
 | Dual CJS+ESM publishing by default | ESM-only unless consumed as a library. |
+
+## Persisting user data
+
+When the CLI needs to store anything for the user — config, credentials, projects, cache, backups, logs — read references/user-data-storage.md before designing the layout. It covers global vs per-project data, OS-standard locations cross-platform, where credentials must go, and the path-resolution module pattern.
