@@ -80,7 +80,7 @@ Generate in this order — each later file references earlier ones, and the READ
 
 2. **`roadmap.md`** — Use `assets/roadmap.md.template`. Phases that match the spec's natural shape, each with Why / In / Out / Acceptance. Phases must be vertical slices — each phase ships something demoable end-to-end, not "build the data layer first, then the UI." Order by dependency. Include a Definition of Done for v1. **Plan to your horizon, not past it:** detail the next phase or two concretely; leave later phases as a name plus one line. The roadmap is a provisional best guess, not a contract — expect to rewrite it as implementation surfaces what you couldn't know up front.
 
-3. **`decisions.md`** — Use `assets/decisions.md.template`. A table of currently-active decisions, each revisable, not binding. Pre-populate only with decisions explicitly stated in the spec — give each one a sequential ID, a one-line statement, and a Source pointer. Do NOT invent decisions the spec didn't make.
+3. **`decisions.md`** — Use `assets/decisions.md.template`. A table of currently-active decisions, each revisable, not binding. Pre-populate only with decisions explicitly stated in the spec — give each one a sequential ID, a one-line statement, a one-line `Why`, and a Source pointer. When the spec asserts the decision but not the reasoning, write `per spec` in `Why` rather than guess. Do NOT invent decisions the spec didn't make.
 
 4. **`progression.md`** — Use `assets/progression.md.template`. Initial state: phase 1 not started, no blockers, "Next" pointing to phase 1 kickoff. Current focus section filled with "Active work: not yet begun" and "Immediate next steps: kick off Phase 1." The Log section starts with one entry: "<date> — planning artifacts initialized."
 

@@ -28,6 +28,7 @@ If any check above fails, the skill drifted into implementation territory. Fix b
 ## Decisions log integrity
 
 - [ ] Every row has a real Source pointer — section number, doc name, dated chat, link. Never blank, never "TBD".
+- [ ] Every row has a `Why` — one-line reasoning, or the literal `per spec` / `no rationale recorded` when none is available. Never invent one.
 - [ ] No invented decisions. Each row traces to either the spec or to explicit user confirmation in this conversation. Anything else: delete or mark `> TBD:`.
 - [ ] IDs are sequential and unique. No gaps, no duplicates.
 - [ ] No decisions about pure implementation. Only product-level commitments and process commitments belong here.

@@ -24,7 +24,7 @@ Choices the spec states explicitly — these become rows in `decisions.md` immed
 
 Look for language like: "we will", "the product is", "v1 ships with", "must support", "is not". Each is a decision someone made, even if not framed as one.
 
-Capture each as: `<one-line decision>` + `<spec section reference>`. These pre-populate the decisions log.
+Capture each as: `<one-line decision>` + `<one-line why>` + `<spec section reference>`. When the spec gives the reasoning, lift it; when it only asserts the decision, write `per spec` for the why rather than invent one. These pre-populate the decisions log.
 
 ### 3. Implied phases
 
@@ -97,8 +97,8 @@ After running the checklist, produce a structured summary like this and show it 
 **Out of scope:** <2-3 most important non-goals>
 
 **Decisions the spec already made (will pre-populate decisions.md):**
-- <decision 1> — <spec ref>
-- <decision 2> — <spec ref>
+- <decision 1> — why: <one line, or "per spec"> — <spec ref>
+- <decision 2> — why: <one line, or "per spec"> — <spec ref>
 ... (typically several of these)
 
 **Implied / proposed phases:**

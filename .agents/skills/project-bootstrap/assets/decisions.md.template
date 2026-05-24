@@ -2,17 +2,17 @@
 
 Currently-active decisions and why. Each row is **revisable context, not a binding rule** — when new information makes one wrong, change it. Keep the table to what's active now; git holds the full history, so this file stays scannable.
 
-| ID    | Decision                                                              | Source                                |
-| ----- | --------------------------------------------------------------------- | ------------------------------------- |
-| D-01  | {{ONE_LINE_DECISION_IN_PRESENT_TENSE}}                                | {{POINTER_TO_SPEC_OR_CHAT_OR_DOC}}    |
-| D-02  | {{ONE_LINE_DECISION}}                                                 | {{POINTER}}                           |
-| D-03  | {{ONE_LINE_DECISION}}                                                 | {{POINTER}}                           |
+| ID    | Decision                                  | Why                                        | Source                              |
+| ----- | ----------------------------------------- | ------------------------------------------ | ----------------------------------- |
+| D-01  | {{ONE_LINE_DECISION_IN_PRESENT_TENSE}}    | {{ONE_LINE_REASONING_AT_THE_TIME}}         | {{POINTER_TO_SPEC_OR_CHAT_OR_DOC}}  |
+| D-02  | {{ONE_LINE_DECISION}}                     | {{ONE_LINE_WHY}}                           | {{POINTER}}                         |
+| D-03  | {{ONE_LINE_DECISION}}                     | {{ONE_LINE_WHY}}                           | {{POINTER}}                         |
 
-> Pre-populate with decisions explicitly stated in the source spec. Do not invent decisions to look complete — the value of this log is that every entry was actually decided.
+> Pre-populate with decisions explicitly stated in the source spec. Do not invent decisions to look complete — the value of this log is that every entry was actually decided. When the spec states the decision but not the reasoning, write `per spec` in `Why` rather than guess one.
 
 ## How to add or change
 
-Add a new row with the next sequential ID, a one-line decision, and a real Source. Keep IDs stable so `progression.md` log entries that reference them keep resolving.
+Add a new row with the next sequential ID, a one-line decision, a one-line `Why`, and a real Source. Keep IDs stable so `progression.md` log entries that reference them keep resolving.
 
 When a decision is overridden, replace its row in place with the new decision, and extend its Source with a one-line `— supersedes earlier choice; <reason>; <link>` pointing to the durable record of the change (the commit or PR, or a CHANGELOG entry if it's user-visible). Don't keep dead rows — git holds the history.
 
@@ -36,4 +36,5 @@ Every add or change should also generate a one-line entry in [`progression.md`](
 
 - IDs are stable anchors. When you override a decision, reuse its ID in place; don't accumulate dead rows or renumber the rest.
 - Source pointers are real — section numbers, doc names, dated chats, links. Never blank, never "TBD". A row without a source has no value.
+- `Why` is one line, present-tense. If the reasoning needs more space, write a linked doc and point to it from the cell. Never invent a reason — write `per spec` or `no rationale recorded` when none is available.
 - Decision text is short and present-tense. Long context goes in linked docs; this table is for scanning.
