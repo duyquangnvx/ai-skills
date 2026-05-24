@@ -1,32 +1,56 @@
 # User & Workspace Data Storage
 
-Read this when the CLI must persist anything for the user — config, credentials, projects, cache, backups, logs. The goal is a layout that survives OS conventions, keeps secrets safe, and stays easy to manage.
+Read this when the CLI must persist anything for the user — config, credentials, projects, cache, backups, logs. The goal is a layout that respects OS conventions, keeps secrets safe, and stays easy to manage.
 
-## First, separate the two kinds of data
+## The invariants — get these right regardless of layout
 
-These are different and must not share a directory:
+Layout style is a choice (see next section), but these four hold either way:
 
-- **Global tool data** — belongs to the user's *installation* of the tool (config, data, cache, state, credentials). Lives in OS-standard locations, never in the current working directory.
-- **Per-project / workspace data** — belongs to the *project the user is working in* (project-local settings, local state). Lives inside that project directory, like `git` keeps `.git/`.
+1. **Separate global from per-project, and mirror their structure.** Global data (applies across all projects) lives in the user's home area; per-project data lives inside that project directory, like `git` keeps `.git/`. Use the *same* subdirectory names in both scopes so one mental model applies everywhere, with project-scope overriding global-scope.
+2. **Keep disposable data in a clearly-named subdirectory.** Cache and regenerable state (e.g. `cache/`, session transcripts) must be deletable without touching real data. Separability is the requirement — a named subdir is enough; a separate OS location is optional.
+3. **Isolate credentials — OS keychain first.** Never default to a plaintext secrets file. Use the OS keychain; fall back to a restricted-permission file only where no keychain exists. Ordinary state may be a plaintext file protected by OS permissions, but secrets must not be.
+4. **Make the root location overridable** via an environment variable, so power users and CI can relocate everything.
 
-A common mistake is dumping both into one `~/.myapp/` folder. Sort each piece of data into one of these two first.
+Do not spread data across many OS directories just because a spec says so. The only thing that buys you over a single well-organized directory is niche (cache on a separate volume, auto-exclusion from some backup tools). Optimize for the invariants above, then pick whichever layout shape fits the tool.
 
-## Categorize global data by lifecycle
+## Choose a layout shape
 
-Classify every file by the "delete test" — what happens if it disappears:
+Two shapes are both legitimate. Pick by the nature of the tool.
 
-| Category | Delete test |
-|---|---|
-| config | User must reconfigure |
-| data | Real loss — databases, project registry, **backups** |
-| state | Inconvenient but recoverable — logs, history, recent files |
-| cache | No loss — the app regenerates it |
+### Shape A — Consolidated single directory (default for interactive / stateful / project-aware tools)
 
-The single property that justifies splitting directories: **cache must be safely deletable without touching data.** Backups are data, not cache — never put backups in the cache directory or an OS cleaner may wipe them.
+One global directory holds everything, with disposable parts as named subdirs. Often paired with a single top-level config file for instant editing.
 
-## Map paths cross-platform — use a library, don't hardcode
+```
+~/.mytool.json            # primary config file — top-level, easy to find/edit
+~/.mytool/                # everything else, global scope
+  settings.json
+  projects/               # per-project session/state, keyed by project path — durable
+  cache/                  # disposable, the only thing safe to delete wholesale
+  backups/                # durable — a sibling of cache, never inside it
+  logs/  debug/           # state
+  agents/ hooks/ skills/  # extensible config, mirrored per-project
+# credentials -> OS keychain (no secrets file here)
+```
 
-Never write per-OS path logic by hand. Use a paths library (in Node, `env-paths`) that returns the correct config/data/cache/log locations for each platform. The conventions it follows:
+Choose this when the tool is something users actively inspect, debug, and reset; when its state (sessions, projects, plugins) is a tightly-coupled whole; and when you want global↔per-project symmetry. Benefits: one place to look (`ls ~/.mytool/`), trivial uninstall/reset (`rm -rf ~/.mytool ~/.mytool.json`), and a per-project directory that can mirror the global one. This symmetry is impossible if global data is scattered across OS dirs — which is the main reason rich dev tools consolidate.
+
+### Shape B — Spread / two-bucket (for simpler or Unix-philosophy tools)
+
+Follow OS-standard locations per data category. Collapse to two buckets unless you have a concrete reason to split further: a **durable bundle** (config + data + backups + logs) and a separate **cache**.
+
+```
+~/.local/share/mytool/    # durable bundle (Linux; map per-OS, see table)
+  config.json  data/  backups/  logs/
+~/.cache/mytool/          # disposable, the only thing safe to nuke wholesale
+# credentials -> OS keychain
+```
+
+Choose this for smaller CLIs, tools targeting tidy XDG-compliant Linux setups, or when the cache is large/volatile enough to benefit from living on a separate volume.
+
+## Cross-platform locations (Shape B) — use a library, don't hardcode
+
+Never write per-OS path logic by hand. Use a paths library (in Node, `env-paths`) that returns the right location per platform. The conventions:
 
 | Category | Linux | Windows | macOS |
 |---|---|---|---|
@@ -35,79 +59,50 @@ Never write per-OS path logic by hand. Use a paths library (in Node, `env-paths`
 | cache | `~/.cache` | `%LOCALAPPDATA%` | `~/Library/Caches` |
 | state | `~/.local/state` | `%LOCALAPPDATA%` | `~/Library/Application Support` |
 
-macOS nuance: paths libraries default to `~/Library/...` (the GUI convention), but many developer/devops CLI tools deliberately use `~/.config` on macOS for cross-platform consistency. Pick `~/Library` for general-audience tools; consider allowing `~/.config` for dev tooling. Make it overridable rather than guessing.
+macOS nuance: paths libraries default to `~/Library/...` (GUI convention), but many dev/devops CLIs use `~/.config` on macOS for cross-platform consistency. Pick `~/Library` for general-audience tools; consider `~/.config` for dev tooling. Make it overridable rather than guessing. Shape A on macOS typically just uses `~/.mytool/` directly, matching the dev-tool norm.
 
-## Don't over-split — collapse to two buckets
+## Global ↔ per-project symmetry and precedence
 
-Spreading data across four separate directories (config, data, state, cache) buys little beyond the cache property and is genuinely harder to manage. Default to two buckets:
+Mirror the subdirectory layout in both scopes and resolve them as a cascade, later winning:
 
-- **Durable bundle** — one app directory holding `config`, `data/`, `backups/`, `logs/` together.
-- **Cache** — separate directory, the only thing safe to nuke.
+```
+managed/enterprise policy  >  CLI flags  >  env vars  >  project scope  >  global scope  >  built-in defaults
+```
 
-Split config/data/state into truly separate locations only when there's a concrete need (e.g. syncing config via a dotfiles repo without syncing data, or keeping cache on a different volume).
+Per-project files that are meant to be shared go in version control; personal/local overrides get a separate `*.local.*` file that is gitignored.
 
-## Credentials — never a plaintext file in the config dir
+## Credentials
 
-Storing secrets in a plaintext file (`credentials.json`, `.env`) exposes them to malware, other users on the machine, and accidental leaks via backups or file sharing. Order of preference:
+A plaintext secrets file exposes tokens to malware, other users on the machine, and leaks via backups or file sharing. Order of preference:
 
-1. **OS keychain** (best) — macOS Keychain, Windows Credential Manager, Linux Secret Service. Use an abstraction library (in Node, a keytar-style binding). Use a descriptive service name tied to the tool (e.g. `com.you.myapp`), not a generic `api`.
-2. **Restricted file** (fallback when no keychain is available) — write with `0600` permissions on Unix, in a file separate from config.
+1. **OS keychain** (best) — macOS Keychain, Windows Credential Manager, Linux Secret Service. Use an abstraction (in Node, a keytar-style binding) and a descriptive service name tied to the tool (e.g. `com.you.mytool`), not a generic `api`.
+2. **Restricted file** (fallback only where no keychain exists) — write with `0600` permissions, separate from config.
 
-Regardless of method: keep credentials isolated from config, and **never** let them land in cache, backups, or logs. Never print full tokens in debug output.
+A common real-world pattern: store secrets in the keychain on macOS, and fall back to a permission-restricted file only on Linux/Windows. Regardless of method, never let credentials land in cache, backups, or logs, and never print full tokens in debug output.
 
 ## `.env` is a dev convention, not tool storage
 
 `.env` is a project-local, development-time pattern and must be gitignored — it is not where a CLI persists global user config. A CLI should *read* config with clear precedence and never *write* its state into a `.env` file.
 
-## Recommended layout
-
-Global (shown via `env-paths` on Linux; the library maps it per-OS):
-
-```
-~/.local/share/myapp/      # durable bundle
-  config.json              # one config file — don't also keep a separate settings.json globally
-  data/
-  backups/
-  logs/
-~/.cache/myapp/            # disposable
-# credentials -> OS keychain, no file here
-```
-
-Per-project (lives inside the user's project directory):
-
-```
-<user-project>/
-  .myapp/
-    settings.json          # project-local config, overrides global
-```
-
 ## Centralize path resolution in one module
 
-Put all path logic in a single `core/paths.ts` so the rest of the app references named paths, never hardcoded strings. This makes the layout trivial to change and hides cross-platform differences:
+Put all path logic in a single `core/paths.ts` so the rest of the app references named paths, never hardcoded strings. This hides the layout choice (Shape A or B) and cross-platform differences behind one swappable module:
 
 ```typescript
 // core/paths.ts — single source of truth for where things live
-import envPaths from "env-paths";
+import { homedir } from "node:os";
 import { join } from "node:path";
 
-const paths = envPaths("myapp", { suffix: "" });
+const root = process.env.MYTOOL_CONFIG_DIR ?? join(homedir(), ".mytool"); // overridable
 
 export const appPaths = {
-  config:  join(paths.data, "config.json"),
-  data:    join(paths.data, "data"),
-  backups: join(paths.data, "backups"),
-  logs:    join(paths.data, "logs"),
-  cache:   paths.cache,            // the only directory safe to delete wholesale
+  config:  join(root, "settings.json"),
+  data:    join(root, "data"),
+  backups: join(root, "backups"),
+  logs:    join(root, "logs"),
+  cache:   join(root, "cache"),     // the only directory safe to delete wholesale
 };
 // credentials are NOT here — they go through a keychain adapter
 ```
 
-## Config precedence
-
-Resolve configuration in layers, later sources overriding earlier:
-
-```
-built-in defaults  <  config file  <  environment variables  <  command-line flags
-```
-
-Respect environment overrides for the storage location itself (e.g. honor `XDG_*` variables, or a `MYAPP_CONFIG_DIR`) so power users and CI can redirect where data lives.
+Swap the `root` resolution for an `env-paths`-based one to move from Shape A to Shape B without touching the rest of the app.

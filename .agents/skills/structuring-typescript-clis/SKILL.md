@@ -148,4 +148,4 @@ A CLI needs leaf libraries for color, spinners, progress, tables, prompts, loggi
 
 ## Persisting user data
 
-When the CLI needs to store anything for the user — config, credentials, projects, cache, backups, logs — read references/user-data-storage.md before designing the layout. It covers global vs per-project data, OS-standard locations cross-platform, where credentials must go, and the path-resolution module pattern.
+When the CLI needs to store anything for the user — config, credentials, projects, cache, backups, logs — read references/user-data-storage.md before designing the layout. It covers the invariants (global vs per-project separation, separable disposable data, keychain-first credentials, overridable root), the two legitimate layout shapes and how to choose, cross-platform locations, and the path-resolution module pattern.
