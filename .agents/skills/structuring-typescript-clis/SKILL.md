@@ -59,6 +59,18 @@ Define behavior shared by every command once — on a base command or middleware
 - Define typed domain errors in `core/`; core throws them and never calls `process.exit` or `console`.
 - The boundary catches errors, maps each type to an exit code, and renders through `ui/` — clean message to stderr by default, full detail/stack only under `--verbose`, structured under `--json`. One mapping, not a `try/catch` in every command.
 
+## Bootstrap and init order
+
+Several things run between `node bin/cli.js` and the first command line of business logic. Make the order explicit, and keep modules side-effect free so the entry file controls it:
+
+1. **Bootstrap**: process-level tweaks with no I/O cost (max heap size, signal handlers, env shims). At the very top of the entry file.
+2. **Fast-paths**: handled before any framework loads — see "Startup performance" below.
+3. **`setup()`**: resolves the working environment (cwd, project root, terminal capabilities) and registers cross-cutting handlers (logging sinks, file watchers, cleanup on exit).
+4. **Config + auth resolution**: an explicit `enableConfigs()` call (or similar) loads the layered config and any cached credentials. Modules that need config import the *getter*, not the value.
+5. **Command dispatch**: only now does the parsing framework see argv.
+
+Why explicit: reading config or env at module top level defeats fast-paths (every `--version` invocation pays the cost) and makes startup non-deterministic (state depends on import order). Centralize init in one function called from the entry file.
+
 ## Command naming and discoverability
 
 - Use **noun-verb (resource-first)** when there are many resources: `mycli user create`. Scales without action-name collisions across resources. Verb-noun (`mycli create user`) fits only small CLIs with few resources.
@@ -92,6 +104,16 @@ Stay framework-agnostic in `core/`; the choice only affects `commands/` and `cli
 - **Startup latency**: framework weight and cold-start cost — matters for commands run in tight loops, negligible for long batch operations.
 - **Flag/arg type-safety** and **command test helpers**.
 
+## Startup performance
+
+For a CLI invoked from scripts, shell hooks, git hooks, or tight loops, cold-start latency *is* a feature. Three patterns matter, in order:
+
+- **Pre-framework fast-paths**: in the entry file, handle well-known argv shapes (`--version`, internal subprocess workers, alternate server modes) by inspecting `process.argv` directly and `await import(...)`-ing the handler — *before* loading the parsing framework. The `--version` path should load zero modules beyond the entry file: print a version string inlined at build time and return.
+- **Lazy command modules**: register each command with a loader (`() => import('./commands/foo.js')`) instead of an eager import, so only the dispatched command evaluates.
+- **Build-time feature gates**: wrap optional subsystems (a daemon mode, an alternate transport, an internal-only feature) in `if (feature('FOO')) { ... }` where `feature()` is resolved at build time. Keep the condition inline — not behind a variable — so the bundler dead-code-eliminates the whole branch. Both bundle size and import time drop.
+
+Measure before optimizing: instrument the entry file with named checkpoints (`performance.mark()`), sample on a small percentage of invocations, and emit phase durations. Pick a budget — for something people invoke from `.bashrc` or git hooks, anything over ~80 ms is noticeable. Without measurement, "optimizations" become folklore.
+
 ## Type safety
 
 - Enable `strict` fully in tsconfig. It catches the common CLI bugs early — unhandled null flags, uninitialized state.
@@ -106,7 +128,7 @@ These keep the tool scriptable and composable:
 |---|---|
 | Exit codes | `0` success, non-zero failure; distinguish business error from misuse. Scripts and CI depend on this. |
 | stdout vs stderr | Real results to stdout; logs, progress, errors to stderr — so output pipes cleanly. |
-| Machine output | Support `--json` (or `--output`) printing structured data, separate from human rendering. |
+| Machine output | Support `--json` (or `--output`) for structured data. Route both human and machine output through a single I/O module that picks a mode once at startup — never let individual commands call `console.log` *and* `JSON.stringify` themselves, or formats drift across commands and NDJSON streams break on the first circular reference or `BigInt`. |
 | Config precedence | Resolve in layers: defaults < config file < environment variables < flags; later overrides earlier. |
 | Color / TTY | Detect non-TTY (pipe/CI) and disable color/spinners; honor `NO_COLOR`. |
 | Destructive actions | Default to confirmation; provide `--force`/`--yes` to bypass for automation. Make repeatable actions idempotent and offer `--dry-run`. |
@@ -119,6 +141,7 @@ These keep the tool scriptable and composable:
 - Bundle with an esbuild-based bundler: emit a runnable entry, generate declaration files only when shipping a library, and externalize `dependencies`/`peerDependencies` so they are not inlined.
 - Target a modern Node version with `platform: node`.
 - Prefer **ESM-only** output for a Node-only tool. Add CJS output only when other packages import yours as a library — dual publishing carries real maintenance cost otherwise.
+- Inject build-time **macros** for static values: version, build timestamp, commit SHA. Inlining keeps the `--version` fast-path zero-import (no `import { version } from '../package.json'`) and makes telemetry stable across distribution channels.
 
 ## Testing
 
@@ -143,6 +166,8 @@ A CLI needs leaf libraries for color, spinners, progress, tables, prompts, loggi
 | Logs mixed into stdout | Results to stdout, everything else to stderr. |
 | No machine-readable output | Add `--json` early; retrofitting every command later is costly. |
 | Eager-loading all commands | Lazy-load modules to keep startup fast. |
+| Loading the parsing framework before checking common flags | Handle `--version` and internal subprocess modes by inspecting `process.argv` in the entry file first, before importing the framework. |
+| Reading config or env at module top level | Read inside an explicit init function the entry file calls once. Top-level side effects defeat fast-paths and make startup non-deterministic. |
 | Monorepo or plugins built upfront | Stay single-package until a part needs its own lifecycle. |
 | Dual CJS+ESM publishing by default | ESM-only unless consumed as a library. |
 
