@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Poll {{SUCCESS_GLOB}} (and matching .error files) for {{EXPECTED}} results,
+# timeout after {{TIMEOUT}}s. Used by the orchestrator after a fan-out phase.
+
+set -u
+
+EXPECTED={{EXPECTED}}
+TIMEOUT={{TIMEOUT}}
+PHASE_NAME="{{PHASE_NAME}}"
+SUCCESS_GLOB="{{SUCCESS_GLOB}}"
+ERROR_GLOB="{{ERROR_GLOB}}"
+
+ELAPSED=0
+START=$(date +%s)
+
+while [ $ELAPSED -lt $TIMEOUT ]; do
+  SUCCESS=$(ls -1 $SUCCESS_GLOB 2>/dev/null | wc -l)
+  ERRORS=$(ls -1 $ERROR_GLOB 2>/dev/null | wc -l)
+  TOTAL=$((SUCCESS + ERRORS))
+  if [ "$TOTAL" -ge "$EXPECTED" ]; then break; fi
+  sleep 10
+  ELAPSED=$(( $(date +%s) - START ))
+done
+
+echo "Phase ${PHASE_NAME} complete: ${SUCCESS} ok, ${ERRORS} failed (of ${EXPECTED})"

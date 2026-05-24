@@ -1,0 +1,54 @@
+---
+name: {{SKILL_NAME}}
+description: |
+  {{ONE_PARAGRAPH_DESCRIPTION_INCLUDING_TRIGGER_PHRASES}}
+---
+
+# {{SKILL_TITLE}}
+
+{{ONE_SENTENCE_PIPELINE_SUMMARY}}
+
+## Pipeline shape
+
+```
+{{PIPELINE_TREE}}
+```
+
+## Timeout configuration
+
+| Layer | Setting | Notes |
+|---|---|---|
+| max_turns per agent | {{MAX_TURNS_PER_AGENT}} | {{MAX_TURNS_NOTE}} |
+| Wall-clock per phase | {{PHASE_TIMEOUT}}s | Move on with whatever completed |
+{{IF_HEADLESS_BASH_TIMEOUT_ROW}}
+{{IF_HEADLESS_CONTAINER_DEADLINE_ROW}}
+
+## Resume
+
+If a previous run left intermediate files in `data/`, the skill detects them and skips phases whose outputs are already present.
+
+To force a rerun of a specific phase:
+1. Delete `data/<phase>/` for that phase.
+2. Re-invoke the skill.
+
+To rerun from a specific phase forward:
+1. Note the phase number.
+2. Invoke with prompt: "resume from phase N — earlier outputs are in data/".
+
+{{PHASE_BLOCKS}}
+
+## Failure handling
+
+{{FAILURE_TABLE}}
+
+Never fail the entire skill due to individual component failures. Always produce a pipeline report — even one that says "everything broke".
+
+{{IF_HEADLESS_RECOVERY_BLOCK}}
+
+## Output delivery
+
+{{DELIVERY_BLOCK}}
+
+## Self-improvement note
+
+If you discover that an instruction in this skill was wrong, ambiguous, or incomplete during execution, fix it inline and continue. The fix is part of the run — commit it back with the report.
