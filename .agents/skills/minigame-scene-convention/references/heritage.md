@@ -1,7 +1,5 @@
 # Heritage and stated assumptions
 
-Read when: deciding whether to deviate from the convention, justifying a design choice to a teammate, or evaluating whether the convention fits a new game type.
-
 This convention is an opinionated combination of established patterns adapted for TypeScript minigames. Knowing the lineage helps make informed deviations.
 
 ## Heritage

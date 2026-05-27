@@ -1,7 +1,5 @@
 # Folder structure — default and variations
 
-Read when: scaffolding a new minigame folder, or evaluating whether an existing folder shape is still convention-compliant.
-
 The folder shape is **flexible** — variations are fine as long as Layer 1 (communication contract) and Layer 2 (role classification) hold.
 
 ## Default shape
