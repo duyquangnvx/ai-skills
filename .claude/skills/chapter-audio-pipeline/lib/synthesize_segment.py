@@ -5,19 +5,15 @@ Usage:
                                   --speakers <speakers.json> \
                                   --index <N> \
                                   --output <audio/seg-NNN.wav>
-
-Example:
-    python lib/synthesize_segment.py \
-        --segments data/silver-rain/chapters/ch001/segments.json \
-        --speakers data/silver-rain/speakers.json \
-        --index 3 \
-        --output data/silver-rain/chapters/ch001/audio/seg-003.wav
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import shlex
+import subprocess
+import sys
 from pathlib import Path
 
 
@@ -27,25 +23,56 @@ def synthesize_segment(
     index: int,
     output: Path,
 ) -> None:
-    """Run the TTS command for one segment and write the audio to `output`.
+    segments = json.loads(segments_path.read_text(encoding="utf-8"))
+    speakers = json.loads(speakers_path.read_text(encoding="utf-8"))
 
-    Args:
-        segments_path: Path to segments.json (a list of {speakerId, text}).
-        speakers_path: Path to speakers.json (speakerId -> {description, command}).
-        index: Zero-based segment index to synthesize.
-        output: Destination audio file. Parent directory is created if missing.
+    segment = segments[index]
+    speaker_id = segment["speakerId"]
+    text = segment["text"]
 
-    Raises:
-        IndexError: If `index` is out of range for segments.json.
-        KeyError: If the segment's speakerId is not present in speakers.json.
-        subprocess.CalledProcessError: If the TTS command returns non-zero.
-    """
-    raise NotImplementedError(
-        "Domain logic — implement based on: load segments[index], look up "
-        "speakers[segment['speakerId']]['command'], substitute {text} and "
-        "{output} placeholders, run via subprocess.run, raise on non-zero exit. "
-        "Remember to shell-escape the text (or pass via stdin)."
+    if speaker_id not in speakers:
+        raise KeyError(f"speakerId {speaker_id!r} missing from speakers.json")
+
+    template = speakers[speaker_id]["command"]
+    output.parent.mkdir(parents=True, exist_ok=True)
+    tmp_output = output.with_suffix(output.suffix + ".tmp")
+
+    # Tokenize template, then substitute placeholders per token so quoting is preserved
+    # and the text/path are passed as single argv entries (not re-parsed by the shell).
+    tokens = shlex.split(template, posix=True)
+    argv: list[str] = []
+    for tok in tokens:
+        if tok == "{text}":
+            argv.append(text)
+        elif tok == "{output}":
+            argv.append(str(tmp_output))
+        else:
+            argv.append(
+                tok.replace("{text}", text).replace("{output}", str(tmp_output))
+            )
+
+    result = subprocess.run(
+        argv,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
     )
+    if result.returncode != 0:
+        raise subprocess.CalledProcessError(
+            result.returncode,
+            argv,
+            output=result.stdout,
+            stderr=result.stderr,
+        )
+
+    if not tmp_output.exists() or tmp_output.stat().st_size == 0:
+        raise RuntimeError(
+            f"TTS command exited 0 but produced no audio at {tmp_output}. "
+            f"stdout={result.stdout!r} stderr={result.stderr!r}"
+        )
+
+    tmp_output.replace(output)
 
 
 def _write_error(output: Path, message: str) -> None:
@@ -62,8 +89,19 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
 
+    # Skip if audio already exists (resume support).
+    if args.output.exists() and args.output.stat().st_size > 0:
+        return
+
     try:
         synthesize_segment(args.segments, args.speakers, args.index, args.output)
+    except subprocess.CalledProcessError as exc:
+        _write_error(
+            args.output,
+            f"CalledProcessError exit={exc.returncode}\n"
+            f"stdout: {exc.output}\nstderr: {exc.stderr}\n",
+        )
+        raise SystemExit(1) from exc
     except Exception as exc:
         _write_error(args.output, f"{type(exc).__name__}: {exc}\n")
         raise SystemExit(1) from exc
