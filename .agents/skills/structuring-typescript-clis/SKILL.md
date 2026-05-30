@@ -47,7 +47,7 @@ src/
   lib/                # shared utils: logger, config loader
 ```
 
-**Shape B — feature-first (cut vertically / vertical slice).** Top-level folders are feature areas; each co-locates its own commands, services, domain, and adapters, and depends on a shared `core`/`lib`. Best for a large CLI with many independent resources, when whole features get added/removed often, owners split by feature, or a monorepo split is likely later. The layers still exist — they just live *inside* each feature, not at the top.
+**Shape B — feature-first (cut vertically / vertical slice).** Top-level folders are feature areas; each co-locates its own commands, services, domain, and feature-specific adapters, and depends on shared `core`/`lib` and shared infrastructure adapters. Best for a large CLI with many independent resources, when whole features get added/removed often, owners split by feature, or a monorepo split is likely later. The layers still exist — they just live *inside* each feature, not at the top.
 
 ```
 src/
@@ -57,13 +57,15 @@ src/
       commands/       # user create | list | delete — thin, delegate inward
       service.ts      # use-cases for this feature
       domain.ts       # types + rules for this feature — no I/O
-      adapter.ts      # this feature's I/O (its API/DB), behind an interface
+      adapter.ts      # feature-specific outbound I/O (its API/DB), behind an interface
+                      # grow service.ts/domain.ts/adapter.ts into folders as the feature gets large
     billing/
       commands/
       service.ts
       domain.ts
       adapter.ts
-  core/               # cross-feature domain types + rules shared by features
+  core/               # cross-feature domain types + rules ONLY — not Shape A's core; no services live here
+  adapters/           # shared outbound infra: http client, db pool, clock, fs, keychain
   ui/                 # rendering/prompts, shared across features
   lib/                # logger, config loader, paths
 ```
@@ -72,12 +74,12 @@ src/
 
 ## Layer rules
 
-These are responsibilities of *layers*, not of fixed top-level folders: in Shape A each lives in its own top-level directory; in Shape B `commands`/`service`/`domain`/`adapter` live inside each feature while `ui`/`lib` stay shared. The boundaries below hold either way.
+These are responsibilities of *layers*, not of fixed top-level folders: in Shape A each lives in its own top-level directory; in Shape B `commands`/`service`/`domain` and feature-specific `adapter`s live inside each feature while `ui`/`lib` and shared infrastructure `adapters` stay top-level. The boundaries below hold either way.
 
 - `commands/`: no business logic, no direct DB/API/filesystem calls. Validate raw input, then hand a typed object to a core service.
 - `core/services/`: orchestrates use-cases; receives plain data, returns plain data or throws domain errors. Imports nothing from `commands/`, `ui/`, or the parsing framework.
 - `core/domain/`: pure types and rules, deterministic, no I/O — the easiest layer to test.
-- `adapters/`: the only place performing I/O across process boundaries. Core depends on adapter *interfaces*, not concrete implementations, so it tests with fakes.
+- `adapters/`: the only place performing I/O across process boundaries. In ports-and-adapters terms, `commands/` is the **inbound (driving)** adapter — the CLI is just one entry point — while these are the **outbound (driven)** adapters. Core depends on adapter *interfaces*, not concrete implementations, so it tests with fakes. In Shape B, keep *feature-specific* outbound adapters inside the feature, but put *shared infrastructure* (http transport, db pool, clock, keychain) in a top-level `adapters/` so the plumbing isn't duplicated per feature — don't push all adapters up, and don't trap shared ones in one feature.
 - `ui/`: all terminal rendering and interaction, kept out of core and out of command control flow.
 
 ## Cross-cutting concerns: base command and errors
@@ -87,6 +89,7 @@ Define behavior shared by every command once — on a base command or middleware
 - Global flags (`--json`, `--verbose`, `--quiet`, `--no-color`, `--config`), config loading, and a single top-level error boundary live here, not copy-pasted per command.
 - Define typed domain errors in `core/`; core throws them and never calls `process.exit` or `console`.
 - The boundary catches errors, maps each type to an exit code, and renders through `ui/` — clean message to stderr by default, full detail/stack only under `--verbose`, structured under `--json`. One mapping, not a `try/catch` in every command.
+- Give each domain error a stable, documented code and an *actionable* message (what to do next, not just what broke). For unexpected errors, print a bug-report URL prefilled with version and context, and gate full tracebacks behind `--verbose`/`DEBUG`.
 
 ## Bootstrap and init order
 
@@ -163,6 +166,9 @@ These keep the tool scriptable and composable:
 | Destructive actions | Default to confirmation; provide `--force`/`--yes` to bypass for automation. Make repeatable actions idempotent and offer `--dry-run`. |
 | Verbosity | Provide `--quiet` and `--verbose`. |
 | Stdin | Accept `-` as a filename to read stdin, so the tool composes in pipes. |
+| End of options | Accept `--` to stop flag parsing and pass the rest through verbatim (e.g. to a spawned subprocess). |
+| Interactivity | Prompt only when stdin is a TTY; every prompt needs an equivalent flag so non-interactive/CI runs never block. |
+| Signals | Exit promptly on SIGINT — announce before any cleanup, bound cleanup with a timeout, and skip it on a second Ctrl-C. Design crash-only so an interrupted run can resume. |
 
 ## Build and distribution
 
