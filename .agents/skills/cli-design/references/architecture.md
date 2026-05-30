@@ -1,11 +1,24 @@
----
-name: structuring-typescript-clis
-description: Use when structuring, organizing, or scaffolding a TypeScript/Node command-line tool (CLI) — especially one expected to grow large with many commands. Triggers when starting a new TS CLI, deciding project layout or layering, choosing where business logic lives, organizing many subcommands, splitting into a monorepo, or keeping a command-line app testable as it scales. Framework-agnostic; does not pick an argument-parsing library.
----
+# TypeScript/Node Architecture
 
-# Structuring TypeScript CLIs
+How to structure a CLI's code so it stays testable and maintainable as the number of commands grows. These rules hold regardless of the argument-parsing framework chosen (see `frameworks.md`) — the framework only touches `commands/` and `cli.ts`, never `core/`.
 
-Structure a TypeScript CLI so it stays testable and maintainable as the number of commands grows. These rules hold regardless of the argument-parsing framework.
+## Contents
+- [Core principle: thin commands, fat core](#core-principle-thin-commands-fat-core)
+- [Project structure](#project-structure-single-package)
+- [Layer rules](#layer-rules)
+- [Cross-cutting concerns: base command and errors](#cross-cutting-concerns-base-command-and-errors)
+- [Bootstrap and init order](#bootstrap-and-init-order)
+- [Command naming and discoverability](#command-naming-and-discoverability)
+- [Scaling to a monorepo](#scaling-to-a-monorepo)
+- [Startup performance](#startup-performance)
+- [Type safety](#type-safety)
+- [CLI behavior contract](#cli-behavior-contract)
+- [Build and distribution](#build-and-distribution)
+- [Cross-platform](#cross-platform)
+- [Testing](#testing)
+- [Common mistakes](#common-mistakes)
+- [Supporting libraries](#supporting-libraries)
+- [Persisting user data](#persisting-user-data)
 
 ## Core principle: thin commands, fat core
 
@@ -79,7 +92,7 @@ These are responsibilities of *layers*, not of fixed top-level folders: in Shape
 - `commands/`: no business logic, no direct DB/API/filesystem calls. Validate raw input, then hand a typed object to a core service.
 - `core/services/`: orchestrates use-cases; receives plain data, returns plain data or throws domain errors. Imports nothing from `commands/`, `ui/`, or the parsing framework.
 - `core/domain/`: pure types and rules, deterministic, no I/O — the easiest layer to test.
-- `adapters/`: the only place performing I/O across process boundaries. In ports-and-adapters terms, `commands/` is the **inbound (driving)** adapter — the CLI is just one entry point — while these are the **outbound (driven)** adapters. Core depends on adapter *interfaces*, not concrete implementations, so it tests with fakes. In Shape B, keep *feature-specific* outbound adapters inside the feature, but put *shared infrastructure* (http transport, db pool, clock, keychain) in a top-level `adapters/` so the plumbing isn't duplicated per feature — don't push all adapters up, and don't trap shared ones in one feature.
+- `adapters/`: the only place performing I/O across process boundaries. In ports-and-adapters terms, `commands/` is the **inbound (driving)** adapter — the CLI is just one entry point — while these are the **outbound (driven)** adapters. Core depends on adapter *interfaces*, not concrete implementations, so it tests with fakes. This is also where to wrap nondeterministic sources (clock, random, UUID) so core stays deterministic and testable. In Shape B, keep *feature-specific* outbound adapters inside the feature, but put *shared infrastructure* (http transport, db pool, clock, keychain) in a top-level `adapters/` so the plumbing isn't duplicated per feature — don't push all adapters up, and don't trap shared ones in one feature.
 - `ui/`: all terminal rendering and interaction, kept out of core and out of command control flow.
 
 ## Cross-cutting concerns: base command and errors
@@ -126,16 +139,6 @@ packages/
 
 For user-extensible CLIs, add a **plugin architecture**: discover and load command modules dynamically (e.g. resolve installed plugin packages, or treat `mycli-<name>` executables on PATH as `mycli <name>`). Introduce plugins only when third parties must extend the CLI — not for internal organization, which packages already handle.
 
-## Choosing a parsing framework
-
-Stay framework-agnostic in `core/`; the choice only affects `commands/` and `cli.ts`. Evaluate candidates against the actual command surface, and prefer the lightest option until scale forces more batteries:
-
-- **Nested subcommands**: clean support for multi-level commands and one-file-per-command, or must it be hand-wired?
-- **Machine output**: a built-in structured/`--json` mode, or build the suppress-logs-and-serialize layer manually for every command?
-- **Extensibility**: native plugin loading needed, or not?
-- **Startup latency**: framework weight and cold-start cost — matters for commands run in tight loops, negligible for long batch operations.
-- **Flag/arg type-safety** and **command test helpers**.
-
 ## Startup performance
 
 For a CLI invoked from scripts, shell hooks, git hooks, or tight loops, cold-start latency *is* a feature. Three patterns matter, in order:
@@ -149,7 +152,7 @@ Measure before optimizing: instrument the entry file with named checkpoints (`pe
 ## Type safety
 
 - Enable `strict` fully in tsconfig. It catches the common CLI bugs early — unhandled null flags, uninitialized state.
-- Validate args/flags at the command boundary with a schema validator, then pass the parsed, typed object inward. Core never receives raw strings it must re-parse.
+- Validate args/flags at the command boundary with a schema validator (e.g. **Zod** or **Valibot**), then pass the parsed, typed object inward. Core never receives raw strings it must re-parse. The validator's error messages double as the user-facing error for bad input (rewrite them for humans per `ux-guidelines.md`).
 - Use `satisfies` for command/flag config objects to keep precise literal types while checking shape.
 
 ## CLI behavior contract
@@ -173,21 +176,27 @@ These keep the tool scriptable and composable:
 ## Build and distribution
 
 - Add a `bin` entry in package.json pointing at the built entry file; start that file with `#!/usr/bin/env node`.
-- Bundle with an esbuild-based bundler: emit a runnable entry, generate declaration files only when shipping a library, and externalize `dependencies`/`peerDependencies` so they are not inlined.
+- Bundle with an esbuild-based bundler (e.g. tsup or tsdown): emit a runnable entry, generate declaration files only when shipping a library, and externalize `dependencies`/`peerDependencies` so they are not inlined.
 - Target a modern Node version with `platform: node`.
 - Prefer **ESM-only** output for a Node-only tool. Add CJS output only when other packages import yours as a library — dual publishing carries real maintenance cost otherwise.
+- For local development, run TypeScript directly (e.g. `tsx`) so you don't rebuild on every change.
 - Inject build-time **macros** for static values: version, build timestamp, commit SHA. Inlining keeps the `--version` fast-path zero-import (no `import { version } from '../package.json'`) and makes telemetry stable across distribution channels.
+- Set the `files` field in package.json (or an `.npmignore`) so only the built output ships — not `src/`, tests, or fixtures. Smaller installs, faster `npx`.
+
+## Cross-platform
+
+A Node CLI is expected to run on Windows, macOS, and Linux. Bake that in rather than retrofitting it:
+
+- Build paths with `path.join`/`path.resolve`, never `'/'` concatenation. Use `process.cwd()` for user-supplied paths and `import.meta.url`/`__dirname` for files shipped with the tool.
+- Don't assume a shell, `bash`, `/tmp`, or POSIX-only env vars in spawned commands; honor `TMPDIR`/`TEMP`. Prefer passing an args array to `spawn` over a shell string.
+- The `#!/usr/bin/env node` shebang plus a `bin` entry is what makes the tool launch cross-platform — npm generates the Windows `.cmd` shim from it.
 
 ## Testing
 
-- Unit-test `core/` heavily — fast, no process spawn, no terminal mocking. Most coverage belongs here.
+- Unit-test `core/` heavily — fast, no process spawn, no terminal mocking. Most coverage belongs here. Inject fake adapters for I/O.
 - Integration-test commands by invoking the parser with an argv array and asserting on the result and exit behavior.
 - Snapshot-test `ui/` rendering (help text, tables) when output stability matters.
 - Smoke-test end-to-end against the **built binary** on a handful of happy paths only: this exercises the shebang, `bin` wiring, bundle, and runtime module resolution that in-process command tests bypass, and verifies real process exit codes. Keep this layer thin — it is slow and brittle.
-
-## Supporting libraries
-
-A CLI needs leaf libraries for color, spinners, progress, tables, prompts, logging, config, paths, subprocess, and diff rendering. These belong in `ui/`, `lib/`, and `adapters/` — never in `core/` — and any TTY-dependent output stays gated behind `ui/`. Check the Node standard library before adding one (`util.styleText`, `util.parseArgs`, `--env-file`). For category-by-category selection criteria and representative packages, see `references/cli-libraries.md`.
 
 ## Common mistakes
 
@@ -206,6 +215,10 @@ A CLI needs leaf libraries for color, spinners, progress, tables, prompts, loggi
 | Monorepo or plugins built upfront | Stay single-package until a part needs its own lifecycle. |
 | Dual CJS+ESM publishing by default | ESM-only unless consumed as a library. |
 
+## Supporting libraries
+
+A CLI needs leaf libraries for color, spinners, progress, tables, prompts, logging, config, paths, subprocess, and diff rendering. These belong in `ui/`, `lib/`, and `adapters/` — never in `core/` — and any TTY-dependent output stays gated behind `ui/`. Check the Node standard library before adding one (`util.styleText`, `util.parseArgs`, `--env-file`). For category-by-category selection criteria and representative packages, see `cli-libraries.md`. For the parsing framework specifically, see `frameworks.md`.
+
 ## Persisting user data
 
-When the CLI needs to store anything for the user — config, credentials, projects, cache, backups, logs — read references/user-data-storage.md before designing the layout. It covers the invariants (global vs per-project separation, separable disposable data, keychain-first credentials, overridable root), the two legitimate layout shapes and how to choose, cross-platform locations, and the path-resolution module pattern.
+When the CLI needs to store anything for the user — config, credentials, projects, cache, backups, logs — read `user-data-storage.md` before designing the layout. It covers the invariants (global vs per-project separation, separable disposable data, keychain-first credentials, overridable root), the two legitimate layout shapes and how to choose, cross-platform locations, and the path-resolution module pattern.

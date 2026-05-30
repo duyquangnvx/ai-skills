@@ -1,6 +1,6 @@
 # Node/TS CLI Frameworks
 
-Choosing the argument-parsing layer. All of these sit at the `commands/` boundary in the architecture (`architecture-ts.md`); none of them should leak into `core/`. Pick by complexity, not popularity.
+Choosing the argument-parsing layer. All of these sit at the `commands/` boundary in the architecture (`architecture.md`); none of them should leak into `core/`. Pick by complexity, not popularity.
 
 ## The four mainstream options
 
@@ -26,6 +26,16 @@ Choosing the argument-parsing layer. All of these sit at the `commands/` boundar
 
 Numbers (download counts, exact dependency counts, millisecond benchmarks) reported across sources vary and drift over time — treat the table as relative ordering, not absolute figures. Commander is consistently reported as by far the most widely used; oclif as the heaviest. If startup latency matters (a tool invoked constantly, or in tight CI loops), favor the lighter end and lazy-load commands.
 
+## Evaluate against your command surface
+
+Pick by complexity, not popularity. Score the candidates against what the CLI actually needs, and prefer the lightest option until scale forces more batteries:
+
+- **Nested subcommands**: clean support for multi-level commands and one-file-per-command, or must it be hand-wired?
+- **Machine output**: a built-in structured/`--json` mode, or build the suppress-logs-and-serialize layer manually for every command?
+- **Extensibility**: native plugin loading needed, or not?
+- **Startup latency**: framework weight and cold-start cost — matters for commands run in tight loops, negligible for long batch operations.
+- **Flag/arg type-safety** and **command test helpers**.
+
 ## Selection guidance
 
 - **Default / small-to-medium CLI** → Commander + Zod (validate at the boundary) + esbuild/tsup (bundle) + tsx (dev). This is the pragmatic stack for most tools.
@@ -37,10 +47,6 @@ Numbers (download counts, exact dependency counts, millisecond benchmarks) repor
 
 The framework only replaces the `commands/` + parsing layer. The thin-command/fat-core split, the `core/` and `adapters/` layers, Zod validation at the boundary, the stdout/stderr and exit-code contract, and the testing strategy are all framework-independent — keep them identical no matter which parser you pick. That decoupling is also what lets you switch frameworks later with low cost.
 
-## Companion libraries (optional, mix as needed)
+## Companion libraries
 
-- Prompts/interactivity: `@inquirer/prompts`, `prompts`, or `clack`.
-- Spinners/progress: `ora`.
-- Color: `picocolors` (tiny) or `chalk`; always gate on TTY / `NO_COLOR`.
-- Tables: `cli-table3`.
-- Rich/interactive UIs: `ink` (React for the terminal) — only when a static text UI genuinely isn't enough.
+The parsing framework is only one dependency. For the rest — color, spinners, progress, tables, prompts, logging, config, paths, subprocess, diff — see `cli-libraries.md`, which maps each category to its layer (`ui/`, `lib/`, `adapters/` — never `core/`) with selection criteria and representative packages. Check what the chosen framework already bundles (some ship an `ux`-style namespace) before adding leaf libraries.

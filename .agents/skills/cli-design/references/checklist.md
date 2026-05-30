@@ -47,7 +47,8 @@ A fast pass for designing a new CLI or reviewing an existing one. When reviewing
 
 ## Naming & subcommands
 - [ ] Command name short, lowercase, no clash with common commands.
-- [ ] Consistent casing and `noun verb` / `verb noun` grammar across subcommands.
+- [ ] Consistent casing and `noun verb` / `verb noun` grammar across subcommands; `noun verb` (resource-first) when there are many resources.
+- [ ] Command tree shallow (regroup beyond three levels); one file per command mirroring the tree.
 - [ ] Help works at every subcommand level.
 
 ## Architecture (TypeScript/Node)
@@ -59,8 +60,15 @@ A fast pass for designing a new CLI or reviewing an existing one. When reviewing
 - [ ] Commands lazy-loaded if there are many; `SIGINT`/`SIGTERM` cleaned up.
 - [ ] Pre-framework fast-path for `--version`/subprocess modes; startup budget measured for hot-loop tools.
 - [ ] Cross-platform paths (`path.join`, no shell/`/tmp` assumptions); runs on Windows.
+- [ ] Config/env read inside an explicit init function, not at module top level; flag/error/config wiring centralized on a base command or one error boundary.
+
+## Persisting user data (if it stores anything)
+- [ ] Global vs per-project separated and mirrored; disposable data (cache) in a clearly-named, deletable subdir.
+- [ ] Credentials in the OS keychain (restricted-permission file only as fallback), never in cache/backups/logs.
+- [ ] Root location overridable via env var; path logic centralized in one module.
 
 ## Testing
 - [ ] Heavy unit coverage on `core/` with fake adapters.
 - [ ] Integration tests invoke the parser with argv and assert result + exit behavior.
 - [ ] Snapshot tests on `ui/` output where stability matters.
+- [ ] Thin end-to-end smoke test against the built binary (shebang, `bin` wiring, real exit codes).
