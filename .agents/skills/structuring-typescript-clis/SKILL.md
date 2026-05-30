@@ -31,6 +31,10 @@ export async function createUser(input: CreateUserInput): Promise<User> {
 
 ## Project structure (single package)
 
+Two layout shapes are legitimate. They differ only in the *top-level cut*; the layer boundaries and the thin-commands/fat-core rule are identical in both. Pick the axis that matches how the CLI actually changes.
+
+**Shape A — layer-first (cut horizontally).** Top-level folders are technical layers. Best for a small-to-medium CLI with few resources, where the layer is the dominant axis of change and one person or team owns the whole surface.
+
 ```
 src/
   cli.ts              # entry: shebang, register commands, start parsing — thin
@@ -43,7 +47,32 @@ src/
   lib/                # shared utils: logger, config loader
 ```
 
+**Shape B — feature-first (cut vertically / vertical slice).** Top-level folders are feature areas; each co-locates its own commands, services, domain, and adapters, and depends on a shared `core`/`lib`. Best for a large CLI with many independent resources, when whole features get added/removed often, owners split by feature, or a monorepo split is likely later. The layers still exist — they just live *inside* each feature, not at the top.
+
+```
+src/
+  cli.ts              # entry: register each feature's commands — thin
+  features/
+    user/
+      commands/       # user create | list | delete — thin, delegate inward
+      service.ts      # use-cases for this feature
+      domain.ts       # types + rules for this feature — no I/O
+      adapter.ts      # this feature's I/O (its API/DB), behind an interface
+    billing/
+      commands/
+      service.ts
+      domain.ts
+      adapter.ts
+  core/               # cross-feature domain types + rules shared by features
+  ui/                 # rendering/prompts, shared across features
+  lib/                # logger, config loader, paths
+```
+
+**How to choose.** Default to Shape A; move to Shape B when adding a feature means touching five top-level folders and you find yourself hunting across the tree to understand or delete one feature. Shape B is also the natural precursor to the monorepo below — each `features/<area>/` folder becomes a candidate `core-<area>/` package, so the split is mechanical instead of a re-slice. Two failure modes to avoid: forcing Shape B on a small CLI (feature folders with one file each — over-fragmentation, violates YAGNI), and letting layer discipline erode inside a feature because the I/O is "right there" next to the command. In both shapes, `core`/`service`/`domain` still take plain data and never import `commands/`, `ui/`, or the parsing framework.
+
 ## Layer rules
+
+These are responsibilities of *layers*, not of fixed top-level folders: in Shape A each lives in its own top-level directory; in Shape B `commands`/`service`/`domain`/`adapter` live inside each feature while `ui`/`lib` stay shared. The boundaries below hold either way.
 
 - `commands/`: no business logic, no direct DB/API/filesystem calls. Validate raw input, then hand a typed object to a core service.
 - `core/services/`: orchestrates use-cases; receives plain data, returns plain data or throws domain errors. Imports nothing from `commands/`, `ui/`, or the parsing framework.
