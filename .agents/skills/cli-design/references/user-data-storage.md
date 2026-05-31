@@ -86,10 +86,10 @@ A common real-world pattern: store secrets in the keychain on macOS, and fall ba
 
 ## Centralize path resolution in one module
 
-Put all path logic in a single `core/paths.ts` so the rest of the app references named paths, never hardcoded strings. This hides the layout choice (Shape A or B) and cross-platform differences behind one swappable module:
+Put all path logic in a single `shared/lib/paths.ts` so the rest of the app references named paths, never hardcoded strings. This hides the layout choice (Shape A or B) and cross-platform differences behind one swappable module:
 
 ```typescript
-// core/paths.ts — single source of truth for where things live
+// shared/lib/paths.ts — single source of truth for where things live
 import { homedir } from "node:os";
 import { join } from "node:path";
 

@@ -1,6 +1,6 @@
 # Node/TS CLI Frameworks
 
-Choosing the argument-parsing layer. All of these sit at the `commands/` boundary in the architecture (`architecture.md`); none of them should leak into `core/`. Pick by complexity, not popularity.
+Choosing the argument-parsing layer. All of these sit at the `commands/` boundary in the architecture (`architecture.md`); none of them should leak into a feature's `service`/`domain` (the fat core). Pick by complexity, not popularity.
 
 ## The four mainstream options
 
@@ -45,8 +45,8 @@ Pick by complexity, not popularity. Score the candidates against what the CLI ac
 
 ## What stays constant regardless of choice
 
-The framework only replaces the `commands/` + parsing layer. The thin-command/fat-core split, the `core/` and `adapters/` layers, Zod validation at the boundary, the stdout/stderr and exit-code contract, and the testing strategy are all framework-independent — keep them identical no matter which parser you pick. That decoupling is also what lets you switch frameworks later with low cost.
+The framework only replaces the `commands/` + parsing layer. The thin-command/fat-core split, the fat-core (`service`/`domain`) and `adapters/` layers, Zod validation at the boundary, the stdout/stderr and exit-code contract, and the testing strategy are all framework-independent — keep them identical no matter which parser you pick. That decoupling is also what lets you switch frameworks later with low cost.
 
 ## Companion libraries
 
-The parsing framework is only one dependency. For the rest — color, spinners, progress, tables, prompts, logging, config, paths, subprocess, diff — see `cli-libraries.md`, which maps each category to its layer (`ui/`, `lib/`, `adapters/` — never `core/`) with selection criteria and representative packages. Check what the chosen framework already bundles (some ship an `ux`-style namespace) before adding leaf libraries.
+The parsing framework is only one dependency. For the rest — color, spinners, progress, tables, prompts, logging, config, paths, subprocess, diff — see `cli-libraries.md`, which maps each category to its layer (`shared/ui` or feature `ui.ts`, `shared/lib`, `adapters/` — never a feature's `service`/`domain`) with selection criteria and representative packages. Check what the chosen framework already bundles (some ship an `ux`-style namespace) before adding leaf libraries.

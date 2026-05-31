@@ -16,13 +16,13 @@ Reach for a dependency only when the built-in is insufficient. Modern Node cover
 
 ## Where each category lives
 
-Map every supporting library to a layer; never import any of them into `core/`.
+Map every supporting library to a layer; never import any of them into a feature's `service`/`domain`.
 
-- `ui/`: color, spinners, progress, tables, prompts, diff rendering, human-readable formatting, terminal string handling.
-- `lib/`: logger, config loader, path resolution, process lifecycle and cleanup.
-- `adapters/`: subprocess, HTTP, filesystem, file watching, opening URLs/files.
+- `shared/ui` (or feature `ui.ts`): color, spinners, progress, tables, prompts, diff rendering, human-readable formatting, terminal string handling.
+- `shared/lib`: logger, config loader, path resolution, process lifecycle and cleanup.
+- `adapters/` (feature-local or `shared/adapters`): subprocess, HTTP, filesystem, file watching, opening URLs/files.
 
-**Gate all TTY-dependent output behind `ui/`** so a single place can disable spinners/color/progress/prompts when output is not a TTY, or when `--json` / `--quiet` is set. Do not call spinner/color libraries directly from command handlers.
+**Gate all TTY-dependent output behind `ui`** so a single place can disable spinners/color/progress/prompts when output is not a TTY, or when `--json` / `--quiet` is set. Do not call spinner/color libraries directly from command handlers.
 
 ## Note on batteries-included frameworks
 
@@ -64,4 +64,4 @@ Some CLI frameworks bundle color, table, spinner, and prompt helpers (e.g. an `u
 - **Prefer actively maintained and ESM-compatible packages.** Many popular CLI libraries went ESM-only (e.g. `chalk` v5, `execa`); confirm the module format matches the build setup before adopting, or pin an older major when CJS is required.
 - **Use structured (JSON) logging** for any CLI meant to be consumed by scripts, CI, or agents — not just pretty console output.
 - **Do not duplicate framework-provided helpers**, and do not add a dependency for something the standard library now does.
-- **Keep every TTY-dependent library behind the `ui/` layer** so non-interactive modes suppress them in one place.
+- **Keep every TTY-dependent library behind the `ui` layer** so non-interactive modes suppress them in one place.

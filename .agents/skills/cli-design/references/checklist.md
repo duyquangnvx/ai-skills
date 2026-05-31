@@ -71,7 +71,7 @@ A fast pass for designing a new CLI or reviewing an existing one. When reviewing
 - [ ] Root location overridable via env var; path logic centralized in one module.
 
 ## Testing
-- [ ] Heavy unit coverage on `core/` with fake adapters.
+- [ ] Heavy unit coverage on the feature core (`service.ts`/`domain.ts`) with fake adapters.
 - [ ] Integration tests invoke the parser with argv and assert result + exit behavior.
-- [ ] Snapshot tests on `ui/` output where stability matters.
+- [ ] Snapshot tests on `ui` output (`ui.ts` / `shared/ui`) where stability matters.
 - [ ] Thin end-to-end smoke test against the built binary (shebang, `bin` wiring, real exit codes).
