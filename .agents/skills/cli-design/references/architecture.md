@@ -68,6 +68,18 @@ src/
 
 A small feature need not fill every slot — it might be just `commands/` + `service.ts` + `domain.ts`. Don't create empty placeholder files; add a slot only when the feature needs it. Adding `ui.ts` or `adapters/` later is a local change inside one folder, not a reshape.
 
+### Naming inside a feature
+
+File names are **generic**; the path carries the domain (`features/user/service.ts`). A CLI feature always has a `commands/` folder (one file per verb), so generic-in-folder is the default — use it throughout.
+
+Switch to **prefix-flat** (`user.service.ts`) only when a feature has no slot that fans out into files — e.g. a web API whose routes all live in one chained file. There the filename carries domain + role, staying self-identifying in editor tabs, fuzzy-finder, grep, and stack traces.
+
+Name each feature folder after its domain (`user/`, `billing/`) and stay consistent on plural-vs-singular, so `features/` reads as a table of contents of the tool.
+
+### Why the shared bucket is `shared/`, not `core/`
+
+Reserve **"core"** for the *fat core* — a feature's business logic. Don't name the cross-cutting infra folder `core/`: in clean/hexagonal usage "core" means the domain, so a top-level `core/` full of db/logger/env reads as the opposite of what it holds. `shared/` is neutral — it claims only "used by ≥2 features." Keep one invariant on its infrastructure (`shared/adapters`, `shared/lib`): **no business logic**, only plumbing behind interfaces. Genuinely cross-cutting *business* types go in `shared/domain/`; everything else business-specific stays in its owning feature. (Prefer two buckets? Split plumbing into `infra/` and keep `shared/` for domain types — the boundary "infra holds zero business logic" is what matters, not the word.)
+
 ## Three invariants that keep the shape stable
 
 These are what let the structure scale from small to large without ever being re-sliced:
@@ -214,6 +226,7 @@ A Node CLI is expected to run on Windows, macOS, and Linux. Bake that in rather 
 | Loading the parsing framework before checking common flags | Handle `--version` and internal subprocess modes by inspecting `process.argv` in the entry file first, before importing the framework. |
 | Reading config or env at module top level | Read inside an explicit init function the entry file calls once. Top-level side effects defeat fast-paths and make startup non-deterministic. |
 | Organizing by technical layer (`commands/`, `services/`, …) | Organize by feature; the layer-first cut forces an app-wide re-slice once features multiply. |
+| Naming the cross-cutting infra folder `core/` | "Core" means the fat core (business logic); name the shared bucket `shared/` (or split plumbing into `infra/`), and keep business logic out of it. |
 | Monorepo or plugins built upfront | Stay single-package until a part needs its own lifecycle. |
 | Dual CJS+ESM publishing by default | ESM-only unless consumed as a library. |
 
