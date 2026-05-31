@@ -38,7 +38,7 @@ Some CLI frameworks bundle color, table, spinner, and prompt helpers (e.g. an `u
 | Multi-step task runner | Task tree, concurrency, per-task status — for staged pipelines | `listr2` |
 | Table / structured display | Column layout, wrapping, alignment | `cli-table3` |
 | Interactive prompts | Confirm/select/multiselect/autocomplete, cancellation handling | `@clack/prompts` (modern default), `@inquirer/prompts`, `enquirer` (advanced types) |
-| Full terminal UI (TUI) | When the CLI is stateful enough to need a render loop | `ink` (React for the terminal) |
+| Full terminal UI (TUI) | A bounded interactive view inside an otherwise command-based CLI (a live progress dashboard, a picker). Reach for this only for that contained surface — a full-screen, vim/emacs-style app is outside this skill's scope. | `ink` (React for the terminal) |
 | Logging | Structured JSON for machine/agent consumption, levels, redaction | `pino` (structured), `consola` (pretty CLI), `winston` |
 | Config file loading | Discovery + precedence merge | `cosmiconfig` (discovery), `rc` |
 | Persistent config store | Read/write a user config that survives runs | `conf` |

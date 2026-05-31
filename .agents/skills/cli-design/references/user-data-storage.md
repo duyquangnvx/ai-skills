@@ -75,7 +75,7 @@ Per-project files that are meant to be shared go in version control; personal/lo
 
 A plaintext secrets file exposes tokens to malware, other users on the machine, and leaks via backups or file sharing. Order of preference:
 
-1. **OS keychain** (best) — macOS Keychain, Windows Credential Manager, Linux Secret Service. Use an abstraction (in Node, a keytar-style binding) and a descriptive service name tied to the tool (e.g. `com.you.mytool`), not a generic `api`.
+1. **OS keychain** (best) — macOS Keychain, Windows Credential Manager, Linux Secret Service. Use a native binding (in Node, `@napi-rs/keyring`; `keytar` is archived/unmaintained) and a descriptive service name tied to the tool (e.g. `com.you.mytool`), not a generic `api`.
 2. **Restricted file** (fallback only where no keychain exists) — write with `0600` permissions, separate from config.
 
 A common real-world pattern: store secrets in the keychain on macOS, and fall back to a permission-restricted file only on Linux/Windows. Regardless of method, never let credentials land in cache, backups, or logs, and never print full tokens in debug output.
