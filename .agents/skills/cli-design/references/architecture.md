@@ -177,7 +177,7 @@ These keep the tool scriptable and composable:
 
 - Add a `bin` entry in package.json pointing at the built entry file; start that file with `#!/usr/bin/env node`.
 - Bundle with an esbuild-based bundler (e.g. tsup or tsdown): emit a runnable entry, generate declaration files only when shipping a library, and externalize `dependencies`/`peerDependencies` so they are not inlined.
-- Target a modern Node version with `platform: node`.
+- Target a modern Node version with `platform: node`, and declare the floor in package.json `engines`. The stdlib-first APIs this skill leans on land at specific versions — `process.loadEnvFile`/`util.parseEnv` in 20.12, stable `util.styleText` in 22 — so target **Node ≥ 20.12** (or ≥ 22 to use `styleText` without a flag), and guard or polyfill anything newer than your floor.
 - Prefer **ESM-only** output for a Node-only tool. Add CJS output only when other packages import yours as a library — dual publishing carries real maintenance cost otherwise.
 - For local development, run TypeScript directly (e.g. `tsx`) so you don't rebuild on every change.
 - Inject build-time **macros** for static values: version, build timestamp, commit SHA. Inlining keeps the `--version` fast-path zero-import (no `import { version } from '../package.json'`) and makes telemetry stable across distribution channels.
