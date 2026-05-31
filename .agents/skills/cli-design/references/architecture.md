@@ -44,56 +44,41 @@ export async function createUser(input: CreateUserInput): Promise<User> {
 
 ## Project structure (single package)
 
-Two layout shapes are legitimate. They differ only in the *top-level cut*; the layer boundaries and the thin-commands/fat-core rule are identical in both. Pick the axis that matches how the CLI actually changes.
-
-**Shape A — layer-first (cut horizontally).** Top-level folders are technical layers. Best for a small-to-medium CLI with few resources, where the layer is the dominant axis of change and one person or team owns the whole surface.
+Use one canonical layout: a thin inbound CLI shell over feature-first (vertical-slice) logic. It is **scale-invariant** — the same shape works at three commands and at three hundred, and it never forces you to re-cut the tree as the CLI grows. The layer boundaries below (thin commands, fat core, I/O behind interfaces) hold regardless; the only decision this layout makes for you is the *top-level cut*, and it picks the cut that doesn't create a migration later.
 
 ```
 src/
-  cli.ts              # entry: shebang, register commands, start parsing — thin
-  commands/           # one file per command; directory mirrors command tree
-  core/
-    services/         # use-cases: createUser(input) -> result
-    domain/           # types, models, business rules — no I/O
-  adapters/           # I/O across process boundaries: API, DB, fs, env, clock
-  ui/                 # output rendering (table/json), prompts, spinners
-  lib/                # shared utils: logger, config loader
+  index.ts                 # entry: bootstrap → register commands (lazy) → one error boundary — thin
+  cli/                     # the inbound shell: everything that touches the terminal
+    commands/<feature>/    # one file per command, directory mirrors the command tree — thin: parse → delegate → format
+    ui/                    # rendering (table/json), prompts, spinners — the only layer that writes to the terminal
+    base-command.ts        # global flags + config loading + the single try/catch → exit-code → render boundary
+  features/<feature>/      # vertical slice: the fat core for one feature
+    service.ts             # use-cases: createUser(input) -> result
+    domain.ts              # types + rules for this feature — deterministic, no I/O
+    adapter.ts             # feature-specific outbound I/O (its API/DB), behind an interface
+  core/                    # cross-feature domain types + shared rules ONLY — no services live here
+  adapters/                # SHARED infrastructure: http client, fs/storage, db pool, clock, keychain, subprocess
+  lib/                     # logger, config loader, paths, errors
 ```
 
-**Shape B — feature-first (cut vertically / vertical slice).** Top-level folders are feature areas; each co-locates its own commands, services, domain, and feature-specific adapters, and depends on shared `core`/`lib` and shared infrastructure adapters. Best for a large CLI with many independent resources, when whole features get added/removed often, owners split by feature, or a monorepo split is likely later. The layers still exist — they just live *inside* each feature, not at the top.
+**Why this one — and not "start layer-first, migrate later".** The expensive refactor is precisely the layer-first → feature-first migration: it re-cuts every top-level folder at once, and it reliably arrives the moment a CLI grows past a handful of features. Feature-first never needs it. When a feature outgrows a single file, you *explode the file into a folder in place* — `service.ts` → `service/`, `adapter.ts` → `adapters/` — a local change touching only that feature. The rule is one line: **grow a feature file into a folder; never move a feature relative to other features.** That is what removes the future re-slice — the growth axis (a feature gets bigger) and the structural axis (where features live) are decoupled.
 
-```
-src/
-  cli.ts              # entry: register each feature's commands — thin
-  features/
-    user/
-      commands/       # user create | list | delete — thin, delegate inward
-      service.ts      # use-cases for this feature
-      domain.ts       # types + rules for this feature — no I/O
-      adapter.ts      # feature-specific outbound I/O (its API/DB), behind an interface
-                      # grow service.ts/domain.ts/adapter.ts into folders as the feature gets large
-    billing/
-      commands/
-      service.ts
-      domain.ts
-      adapter.ts
-  core/               # cross-feature domain types + rules ONLY — not Shape A's core; no services live here
-  adapters/           # shared outbound infra: http client, db pool, clock, fs, keychain
-  ui/                 # rendering/prompts, shared across features
-  lib/                # logger, config loader, paths
-```
+**Monorepo-ready by construction.** When a feature earns its own release cadence, `features/<area>/` lifts out to `packages/core-<area>/` and `cli/` becomes `packages/cli/` — mechanical, not a reorganization (see "Scaling to a monorepo").
 
-**How to choose.** Default to Shape A; move to Shape B when adding a feature means touching five top-level folders and you find yourself hunting across the tree to understand or delete one feature. Shape B is also the natural precursor to the monorepo below — each `features/<area>/` folder becomes a candidate `core-<area>/` package, so the split is mechanical instead of a re-slice. A common hybrid keeps `commands/` top-level (mirroring the command tree, as an inbound adapter layer) and feature-slices only the logic under `features/<area>/`; prefer it when the command surface is the primary navigation/registration axis, and because it maps onto the monorepo split even more cleanly — `commands/`+`ui/` become the `cli/` shell while `features/<area>/` become `core-<area>/`. Two failure modes to avoid: forcing Shape B on a small CLI (feature folders with one file each — over-fragmentation, violates YAGNI), and letting layer discipline erode inside a feature because the I/O is "right there" next to the command. In both shapes, `core`/`service`/`domain` still take plain data and never import `commands/`, `ui/`, or the parsing framework.
+**The two cuts that carry the design.** (1) Keep the *inbound shell* (`cli/` — commands + ui + base command) separate from *feature logic* (`features/`). (2) Keep *feature-specific* adapters inside their feature, but put *shared* infrastructure (http, storage, keychain, clock, subprocess) in the top-level `adapters/`. Don't push every adapter up (it couples unrelated features) and don't trap a shared one inside one feature (it forces duplication). In all cases `core`/`service`/`domain` take plain data and never import `cli/`, `ui/`, or the parsing framework.
+
+**The one time to flatten.** If you are certain the tool will stay tiny and single-purpose — a handful of commands over a single resource, no growth planned — you may collapse `features/` into a flat `core/{services,domain}` and drop the per-feature folders, trading the slice for fewer directories on a surface that will never need it. The instant a second independent resource appears, adopt the layout above. When unsure, use the layout above: an empty `features/<x>/` folder costs nothing, a later re-slice costs a lot.
 
 ## Layer rules
 
-These are responsibilities of *layers*, not of fixed top-level folders: in Shape A each lives in its own top-level directory; in Shape B `commands`/`service`/`domain` and feature-specific `adapter`s live inside each feature while `ui`/`lib` and shared infrastructure `adapters` stay top-level. The boundaries below hold either way.
+These are responsibilities of *layers*, not of folder names. In the canonical layout the feature's `service`/`domain`/`adapter` live inside `features/<feature>/`, while `cli/` (commands + ui + base command), shared `core`, shared infrastructure `adapters`, and `lib` stay top-level. The boundaries hold wherever the file physically sits.
 
-- `commands/`: no business logic, no direct DB/API/filesystem calls. Validate raw input, then hand a typed object to a core service.
-- `core/services/`: orchestrates use-cases; receives plain data, returns plain data or throws domain errors. Imports nothing from `commands/`, `ui/`, or the parsing framework.
-- `core/domain/`: pure types and rules, deterministic, no I/O — the easiest layer to test.
-- `adapters/`: the only place performing I/O across process boundaries. In ports-and-adapters terms, `commands/` is the **inbound (driving)** adapter — the CLI is just one entry point — while these are the **outbound (driven)** adapters. Core depends on adapter *interfaces*, not concrete implementations, so it tests with fakes. This is also where to wrap nondeterministic sources (clock, random, UUID) so core stays deterministic and testable. In Shape B, keep *feature-specific* outbound adapters inside the feature, but put *shared infrastructure* (http transport, db pool, clock, keychain) in a top-level `adapters/` so the plumbing isn't duplicated per feature — don't push all adapters up, and don't trap shared ones in one feature.
-- `ui/`: all terminal rendering and interaction, kept out of core and out of command control flow.
+- `commands/` (under `cli/`): no business logic, no direct DB/API/filesystem calls. Validate raw input, then hand a typed object to a feature service.
+- feature `service`: orchestrates use-cases; receives plain data, returns plain data or throws domain errors. Imports nothing from `cli/`, `ui/`, or the parsing framework.
+- feature `domain` and shared `core`: pure types and rules, deterministic, no I/O — the easiest layer to test. `core/` holds only what is shared across features; anything feature-specific stays in the feature.
+- `adapters/`: the only place performing I/O across process boundaries. In ports-and-adapters terms, `commands/` is the **inbound (driving)** adapter — the CLI is just one entry point — while these are the **outbound (driven)** adapters. Core depends on adapter *interfaces*, not concrete implementations, so it tests with fakes. This is also where to wrap nondeterministic sources (clock, random, UUID) so core stays deterministic and testable. Keep *feature-specific* outbound adapters inside the feature; put *shared infrastructure* (http transport, db pool, clock, keychain, subprocess) in the top-level `adapters/` so the plumbing isn't duplicated — don't push all adapters up, and don't trap shared ones in one feature.
+- `ui/` (under `cli/`): all terminal rendering and interaction, kept out of core and out of command control flow.
 
 ## Cross-cutting concerns: base command and errors
 
