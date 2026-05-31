@@ -52,8 +52,11 @@ A fast pass for designing a new CLI or reviewing an existing one. When reviewing
 - [ ] Help works at every subcommand level.
 
 ## Architecture (TypeScript/Node)
+- [ ] Feature-first layout: top level is `cli.ts` + `features/` + `shared/`; each feature owns its `commands/`/`service`/`domain` (not organized by technical layer).
+- [ ] No feature imports another feature's internals — only `shared/` or a feature's public `index.ts`; shared-by-≥2 code promoted to `shared/`.
+- [ ] Boundaries enforced in CI (dependency-cruiser / eslint-plugin-boundaries), not just by convention.
 - [ ] Thin commands / fat core: commands only parse → delegate → format.
-- [ ] `core/` has no argv, no framework, no `console`, no `process.exit`.
+- [ ] Feature core has no argv, no framework, no `console`, no `process.exit`.
 - [ ] I/O isolated in `adapters/` behind interfaces; nondeterminism (clock/random/uuid) wrapped.
 - [ ] `strict` on; args/flags validated with Zod/Valibot at the boundary.
 - [ ] `bin` + `#!/usr/bin/env node` shebang; bundled with esbuild/tsup; ESM-only unless shipping a library; `files` field limits published output.
