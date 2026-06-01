@@ -2,7 +2,7 @@
 
 Choosing the argument-parsing layer. All of these sit at the `commands/` boundary in the architecture (`architecture.md`); none of them should leak into a feature's `service`/`domain` (the fat core). Pick by complexity, not popularity.
 
-## The four mainstream options
+## The main options
 
 **Commander** — the minimalist default. Small, near-zero runtime dependencies, TypeScript-native, fastest startup. Does parsing, subcommands, and help and little else. Best for the majority of small-to-medium CLIs. Pair it with a schema validator (Zod) for typed, validated input.
 
@@ -12,17 +12,19 @@ Choosing the argument-parsing layer. All of these sit at the `commands/` boundar
 
 **clipanion** (used by Yarn) — class-based and designed around type safety, with idiomatic syntax that minimizes boilerplate. A good fit when you want strict TypeScript ergonomics and class-based commands without oclif's full platform weight.
 
+**citty** (UnJS, used by Nuxt/Nitro) — the lightweight, zero-dependency option, built directly on Node's native `util.parseArgs`, so startup is fast and the install is tiny. Declarative command objects with typed args (string/boolean/positional/enum→union types, `--no-` negation), recursively nested subcommands with lazy/async loading (`Resolvable<T>`), auto `--help`/`--version`, and `setup`/`cleanup` lifecycle hooks for cross-cutting concerns. TypeScript-first and ESM. A natural fit when you're already in the UnJS/Nitro ecosystem, or want Commander-level simplicity with lazy subcommands and typed args built in.
+
 ## Tradeoff summary
 
-| Dimension | Commander | yargs | oclif | clipanion |
-|---|---|---|---|---|
-| API style | functional, minimal | builder + middleware | class, file-based | class, type-first |
-| Type coercion / choices validation | manual | built-in | built-in | strong (type-driven) |
-| Typo suggestions | no | built-in | no | partial |
-| Plugin system | no | no | yes | no |
-| Scaffolding / auto docs / test utils | no | no | yes | no |
-| Runtime dependencies | ~none | several | many | few |
-| Relative startup cost | lowest | medium | highest | low |
+| Dimension | Commander | yargs | oclif | clipanion | citty |
+|---|---|---|---|---|---|
+| API style | functional, minimal | builder + middleware | class, file-based | class, type-first | declarative objects |
+| Type coercion / choices validation | manual | built-in | built-in | strong (type-driven) | built-in (typed args + enum) |
+| Typo suggestions | no | built-in | no | partial | no |
+| Plugin system | no | no | yes | no | no (lifecycle hooks) |
+| Scaffolding / auto docs / test utils | no | no | yes | no | no |
+| Runtime dependencies | ~none | several | many | few | none (native `parseArgs`) |
+| Relative startup cost | lowest | medium | highest | low | lowest |
 
 Numbers (download counts, exact dependency counts, millisecond benchmarks) reported across sources vary and drift over time — treat the table as relative ordering, not absolute figures. Commander is consistently reported as by far the most widely used; oclif as the heaviest. If startup latency matters (a tool invoked constantly, or in tight CI loops), favor the lighter end and lazy-load commands.
 
@@ -42,6 +44,7 @@ Pick by complexity, not popularity. Score the candidates against what the CLI ac
 - **Complex validation or layered config is the hard part** → yargs for its middleware, or stay on Commander + Zod if the team prefers explicit code.
 - **Large, multi-command, plugin-extensible tool that will grow for years** → oclif.
 - **Strict TypeScript, class-based commands, minimal boilerplate, no need for oclif's platform** → clipanion.
+- **In the UnJS/Nitro ecosystem, or want the lightest zero-dependency parser (native `util.parseArgs`) with lazy subcommands and typed args built in** → citty.
 
 ## What stays constant regardless of choice
 
