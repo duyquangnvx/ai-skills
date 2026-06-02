@@ -26,12 +26,6 @@ Rationale: Immutable data prevents hidden side effects, makes debugging easier, 
 - Avoid copy-paste implementation drift
 - Introduce abstractions when repetition is real, not speculative
 
-### YAGNI (You Aren't Gonna Need It)
-
-- Do not build features or abstractions before they are needed
-- Avoid speculative generality
-- Start simple, then refactor when the pressure is real
-
 ### Build vs. Buy (Total Cost, Not Fewest Deps)
 
 Choose by total cost of ownership, not by "fewest dependencies". Priority:
