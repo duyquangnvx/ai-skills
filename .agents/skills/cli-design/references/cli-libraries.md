@@ -16,11 +16,11 @@ Reach for a dependency only when the built-in is insufficient. Modern Node cover
 
 ## Where each category lives
 
-Map every supporting library to a layer; never import any of them into a feature's `service`/`domain`.
+Map every supporting library to a layer; never import any of them into the `core` (`core/services`/`core/domain`).
 
-- `shared/ui` (or feature `ui.ts`): color, spinners, progress, tables, prompts, diff rendering, human-readable formatting, terminal string handling.
-- `shared/lib`: logger, config loader, path resolution, process lifecycle and cleanup.
-- `adapters/` (feature-local or `shared/adapters`): subprocess, HTTP, filesystem, file watching, opening URLs/files.
+- `ui/`: color, spinners, progress, tables, prompts, diff rendering, human-readable formatting, terminal string handling.
+- `lib/`: logger, config loader, path resolution, process lifecycle and cleanup.
+- `adapters/`: subprocess, HTTP, filesystem, file watching, opening URLs/files.
 
 **Gate all TTY-dependent output behind `ui`** so a single place can disable spinners/color/progress/prompts when output is not a TTY, or when `--json` / `--quiet` is set. Do not call spinner/color libraries directly from command handlers.
 

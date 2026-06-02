@@ -52,11 +52,11 @@ A fast pass for designing a new CLI or reviewing an existing one. When reviewing
 - [ ] Help works at every subcommand level.
 
 ## Architecture (TypeScript/Node)
-- [ ] Feature-first layout: top level is `cli.ts` + `features/` + `shared/`; each feature owns its `commands/`/`service`/`domain` (not organized by technical layer).
-- [ ] No feature imports another feature's internals — only `shared/` or a feature's public `index.ts`; shared-by-≥2 code promoted to `shared/`.
+- [ ] Layout is `cli.ts` + `commands/` + `core/` (`services`/`domain`) + `adapters/` + `ui/` + `lib/`.
+- [ ] Dependency direction holds: `commands/` → `core/` → `adapters/` (interfaces); `core/` never imports `commands/`/`ui`/the framework; `core/domain` never imports `adapters/`.
 - [ ] Boundaries enforced in CI (dependency-cruiser / eslint-plugin-boundaries), not just by convention.
 - [ ] Thin commands / fat core: commands only parse → delegate → format.
-- [ ] Feature core has no argv, no framework, no `console`, no `process.exit`.
+- [ ] Core has no argv, no framework, no `console`, no `process.exit`.
 - [ ] I/O isolated in `adapters/` behind interfaces; nondeterminism (clock/random/uuid) wrapped.
 - [ ] `strict` on; args/flags validated with Zod/Valibot at the boundary.
 - [ ] `bin` + `#!/usr/bin/env node` shebang; bundled with esbuild/tsup; ESM-only unless shipping a library; `files` field limits published output.
@@ -71,7 +71,7 @@ A fast pass for designing a new CLI or reviewing an existing one. When reviewing
 - [ ] Root location overridable via env var; path logic centralized in one module.
 
 ## Testing
-- [ ] Heavy unit coverage on the feature core (`service.ts`/`domain.ts`) with fake adapters.
+- [ ] Heavy unit coverage on `core/` (`core/services`/`core/domain`) with fake adapters.
 - [ ] Integration tests invoke the parser with argv and assert result + exit behavior.
-- [ ] Snapshot tests on `ui` output (`ui.ts` / `shared/ui`) where stability matters.
+- [ ] Snapshot tests on `ui/` output where stability matters.
 - [ ] Thin end-to-end smoke test against the built binary (shebang, `bin` wiring, real exit codes).
