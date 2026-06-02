@@ -32,6 +32,16 @@ Rationale: Immutable data prevents hidden side effects, makes debugging easier, 
 - Avoid speculative generality
 - Start simple, then refactor when the pressure is real
 
+### Build vs. Buy (Total Cost, Not Fewest Deps)
+
+Choose by total cost of ownership, not by "fewest dependencies". Priority:
+
+1. **Stdlib** when it solves it cleanly in a line or two.
+2. **A small, battle-tested leaf lib** when the logic is non-trivial (Unicode/diacritics, parsing, locale, paths, security). Adding the dep is cheaper than hand-rolling it plus owning its tests and edge cases forever.
+3. **Hand-roll** only when the logic is genuinely trivial and project-specific.
+
+"Stdlib first" means *don't add a dep for what the built-in already does cleanly* — NOT *re-implement what a small lib already solves*. Still avoid heavy or redundant deps when a lighter option fits.
+
 ## File Organization
 
 MANY SMALL FILES > FEW LARGE FILES:
