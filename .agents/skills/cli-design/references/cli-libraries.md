@@ -6,9 +6,9 @@ Categories of supporting libraries a production CLI typically needs, where each 
 
 Reach for a dependency only when the built-in is insufficient. Modern Node covers several CLI needs natively:
 
-- **Color**: `util.styleText` — respects `NO_COLOR`, `FORCE_COLOR`, `NODE_DISABLE_COLORS`. Removes the need for a color library in simple cases.
-- **Arg parsing**: `util.parseArgs` — fine for basic flags; reach for a framework or heavier parser only for subcommands, validation, and help generation.
-- **Env files**: `node --env-file=.env`, `process.loadEnvFile()`, `util.parseEnv` — replace `dotenv` for most uses.
+- **Color**: `util.styleText` (stable since Node 22.13) — respects `NO_COLOR`, `FORCE_COLOR`, `NODE_DISABLE_COLORS`. Removes the need for a color library in simple cases.
+- **Arg parsing**: `util.parseArgs` (stable since Node 20) — fine for basic flags; reach for a framework or heavier parser only for subcommands, validation, and help generation.
+- **Env files**: `node --env-file=.env` and `process.loadEnvFile()` (stable in the Node 24 line; available earlier behind experimental status) — replace `dotenv` for most uses. `util.parseEnv` is newer and still in active development.
 - **Subprocess**: `node:child_process` exists, but a wrapper (below) is far more ergonomic for real use.
 - **Async flow**: `AbortController`/`AbortSignal` handle cancellation and timeouts; `Promise.allSettled` handles fan-out. Reach for a concurrency/retry library only beyond these.
 - **HTTP**: `fetch` is global — add a client library only for retry/timeout/instrumentation ergonomics.
