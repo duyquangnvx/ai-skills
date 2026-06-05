@@ -70,7 +70,7 @@ A fast pass for designing a new CLI or reviewing an existing one. When reviewing
 ## Architecture (TypeScript/Node)
 - [ ] Layout is `cli.ts` + `commands/` + `core/` (`services`/`domain`) + `adapters/` + `ui/` + `lib/`.
 - [ ] Dependency direction holds: `commands/` → `core/` → `adapters/` (interfaces); `core/` never imports `commands/`/`ui`/the framework; `core/domain` never imports `adapters/`.
-- [ ] Boundaries enforced in CI (dependency-cruiser / eslint-plugin-boundaries), not just by convention.
+- [ ] Boundaries enforced in CI: import edges via dependency-cruiser / eslint-plugin-boundaries, plus ESLint `no-console` / `no-restricted-globals` on `core/` (globals aren't import edges).
 - [ ] Thin commands / fat core: commands only parse → delegate → format.
 - [ ] Core has no argv, no framework, no `console`, no `process.exit`.
 - [ ] Commands receive an injected context (streams, env, cwd, reporter) instead of touching `process` globals.
@@ -79,6 +79,8 @@ A fast pass for designing a new CLI or reviewing an existing one. When reviewing
 - [ ] Error boundary sets `process.exitCode` (not `process.exit()`); typed domain errors mapped to exit codes in one place.
 - [ ] I/O isolated in `adapters/` behind interfaces; nondeterminism (clock/random/uuid) wrapped.
 - [ ] `strict` on; args/flags validated with Zod/Valibot at the boundary.
+- [ ] Each schema defined once (in `core/domain`) and derived at every boundary — flags, config, persisted entities, tool inputs — never restated.
+- [ ] If the tool exposes a second façade (agent tools / MCP / API / library), it wraps the same core services with shared input schemas and the `--json` data shape — no logic forked between command and tool.
 - [ ] `bin` + `#!/usr/bin/env node` shebang; bundled (tsdown/esbuild); ESM-only unless shipping a library; `files` field limits published output; Node floor declared in `engines`.
 - [ ] Commands lazy-loaded if there are many; pre-framework fast-path for `--version`/subprocess modes; startup budget measured for hot-loop tools.
 - [ ] Cross-platform paths (`path.join`, no shell/`/tmp` assumptions); runs on Windows.

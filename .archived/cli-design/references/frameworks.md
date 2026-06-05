@@ -55,7 +55,7 @@ Pick by complexity, not popularity. Score the candidates against what the CLI ac
 
 ## Selection guidance
 
-- **Default / small-to-medium CLI** → Commander + Zod (validate at the boundary) + tsdown or esbuild (bundle) + tsx (dev). The pragmatic stack for most tools.
+- **Default / small-to-medium CLI** → Commander + Zod (validate at the boundary) + tsdown or esbuild (bundle) + tsx (dev). The pragmatic stack for most tools. Tie-break: if the design already calls for lazy command loading *and* an injected context *and* a large noun-verb surface (the architecture chapter's full apparatus), you'd be hand-building what stricli ships — evaluate stricli first and pick Commander only if its young ecosystem is a real blocker for you.
 - **Complex validation or layered config is the hard part** → yargs for its middleware, or stay on Commander + Zod if the team prefers explicit code.
 - **Large, multi-command, third-party-plugin-extensible tool that will grow for years** → oclif.
 - **Type-safety-first, lazy loading, and an injectable test context built in — and a young ecosystem is acceptable** → stricli.
