@@ -4,7 +4,7 @@ How to structure CLI code so it stays testable and maintainable as it grows. The
 
 ## Contents
 - [Core principle: thin commands, fat core](#core-principle-thin-commands-fat-core)
-- [Project structure](#project-structure)
+- [Structure principles](#structure-principles)
 - [Layer rules](#layer-rules)
 - [Inject context instead of touching globals](#inject-context-instead-of-touching-globals)
 - [One reporter for all output](#one-reporter-for-all-output)
@@ -45,27 +45,31 @@ export async function createUser(input: CreateUserInput): Promise<User> {
 }
 ```
 
-## Project structure
+## Structure principles
 
-```
-src/
-  cli.ts              # entry: shebang, register commands, start parsing — thin
-  commands/           # one file per command; parse → call core → format
-  core/
-    services/         # use-cases: createUser(input) -> result
-    domain/           # types, models, business rules — no I/O
-  adapters/           # I/O across process boundaries: API, DB, fs, env, clock
-  ui/
-    primitives/       # shared, domain-agnostic: table/color/spinner, reporter
-    views/            # per-command views composing primitives
-  lib/                # shared utils: logger, config loader
-```
+Authoritative CLI guidelines (clig.dev, 12 Factor CLI Apps) prescribe behavior contracts, never directory layouts — and so does this skill. What must hold is the set of **layer roles** below and the dependency direction between them; the directory names belong to the product. Name directories with the product's own vocabulary so the top-level tree alone conveys what the tool does — `pipeline/`, `providers/`, `workspace/` tell a newcomer more than `services/`, `adapters/`, `lib/` ever will. Two constraints make that freedom safe:
+
+- Every directory maps to exactly **one** role — a domain name is never an excuse to mix I/O into domain logic.
+- The project declares its tree and role mapping in its own docs, and encodes that mapping in the boundary tool (see "Enforce boundaries with tooling") so it is checked, not remembered.
+
+| Role | What must be true | Common names |
+|---|---|---|
+| Entry | Shebang, bootstrap, fast-paths, command registration, the one error boundary — thin | `cli.ts`, `main.ts` |
+| Inbound commands | One module per command, mirroring the command tree; parse → call core → format, nothing else | `commands/`, `cli/` |
+| Use-cases | Business orchestration as plain functions `(input, deps) → result`; framework-free | `core/services/`, or domain slices: `pipeline/`, `sync/` |
+| Domain | Types, models, rules, typed errors — no I/O | `core/domain/`, `domain/` |
+| Ports | Interfaces core consumes — **owned by core**, implemented by the outbound layer | `core/ports/` |
+| Outbound I/O | The only place crossing process boundaries (API, DB, fs, subprocess, clock/random/uuid) | `adapters/`, `providers/`, `infra/` |
+| Rendering | Reporter + primitives + per-command views; the only TTY-aware layer | `ui/`, `output/` |
+| Shared utils | Logger, config loader, path resolution | `lib/`, `shared/` |
+
+The rest of this document uses `commands/`, `core/`, `adapters/`, `ui/`, `lib/` as **role labels** — shorthand for the rows above, not required names.
 
 ## Layer rules
 
 - **`commands/`**: no business logic and no direct DB/API/filesystem calls. Validate raw input here, then hand a typed object to a core service.
 - **`core/`**: deterministic where possible; receives plain data, returns plain data or throws domain errors. Imports nothing from `commands/`, `ui`, or the parsing framework.
-- **`adapters/`**: the only place that performs I/O across process boundaries. In ports-and-adapters terms, `commands/` is the **inbound (driving)** adapter — the CLI is just one entry point — while these are the **outbound (driven)** adapters. Core depends on adapter *interfaces*, not concrete implementations, so it can be tested with fakes. This is also where to wrap nondeterministic sources (clock, random, UUID) so core stays deterministic and testable.
+- **`adapters/`**: the only place that performs I/O across process boundaries. In ports-and-adapters terms, `commands/` is the **inbound (driving)** adapter — the CLI is just one entry point — while these are the **outbound (driven)** adapters. Core depends on adapter *interfaces*, not concrete implementations, so it can be tested with fakes — and **core owns those interfaces** (the ports role): define them inside core, never inside the outbound directory. Ports placed with the adapters make "core imports adapters" literally true, so the tree misrepresents the very dependency direction it exists to express. This layer is also where to wrap nondeterministic sources (clock, random, UUID) so core stays deterministic and testable.
 - **`ui/`**: two strata, mirroring a frontend design system. **Primitives** are shared and domain-agnostic — table renderer, color, spinner, error rendering, the reporter. **Per-command views** (`renderUserTable(users)`) compose primitives to render one command's human output — the CLI equivalent of a page component, where the command is the route. Unlike React components, views are pure one-shot functions (data in, output out — no state, no lifecycle; ink components are the exception). Views own only the *human* rendering path and never print directly — they render through the reporter (next section) so `--json`/quiet/color/TTY handling stays centralized. When two commands hand-roll similar output, extract a primitive and compose, exactly as you would in a design system. A view is often a six-line function — that's fine and not a reason to skip the stratum: its value is the canonical location every command renders through, not the size of each file. Build both strata upfront; retrofitting them after a dozen commands have each invented their own formatting is the expensive path.
 
 ## Inject context instead of touching globals

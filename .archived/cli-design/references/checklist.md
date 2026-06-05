@@ -68,8 +68,8 @@ A fast pass for designing a new CLI or reviewing an existing one. When reviewing
 - [ ] Help works at every subcommand level.
 
 ## Architecture (TypeScript/Node)
-- [ ] Layout is `cli.ts` + `commands/` + `core/` (`services`/`domain`) + `adapters/` + `ui/` + `lib/`.
-- [ ] Dependency direction holds: `commands/` → `core/` → `adapters/` (interfaces); `core/` never imports `commands/`/`ui`/the framework; `core/domain` never imports `adapters/`.
+- [ ] Every directory maps to exactly one layer role (entry / commands / use-cases / domain / ports / outbound I/O / rendering / shared utils); names carry the product's vocabulary — the top-level tree alone conveys what the tool does; the role mapping is declared in project docs.
+- [ ] Dependency direction holds between roles: commands → core → ports (owned by core; the outbound layer implements them); core never imports commands/rendering/the framework; domain never imports the outbound layer.
 - [ ] Boundaries enforced in CI: import edges via dependency-cruiser / eslint-plugin-boundaries, plus ESLint `no-console` / `no-restricted-globals` on `core/` (globals aren't import edges).
 - [ ] Thin commands / fat core: commands only parse → delegate → format.
 - [ ] Core has no argv, no framework, no `console`, no `process.exit`.
