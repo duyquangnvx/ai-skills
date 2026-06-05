@@ -75,6 +75,7 @@ A fast pass for designing a new CLI or reviewing an existing one. When reviewing
 - [ ] Core has no argv, no framework, no `console`, no `process.exit`.
 - [ ] Commands receive an injected context (streams, env, cwd, reporter) instead of touching `process` globals.
 - [ ] One reporter module owns all output (human/`--json`/quiet/color/TTY), picked once at startup.
+- [ ] `ui/` split into shared primitives and per-command views; views are pure one-shot functions rendering through the reporter, repeated output extracted into primitives.
 - [ ] Error boundary sets `process.exitCode` (not `process.exit()`); typed domain errors mapped to exit codes in one place.
 - [ ] I/O isolated in `adapters/` behind interfaces; nondeterminism (clock/random/uuid) wrapped.
 - [ ] `strict` on; args/flags validated with Zod/Valibot at the boundary.
