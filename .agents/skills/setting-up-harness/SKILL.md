@@ -239,7 +239,8 @@ paths:
 
 A rule that is both broadly relevant AND tied to specific paths lives in
 `CLAUDE.md`; the scoped rule file only points to it. One owner — never state
-the same rule in both places.
+the same rule in both places. And if the scoped file would contain nothing
+but that pointer, skip the file — CLAUDE.md already loads every session.
 
 Language or tech-stack rules do **not** go here — they are not specific to
 this project and are loaded on demand from elsewhere. Putting them here
@@ -288,7 +289,9 @@ not standing law — when new information makes one wrong, replace it.
 
 Never invent a decision. Pre-populate only with choices the spec states
 explicitly or the user confirmed; a sparse honest log beats a complete-looking
-fabricated one.
+fabricated one. One entry per distinct tradeoff, not per spec sentence — specs
+often restate the same choice as both a principle and a decision; de-dupe to
+the tradeoff.
 
 `docs/roadmap.md` — the forward view: what ships, in what order, where the
 phases stand. **Create it only when a spec or a clear direction exists.** No
@@ -379,7 +382,9 @@ taken:
   file, or a default the model already follows — except the curated
   `Commands` table (the deliberate exception; see step 2).
 - Confirm `README.md` and `CLAUDE.md` do not duplicate the same overview or
-  command list — one owns it, the other points to it.
+  command list — one owns it, the other points to it. The one-line framing
+  each file opens with is exempt: an audience-specific one-liner per file is
+  sanctioned, prose beyond that is not.
 - Confirm one owner per question: scope lists only in the roadmap, decision
   reasoning only in `decisions.md`, no rule stated in both `CLAUDE.md` and a
   scoped rule file.
