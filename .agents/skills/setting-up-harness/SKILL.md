@@ -326,6 +326,8 @@ and nowhere else. `decisions.md` records *why* a scope call was made;
 - Why now: <one line — what makes this the right phase to start with>
 - In: <what this phase delivers>
 - Out: <what deliberately lands later>
+- Needs research: <unknowns to verify before building — libs, APIs,
+  feasibility>  (omit if none)
 - Acceptance: <criteria an agent can verify independently>
 
 ## Definition of Done — v1
@@ -334,6 +336,10 @@ and nowhere else. `decisions.md` records *why* a scope call was made;
 
 ## How this file evolves
 
+- A phase starts → resolve its "Needs research" line and spike the
+  build-vs-buy question for its In-scope items (stdlib vs small
+  battle-tested lib vs hand-roll); record picks with their tradeoff in
+  docs/decisions.md. The manifest stays the source of truth for what's used.
 - A phase ships → flip its Status, then re-read this file before starting
   the next phase — what shipped usually reveals something the plan didn't
   know. Re-plan here if needed.
