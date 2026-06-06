@@ -52,8 +52,8 @@ same question drift apart, and the agent cannot tell which is true.
 | `docs/architecture.md` | How is the system built **now**? | Override on change |
 | `docs/decisions.md` | Why is it this way? | Replace entry on supersede |
 | `docs/roadmap.md` *(only with a spec or clear direction)* | What ships, in what order? Which phase are we in? | On phase events only |
-| `progress.md` | Where is work **today**? | Override every session |
-| `implementation-notes.md` | What went off-spec in the current feature? | Accumulate then reset |
+| `docs/progress.md` | Where is work **today**? | Override every session |
+| `docs/implementation-notes.md` | What went off-spec in the current feature? | Accumulate then reset |
 | `CHANGELOG.md` *(optional)* | What changed for users? | Accumulate |
 
 ## Authority
@@ -79,7 +79,7 @@ deliberately skipped).
 3. Write a human-facing `README.md`.
 4. Create `.claude/rules/project/` for path-scoped project rules.
 5. Create `docs/` — `architecture.md`, `decisions.md`, and (with a spec) `roadmap.md`.
-6. Create the working-memory files.
+6. Create the working-memory files in `docs/`.
 7. Prune pass and verify.
 
 ---
@@ -144,9 +144,9 @@ entirely and add it when the first command lands.
 
 ## Session protocol
 
-1. Read `progress.md` — current phase and working state.
+1. Read `docs/progress.md` — current phase and working state.
 2. Working within a phase? Read that phase's section in `docs/roadmap.md`.
-3. At session end: refresh `progress.md`; record any decision made in
+3. At session end: refresh `docs/progress.md`; record any decision made in
    `docs/decisions.md`.
 
 ## Conventions
@@ -162,8 +162,8 @@ entirely and add it when the first command lands.
 - Architecture (current state): docs/architecture.md
 - Decisions (why; revisable): docs/decisions.md
 - Roadmap (phases + status): docs/roadmap.md
-- Current state: progress.md
-- In-flight notes: implementation-notes.md
+- Current state: docs/progress.md
+- In-flight notes: docs/implementation-notes.md
 ```
 
 If no roadmap exists, drop protocol line 2 and write `Roadmap: none yet` in
@@ -348,8 +348,8 @@ the Keep a Changelog format. Otherwise skip it.
 
 ### 6. Working-memory files
 
-`progress.md` — a snapshot for fast resume across cleared context or a new
-session. Its cadence is session-level; phase status lives in the roadmap and
+`docs/progress.md` — a snapshot for fast resume across cleared context or a
+new session. Its cadence is session-level; phase status lives in the roadmap and
 changes only on phase events. Overwrite it; it is not a task log:
 
 ```markdown
@@ -364,9 +364,9 @@ changes only on phase events. Overwrite it; it is not a task log:
 - Blocked:
 ```
 
-`implementation-notes.md` — the delta between the spec/plan and reality for
-the **current** feature: decisions made off-spec, things changed, tradeoffs
-taken:
+`docs/implementation-notes.md` — the delta between the spec/plan and reality
+for the **current** feature: decisions made off-spec, things changed,
+tradeoffs taken:
 
 ```markdown
 # Implementation Notes
@@ -414,9 +414,10 @@ Two update modes (the table above tags each file):
   of user-visible change. Together with git it is the project's durable
   history; the override docs are only its current snapshot.
 
-`implementation-notes.md` sits between: it accumulates within one feature,
-then on merge its durable items move to `docs/decisions.md` and the file is
-reset to empty — short enough to scan, never a second unmaintained history.
+`docs/implementation-notes.md` sits between: it accumulates within one
+feature, then on merge its durable items move to `docs/decisions.md` and the
+file is reset to empty — short enough to scan, never a second unmaintained
+history.
 
 `CLAUDE.md` has its own maintenance rule: lines earn their place through
 observed mistakes, not anticipation. The agent making the same mistake twice
@@ -442,8 +443,8 @@ a missing one: it spends compliance on something untrue.
 - **progress.md as a task list.** Keep it a short human-readable snapshot of
   state, distinct from any plan's task breakdown, or it just duplicates the plan.
 - **Roadmap as a session log.** Phase status changes on phase events; the
-  session-level "where am I" lives in progress.md. Appending session updates to
-  the roadmap turns the forward view into an unreadable history.
+  session-level "where am I" lives in docs/progress.md. Appending session
+  updates to the roadmap turns the forward view into an unreadable history.
 - **implementation-notes.md growing forever.** It is per-feature scratch.
   Promote durable decisions on merge, then clear it.
 - **History in state docs.** README, architecture, and progress should hold the
