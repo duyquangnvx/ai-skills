@@ -223,9 +223,10 @@ restating every command.>
 
 ### 4. .claude/rules/project/
 
-Create the directory. Add a rule file **only** when there is a genuine
-project-specific rule, and scope it to the paths it applies to so it loads
-only when those files are touched:
+Create the directory together with its first rule file — no rule warranted
+yet means no directory either. Add a rule file **only** when there is a
+genuine project-specific rule, and scope it to the paths it applies to so it
+loads only when those files are touched:
 
 ```markdown
 ---

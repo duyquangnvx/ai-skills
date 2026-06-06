@@ -38,7 +38,10 @@ Do NOT invent decisions the spec didn't make.
 
 What the harness files need directly:
 
-- Stack, runtime, intended directory layout → CLAUDE.md / interview
+- Stack, runtime, intended directory layout → CLAUDE.md / interview. Watch
+  for specs that describe a runtime/output workspace tree (what the product
+  *produces*) — that is not the source layout; treat the source tree as a
+  separate fact, usually a `[GAP]`
 - Commands for test/build/lint, if stated → CLAUDE.md Commands table
 - Conventions and invariants an agent could not guess ("X is append-only",
   "never regenerate Y") → CLAUDE.md Conventions, classified advisory vs
