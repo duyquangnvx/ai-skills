@@ -20,6 +20,7 @@ If any check above fails, the skill drifted into implementation territory. Fix b
 
 - [ ] Every phase has both `In scope` and `Out of scope` explicit. Listing only what's in is half the story; what's deliberately out is what prevents scope creep.
 - [ ] Every phase has observable Acceptance criteria — what an outside observer can verify, not internal completeness.
+- [ ] Acceptance criteria are checkable without subjective judgment where possible — a demo that runs, an output that exists, a flow that completes. An agent picking up the phase should be able to verify done-ness independently; "observable but vague" ("works well", "feels polished") fails this check.
 - [ ] Phases are vertical slices. Bad: "Phase 1: build all data models. Phase 2: build all surfaces." Good: each phase ships something demoable end-to-end.
 - [ ] The `Why` for each phase explains why it's THIS phase, not the next or previous one. Reasoning, not restatement.
 - [ ] Definition of Done v1 has only observable criteria. Aspirational phrases like "high quality" don't qualify.
@@ -52,6 +53,7 @@ If any check above fails, the skill drifted into implementation territory. Fix b
 ## Cross-reference integrity
 
 - [ ] `README.md` lists every sibling file present with one-line role descriptions (`architecture.md` and `decisions.md` may be omitted when owned elsewhere; then the table links out to them).
+- [ ] No file here duplicates the role of an existing doc elsewhere in the repo. Dev-layer docs with the same filename (system `architecture.md`, technical decisions log, session-level `progress.md`) are different layers, not duplicates — when both layers exist, the files cross-link.
 - [ ] `README.md` has a "Protocol for agents" section with at-session-start, during-session, and at-session-end rules.
 - [ ] `README.md` has a "What happens after planning" section delineating the boundary with feature-level work.
 - [ ] `progression.md` links to `roadmap.md` and `decisions.md`.

@@ -72,7 +72,7 @@
 
 ## How this file evolves
 
-- A phase ships → flip its row in [`progression.md`](./progression.md). Don't edit this file unless scope changed.
+- A phase ships → flip its row in [`progression.md`](./progression.md), then re-read this file before starting the next phase and confirm the next phase is still the right one — what shipped usually reveals something the plan didn't know. Re-plan here if not; don't edit this file otherwise unless scope changed.
 - A phase's scope changes mid-flight → log a row in [`decisions.md`](./decisions.md), update the In/Out here, note the change in [`progression.md`](./progression.md)'s log.
 - A new phase is needed in the middle → renumber everything after; both humans and agents look for "Phase N", numbering matters.
 - A phase is too big to ship in one go → split it. Two smaller phases beat one long phase of "almost there."
