@@ -88,7 +88,7 @@ Rules:
 - No new dotfiles directly in `$HOME`.
 - Read `.env` for project-scoped vars, but `.env` is not a config file (untracked, stringly-typed, attracts secrets) and never *write* tool state into it.
 - Never silently modify config that belongs to another program; prefer creating a new file (`/etc/cron.d/myapp`), and use dated comments if you must append.
-- Secrets: files, stdin, pipes, OS keychain, or secret managers only — never flags, never env vars.
+- Secrets — distinguish persisting from consuming. Persist only in an OS keychain or a `0600` file; never write secrets into `.env` or any file the tool manages. Consuming via env vars (`MYAPP_API_KEY`) is standard for dev and CI — a gitignored `.env` is just the dev-time loader for them — but never via flags (`ps` shows them to every user).
 
 ## Naming the binary
 

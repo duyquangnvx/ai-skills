@@ -8,7 +8,7 @@ Layout style is a choice (see next section), but these four hold either way:
 
 1. **Separate global from per-project, and mirror their structure.** Global data (applies across all projects) lives in the user's home area; per-project data lives inside that project directory, like `git` keeps `.git/`. Use the *same* subdirectory names in both scopes so one mental model applies everywhere, with project-scope overriding global-scope.
 2. **Keep disposable data in a clearly-named subdirectory.** Cache and regenerable state (e.g. `cache/`, session transcripts) must be deletable without touching real data. Separability is the requirement — a named subdir is enough; a separate OS location is optional.
-3. **Isolate credentials — OS keychain first.** Never default to a plaintext secrets file. Use the OS keychain; fall back to a restricted-permission file only where no keychain exists. Ordinary state may be a plaintext file protected by OS permissions, but secrets must not be.
+3. **Isolate credentials from ordinary state.** Persist secrets in a dedicated `0600` file or the OS keychain (see Credentials below for the tradeoff) — never mixed into world-readable config, and never written into a project's `.env`.
 4. **Make the root location overridable** via an environment variable, so power users and CI can relocate everything.
 
 Do not spread data across many OS directories just because a spec says so. The only thing that buys you over a single well-organized directory is niche (cache on a separate volume, auto-exclusion from some backup tools). Optimize for the invariants above, then pick whichever layout shape fits the tool.
@@ -30,7 +30,7 @@ One global directory holds everything, with disposable parts as named subdirs. O
   backups/                # durable — a sibling of cache, never inside it
   logs/  debug/           # state
   agents/ hooks/ skills/  # extensible config, mirrored per-project
-# credentials -> OS keychain (no secrets file here)
+# credentials -> 0600 credentials file or OS keychain (see Credentials)
 ```
 
 Choose this when the tool is something users actively inspect, debug, and reset; when its state (sessions, projects, plugins) is a tightly-coupled whole; and when you want global↔per-project symmetry. Benefits: one place to look (`ls ~/.mytool/`), trivial uninstall/reset (`rm -rf ~/.mytool ~/.mytool.json`), and a per-project directory that can mirror the global one. This symmetry is impossible if global data is scattered across OS dirs — which is the main reason rich dev tools consolidate.
@@ -43,7 +43,7 @@ Follow OS-standard locations per data category. Collapse to two buckets unless y
 ~/.local/share/mytool/    # durable bundle (Linux; map per-OS, see table)
   config.json  data/  backups/  logs/
 ~/.cache/mytool/          # disposable, the only thing safe to nuke wholesale
-# credentials -> OS keychain
+# credentials -> 0600 credentials file or OS keychain
 ```
 
 Choose this for smaller CLIs, tools targeting tidy XDG-compliant Linux setups, or when the cache is large/volatile enough to benefit from living on a separate volume.
@@ -73,12 +73,14 @@ Per-project files that are meant to be shared go in version control; personal/lo
 
 ## Credentials
 
-A plaintext secrets file exposes tokens to malware, other users on the machine, and leaks via backups or file sharing. Order of preference:
+Secrets mixed into ordinary config leak via backups, file sharing, and accidental commits — isolate them regardless of mechanism. Two legitimate mechanisms; pick by audience, not by a fixed ranking:
 
-1. **OS keychain** (best) — macOS Keychain, Windows Credential Manager, Linux Secret Service. Use a native binding (in Node, `@napi-rs/keyring`; `keytar` is archived/unmaintained) and a descriptive service name tied to the tool (e.g. `com.you.mytool`), not a generic `api`.
-2. **Restricted file** (fallback only where no keychain exists) — write with `0600` permissions, separate from config.
+- **Restricted file** — a dedicated secrets file with `0600` permissions, separate from config. The pragmatic default for dev tools (`aws`, `gcloud`, `kubectl`, Claude Code on Linux/Windows all do this): transparent to inspect and rotate, debuggable, and works everywhere including headless servers, containers, WSL, and CI.
+- **OS keychain** — macOS Keychain, Windows Credential Manager, Linux Secret Service. Stronger at-rest protection; worth it for general-audience tools and high-value, long-lived tokens. Use a native binding (in Node, `@napi-rs/keyring`; `keytar` is archived/unmaintained) and a descriptive service name tied to the tool (e.g. `com.you.mytool`), not a generic `api`. Know the platform pain before committing: Linux Secret Service needs dbus plus a desktop environment (fails on headless servers, containers, WSL), Windows Credential Manager caps blobs at ~2.5KB (an OAuth token plus refresh token can exceed it), and macOS re-prompts whenever the binary's signature changes. If you go keychain, ship a `0600`-file fallback (what `gh` does).
 
-A common real-world pattern: store secrets in the keychain on macOS, and fall back to a permission-restricted file only on Linux/Windows. Regardless of method, never let credentials land in cache, backups, or logs, and never print full tokens in debug output.
+Also accept a `MYTOOL_API_KEY`-style env var at runtime, overriding stored credentials — that is how CI and scripts inject secrets without touching persistent storage.
+
+Regardless of mechanism, never let credentials land in cache, backups, or logs, and never print full tokens in debug output.
 
 ## `.env` is a dev convention, not tool storage
 
@@ -117,7 +119,7 @@ export const appPaths = {
   logs:    join(root, "logs"),
   cache:   join(root, "cache"),     // the only directory safe to delete wholesale
 };
-// credentials are NOT here — they go through a keychain adapter
+// credentials are NOT here — they go through a credential adapter (0600 file or keychain)
 ```
 
 Swap the `root` resolution for an `env-paths`-based one to move from Shape A to Shape B without touching the rest of the app.

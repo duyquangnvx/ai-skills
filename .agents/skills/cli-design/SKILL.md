@@ -15,7 +15,7 @@ Violating these makes a CLI broken or a bad citizen in pipes, scripts, CI, and a
 - **stdout is for output, stderr is for messaging.** Data and machine-readable results → stdout. Logs, warnings, errors, progress → stderr, so pipes stay clean while humans still see messages.
 - **Use an argument-parsing library** (see stack reference). Never hand-roll `process.argv` parsing for anything beyond a throwaway script.
 - **`-h`/`--help` always shows help and means nothing else.** Bare invocation with missing required args shows concise help (description, 1–2 examples, key flags) instead of erroring or hanging. `--version` always works.
-- **NEVER accept secrets via flags or environment variables** — flags leak through `ps` and shell history; env vars leak through logs, `docker inspect`, `systemctl show`. Accept secrets only via files (`--token-file`), stdin, or the OS keychain (see storage reference).
+- **NEVER accept secrets via flags, never persist them into `.env`** — flags leak through `ps` (visible to every user) and shell history. Accept secrets via files (`--token-file`), stdin, stored credentials (see storage reference), or a `MYTOOL_API_KEY`-style env var — the standard injection path for dev and CI; just be aware env vars inherit into child processes and can leak via crash dumps, `docker inspect`, and verbose logs.
 - **Never require interactivity.** Every prompt has a flag/arg equivalent. Skip prompts entirely when stdin is not a TTY or `--no-input` is passed — fail with the flag the user should pass instead.
 
 ## Adaptive output
@@ -87,4 +87,4 @@ Before shipping a CLI change, verify: exit codes distinct and mapped · stdout/s
 - `references/conventions.md` — standard flag names, env vars, exit codes, XDG paths, config precedence, deprecation protocol. Read when naming anything.
 - `references/typescript-stack.md` — framework comparison (verified, vendor-bias corrected), supporting libraries, signal handling, testing, bundling and distribution. Read when picking dependencies.
 - `references/architecture.md` — thin-command/fat-core, progressive structure, context injection, the reporter, error boundary, bootstrap order, startup performance, cross-platform. Read when scaffolding or restructuring a CLI codebase.
-- `references/user-data-storage.md` — persisting config, credentials, projects, cache: layout shapes, cross-platform locations, keychain-first credentials, atomic writes and sync-safe soft-deletes, path-resolution module. Read when the CLI must store anything for the user.
+- `references/user-data-storage.md` — persisting config, credentials, projects, cache: layout shapes, cross-platform locations, credential storage (`0600` file vs keychain tradeoff), atomic writes and sync-safe soft-deletes, path-resolution module. Read when the CLI must store anything for the user.
