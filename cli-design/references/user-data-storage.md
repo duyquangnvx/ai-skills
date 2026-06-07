@@ -84,6 +84,21 @@ A common real-world pattern: store secrets in the keychain on macOS, and fall ba
 
 `.env` is a project-local, development-time pattern and must be gitignored — it is not where a CLI persists global user config. A CLI should *read* config with clear precedence and never *write* its state into a `.env` file.
 
+## Write state safely: atomic writes and sync-safe deletes
+
+Durable state files need two protections that are cheap to add and painful to retrofit:
+
+- **Atomic writes.** Write to a temp file in the same directory, then `rename()` over the target — rename is atomic on the same filesystem, so a crash or Ctrl-C mid-write leaves the old file intact instead of a half-written JSON. This is what makes crash-only design (no required cleanup, recover on next run) actually hold for file-backed state.
+- **Soft-delete records that sync.** If local data syncs with a remote, deleting a record must leave a tombstone (`deleted: true`, bump `updatedAt`), not remove the row — otherwise the next sync can't distinguish "deleted here" from "never arrived here" and deleted records resurrect from the remote. Filter tombstones out of normal reads; garbage-collect them only after the remote has acknowledged the deletion. Purely local stores can hard-delete.
+
+```typescript
+async function persist(path: string, store: Store): Promise<void> {
+  const tmp = `${path}.tmp`;
+  await writeFile(tmp, JSON.stringify(store, null, 2), { mode: 0o600 });
+  await rename(tmp, path); // atomic swap — readers see old or new, never partial
+}
+```
+
 ## Centralize path resolution in one module
 
 Put all path logic in a single `lib/paths.ts` so the rest of the app references named paths, never hardcoded strings. This hides the layout choice (Shape A or B) and cross-platform differences behind one swappable module:

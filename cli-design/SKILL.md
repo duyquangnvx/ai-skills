@@ -87,4 +87,4 @@ Before shipping a CLI change, verify: exit codes distinct and mapped · stdout/s
 - `references/conventions.md` — standard flag names, env vars, exit codes, XDG paths, config precedence, deprecation protocol. Read when naming anything.
 - `references/typescript-stack.md` — framework comparison (verified, vendor-bias corrected), supporting libraries, signal handling, testing, bundling and distribution. Read when picking dependencies.
 - `references/architecture.md` — thin-command/fat-core, progressive structure, context injection, the reporter, error boundary, bootstrap order, startup performance, cross-platform. Read when scaffolding or restructuring a CLI codebase.
-- `references/user-data-storage.md` — persisting config, credentials, projects, cache: layout shapes, cross-platform locations, keychain-first credentials, path-resolution module. Read when the CLI must store anything for the user.
+- `references/user-data-storage.md` — persisting config, credentials, projects, cache: layout shapes, cross-platform locations, keychain-first credentials, atomic writes and sync-safe soft-deletes, path-resolution module. Read when the CLI must store anything for the user.
