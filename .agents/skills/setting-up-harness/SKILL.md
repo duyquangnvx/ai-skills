@@ -2,15 +2,13 @@
 name: setting-up-harness
 description: >-
   Use when setting up a repository for work with a coding agent — including
-  loosely phrased asks like "set up Claude for this project", "initialize the
-  harness", "bootstrap the agent config", "onboard the agent to this repo",
-  "stand up the project docs", "turn this spec into a phased plan", or
-  "bootstrap planning docs from this spec". Produces the onboarding surface
-  for a solo-dev + coding-agent project: the CLAUDE.md contract, README,
-  project rules, architecture / decisions / roadmap docs, and working-memory
-  files. Do NOT use to design a feature (that is brainstorming) and do NOT
-  use to add language or tech-stack rules — those live outside the project
-  and load on demand.
+  loosely phrased asks like "set up Claude for this project", "write a
+  CLAUDE.md for this repo", "initialize the harness", "bootstrap the agent
+  config", "onboard the agent to this repo", "stand up the project docs", or
+  "bootstrap planning docs from this spec". Covers day-zero repos and
+  existing repos that have no agent-facing docs yet. Do NOT use to design a
+  feature (that is brainstorming) and do NOT use to add language or
+  tech-stack rules — those live outside the project and load on demand.
 ---
 
 # Claude Harness Setup (Agent Onboarding)
@@ -21,14 +19,6 @@ hire on day one: how we work here (CLAUDE.md), what we're building and why
 (roadmap, decisions), and where work stands right now (progress). Each piece
 is added only when it earns its place: an over-stuffed harness gets
 half-ignored and taxes every session, so restraint is the goal, not coverage.
-
-## When to use
-
-Setting up a repo's agent config and working docs — a brand-new repo at
-day-zero, or an existing repo that has none of this surface yet. **Not** for
-designing a feature (brainstorm instead), and **not** for language or
-tech-stack rules — those are not project-specific and load on demand from
-elsewhere.
 
 ## The principles
 
@@ -77,8 +67,10 @@ deliberately skipped).
 1. Analyze the spec (if one exists) and interview for the rest.
 2. Write a lean root `CLAUDE.md`.
 3. Write a human-facing `README.md`.
-4. Create `.claude/rules/project/` for path-scoped project rules.
-5. Create `docs/` — `architecture.md`, `decisions.md`, and (with a spec) `roadmap.md`.
+4. If a genuine path-scoped rule exists, create `.claude/rules/project/`
+   with its first rule file; otherwise skip — no rule means no directory.
+5. Create `docs/` — `architecture.md`, `decisions.md`, and (with a spec or
+   clear direction) `roadmap.md`.
 6. Create the working-memory files in `docs/`.
 7. Prune pass and verify.
 
@@ -87,7 +79,7 @@ deliberately skipped).
 ### 1. Spec analysis + interview
 
 If the project has a spec — PRD, design doc, vision doc, long-form brief —
-read it end-to-end, then run `references/spec-analysis.md`. Its output
+read it end-to-end, then read and follow `references/spec-analysis.md`. Its output
 answers most interview questions and surfaces the gaps that genuinely need
 the user. Show the analysis summary and resolve blocking gaps before
 generating any file.
@@ -167,7 +159,9 @@ entirely and add it when the first command lands.
 ```
 
 If no roadmap exists, drop protocol line 2 and write `Roadmap: none yet` in
-the Docs list so a later session knows the gap is deliberate.
+the Docs list so a later session knows the gap is deliberate. If a legacy
+planning doc owns the forward view (see Authority), point the Docs list at it
+instead of `none yet`.
 
 Keep the `Conventions` section honest: an empty section beats invented rules.
 
@@ -176,7 +170,8 @@ Classify each convention collected in the interview before writing it down:
 a scoped rule) vs **must-always** (formatting, type-checks, "never commit X" —
 anything where one miss is a failure). For must-always items, state the intent
 in prose AND name the deterministic mechanism that should enforce it — a hook,
-a lint rule, a CI check. Setting those up may be out of scope for this skill,
+a lint rule, a CI check — inline next to the rule (e.g. `— enforce via:
+pre-commit hook`). Setting those up may be out of scope for this skill,
 but the classification table is not: report it in step 7 so nothing
 must-always is left resting on prose alone.
 
@@ -411,7 +406,7 @@ tradeoffs taken:
 
 ## Document lifecycle
 
-Two update modes (the table above tags each file):
+Two update modes (the *What this produces* table tags each file):
 
 - **Override (latest only):** describes the present; git keeps the history.
   `decisions.md` is the nuance — point-in-time context, not standing law; its
@@ -434,47 +429,21 @@ a missing one: it spends compliance on something untrue.
 
 ## Anti-patterns
 
-- **Bloated CLAUDE.md.** Restating the stack or a config file buries the rules
-  that matter and taxes every session. If a line would not prevent a mistake,
-  cut it.
+Each step above carries its own discipline (and step 7 re-checks it); these
+are the cross-cutting failures no single step owns:
+
 - **Treating advisory rules as guarantees.** `CLAUDE.md` and project rules are
   followed most of the time, not always. Anything that must happen every time —
   formatting, type-checks, "never commit X" — belongs in lint, CI, or hooks.
   State the intent in prose; enforce it deterministically elsewhere.
-- **Two answers to one question.** A scope list in both roadmap and
-  architecture, a decision restated as a constraint, a rule in both CLAUDE.md
-  and a scoped file — every duplicate is future drift. One owner; others link.
-- **Invented phases or decisions.** A roadmap without direction and a decisions
-  log padded to look complete are worse than honest gaps. No spec → no roadmap;
-  not decided → not logged.
-- **progress.md as a task list.** Keep it a short human-readable snapshot of
-  state, distinct from any plan's task breakdown, or it just duplicates the plan.
-- **Roadmap as a session log.** Phase status changes on phase events; the
-  session-level "where am I" lives in docs/progress.md. Appending session
-  updates to the roadmap turns the forward view into an unreadable history.
-- **implementation-notes.md growing forever.** It is per-feature scratch.
-  Promote durable decisions on merge, then clear it.
-- **History in state docs.** README, architecture, and progress should hold the
-  current truth only. Overwrite; do not append a changelog into them.
-- **Treating a recorded decision as binding.** Entries in `docs/decisions.md`
-  are the reasoning at a past moment, not law. With new information, revisit and
-  override them — then record the change, rather than defending the old choice
-  because it is written down.
-- **Ceremony over discipline.** Sequential decision IDs, mandatory source
-  pointers, cross-logging every change in three files — structure that exists
-  to be maintained, not to prevent mistakes. The discipline that matters: don't
-  invent, keep one owner, keep acceptance verifiable.
-- **Tech-stack rules under project rules.** They are not project-specific and
-  load on demand from elsewhere; mixing them in duplicates context.
 - **A standalone tech-stack doc.** Manifests and lockfiles are the source of
   truth for what is used and are read on demand; a `tech-stack.md` only
   duplicates them and drifts. Record the *choice* of stack — when it carried a
   real tradeoff — in `docs/decisions.md` instead.
-- **README and CLAUDE.md saying the same thing.** Duplicated overview or command
-  lists drift apart over time. Keep one source and let the other point to it:
-  README for humans, CLAUDE.md for the agent.
-- **Placeholder docs.** Create the structure, but only fill sections that have
-  genuine, non-inferable content.
+- **Ceremony over discipline.** Sequential decision IDs, mandatory source
+  pointers, cross-logging every change in three files — structure that exists
+  to be maintained, not to prevent mistakes. The discipline that matters: don't
+  invent, keep one owner, keep acceptance verifiable.
 
 ## Reference files
 

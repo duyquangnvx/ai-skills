@@ -103,6 +103,7 @@ file:
 
 **Blocking questions:** <questions for the user>
 **TBD-acceptable gaps:** <short list>
+**Deferred by spec (future):** <short list — omit if none>
 ```
 
 ## Anti-patterns
