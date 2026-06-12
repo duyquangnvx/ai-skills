@@ -156,6 +156,10 @@ entirely and add it when the first command lands.
 - Roadmap (phases + status): docs/roadmap.md
 - Current state: docs/progress.md
 - In-flight notes: docs/implementation-notes.md
+
+This list is the full set. Before adding a new doc, check whether an
+existing file already owns the question — extend or link it instead of
+creating a parallel file.
 ```
 
 If no roadmap exists, drop protocol line 2 and write `Roadmap: none yet` in
@@ -449,3 +453,7 @@ are the cross-cutting failures no single step owns:
 
 - `references/spec-analysis.md` — checklist for extracting harness-relevant
   facts and gaps from a spec before generating anything.
+- `references/harness-eval.md` — behavioral contracts and blind-session
+  methodology for verifying a generated harness actually steers later
+  sessions. Run after setup on a new project shape, or when a rule keeps
+  getting ignored in real use.
