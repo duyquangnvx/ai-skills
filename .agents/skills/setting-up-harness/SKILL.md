@@ -141,8 +141,11 @@ entirely and add it when the first command lands.
 3. At session end: refresh `docs/progress.md`; record a choice in
    `docs/decisions.md` if a future session could undo it by mistake — a real
    tradeoff, or a stopgap guarding against premature work ("X until Y", with
-   an `Expires`). Skip routine choices the code already shows; session-scoped
-   notes go to docs/implementation-notes.md.
+   an `Expires`). Keep the entry to the tradeoff and the *why* — link the spec
+   or plan for the rest; an entry that restates its spec will outgrow the file.
+   Skip routine choices the code already shows; a choice that lives in
+   `architecture.md` is owned there, not duplicated here. Session-scoped notes
+   go to docs/implementation-notes.md.
 
 ## Conventions
 
@@ -285,9 +288,16 @@ not standing law — when new information makes one wrong, replace it. This is
 — git keeps the history. On each phase ship, sweep this file: delete entries
 whose `Expires` condition shipped, replace any superseded entry still here.
 
+Keep each entry to the tradeoff and the *why* — link the spec or plan for the
+detail; an entry that summarizes its spec will outgrow the file. One entry per
+distinct tradeoff, not per spec sentence. A settled choice plain in the code or
+already owned by `architecture.md` is owned *there* — duplicating it here is the
+two-owners anti-pattern and the main way this log bloats. The test for an entry:
+could a future session undo this by mistake if the *why* were gone?
+
 ## <YYYY-MM-DD> — <short title>
 
-- Decision: <what was chosen>
+- Decision: <what was chosen — one or two lines, not the whole design>
 - Why: <reasoning at the time; `per spec` when the spec asserts it without reasoning>
 - Expires: <for stopgaps only — the condition that retires this entry>  (omit if standing)
 - Supersedes: <prior choice — one-line reason it changed>  (omit if none)
