@@ -138,8 +138,11 @@ entirely and add it when the first command lands.
 
 1. Read `docs/progress.md` — current phase and working state.
 2. Working within a phase? Read that phase's section in `docs/roadmap.md`.
-3. At session end: refresh `docs/progress.md`; record any decision made in
-   `docs/decisions.md`.
+3. At session end: refresh `docs/progress.md`; record a choice in
+   `docs/decisions.md` if a future session could undo it by mistake — a real
+   tradeoff, or a stopgap guarding against premature work ("X until Y", with
+   an `Expires`). Skip routine choices the code already shows; session-scoped
+   notes go to docs/implementation-notes.md.
 
 ## Conventions
 
@@ -277,12 +280,16 @@ note what superseded it — git holds the full history:
 # Decisions
 
 Record choices with real tradeoffs. Each entry is the reasoning at the time,
-not standing law — when new information makes one wrong, replace it.
+not standing law — when new information makes one wrong, replace it. This is
+**not an append-only ADR log**: superseded entries are replaced, not retained
+— git keeps the history. On each phase ship, sweep this file: delete entries
+whose `Expires` condition shipped, replace any superseded entry still here.
 
 ## <YYYY-MM-DD> — <short title>
 
 - Decision: <what was chosen>
 - Why: <reasoning at the time; `per spec` when the spec asserts it without reasoning>
+- Expires: <for stopgaps only — the condition that retires this entry>  (omit if standing)
 - Supersedes: <prior choice — one-line reason it changed>  (omit if none)
 - Source: <spec section, discussion, PR>  (optional — include when traceable)
 ```
@@ -291,7 +298,15 @@ Never invent a decision. Pre-populate only with choices the spec states
 explicitly or the user confirmed; a sparse honest log beats a complete-looking
 fabricated one. One entry per distinct tradeoff, not per spec sentence — specs
 often restate the same choice as both a principle and a decision; de-dupe to
-the tradeoff.
+the tradeoff. An entry records the tradeoff and the why — link the spec or
+plan for everything else; an entry that summarizes its spec will outgrow the
+file. Not every implementation choice is a decision: a settled choice plain
+in the code or already in `architecture.md` is owned there — duplicating it
+here is the two-owners anti-pattern and the main way the log bloats. A
+*deferral* is different: "use JSONL until we pick a store" guards a future
+session against building the deferred thing prematurely, so it earns an entry
+with an `Expires`. The test is the protocol's: could a future session undo
+this by mistake if the *why* were gone?
 
 `docs/roadmap.md` — the forward view: what ships, in what order, where the
 phases stand. **Create it only when a spec or a clear direction exists.** No
@@ -342,7 +357,7 @@ and nowhere else. `decisions.md` records *why* a scope call was made;
   docs/decisions.md. The manifest stays the source of truth for what's used.
 - A phase ships → flip its Status, then re-read this file before starting
   the next phase — what shipped usually reveals something the plan didn't
-  know. Re-plan here if needed.
+  know. Re-plan here if needed, and sweep `docs/decisions.md` per its header.
 - Scope changes mid-flight → update In/Out here, record the why in
   docs/decisions.md.
 - A phase too big to ship in one go → split it. Two small phases beat one
