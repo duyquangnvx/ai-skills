@@ -7,7 +7,9 @@ description: Use when a user wants help deciding, planning, scoping, choosing, s
 
 Guided consultation helps users make decisions without being flooded by options. The core pattern is: orient briefly, resolve one decision at a time, recommend a default when trade-offs exist, confirm periodically, then produce a concrete artifact as soon as there is enough context.
 
-Users often do not know what they want in the abstract, but they can react to concrete trade-offs. The assistant should surface one meaningful trade-off at a time, give a defensible recommendation, and let the user choose or override it.
+## Why this works
+
+Users often do not know what they want in the abstract, but they can react to concrete trade-offs. Asking for full requirements upfront fails because the user has not yet thought through the trade-offs — they need to see what is at stake before a preference can form. Resolving one decision at a time, each with a recommendation to react to, surfaces exactly that: every question makes one trade-off visible, and the recommendation gives the user something concrete to accept or override.
 
 ## When to use
 
@@ -33,13 +35,13 @@ Do not use this skill for:
 ## Core rules
 
 1. **One decision per message.**
-   Ask one meaningful decision at a time. One decision may have 2-3 options, but do not bundle unrelated decisions such as budget, timeline, and style in one message.
+   Ask one meaningful decision at a time. One decision may carry 2-3 options, but do not bundle unrelated decisions such as budget, timeline, and style into one message.
 
 2. **Recommend before asking when there is a defensible default.**
-   The user should not have to navigate trade-offs blindly. Give a recommended direction and one short reason.
+   The user should not have to navigate trade-offs blindly. Give a recommended direction and one short reason. If a decision is purely a matter of taste and no default is defensible, say so and just ask — do not manufacture a recommendation for the sake of format.
 
 3. **Use multiple choice when possible.**
-   A/B/C choices are easier to answer than broad open-ended questions. Use open-ended questions only when the answer space is genuinely open.
+   A/B/C choices are easier to answer than broad open-ended questions. Use open-ended questions only when the answer space is genuinely open, such as budget.
 
 4. **Confirm incrementally.**
    After 2-4 decisions, summarize the current direction and ask whether it is right before continuing or producing.
@@ -87,10 +89,11 @@ Use this shape for trade-off decisions:
 I recommend <choice> because <reason>.
 
 Which direction fits?
+
 - A) <recommended option>
 - B) <alternative>
 - C) <alternative or "something else">
-````
+```
 
 For preference-only decisions where no default is defensible:
 
@@ -98,6 +101,7 @@ For preference-only decisions where no default is defensible:
 This is mostly taste, so I would not force a recommendation.
 
 Which direction sounds better?
+
 - A) <option>
 - B) <option>
 - C) Something else
@@ -115,9 +119,9 @@ What range should I assume?
 
 Silently size the consultation before starting:
 
-* **Low stakes or few decisions:** ask 1-2 questions, then produce.
-* **Medium stakes or several decisions:** ask 3-6 questions, with one midpoint summary.
-* **High stakes or many decisions:** work in named phases and summarize after each phase.
+- **Low stakes or few decisions:** ask 1-2 questions, then produce.
+- **Medium stakes or several decisions:** ask 3-6 questions, with one midpoint summary.
+- **High stakes or many decisions:** work in named phases and summarize after each phase.
 
 Err toward fewer questions. Stop once there is enough context for a useful first version.
 
@@ -125,35 +129,35 @@ Err toward fewer questions. Stop once there is enough context for a useful first
 
 Produce the deliverable when any condition is true:
 
-* You have enough context for a useful first version.
-* Remaining unknowns are minor or easier to resolve by reacting to a draft.
-* The user shows impatience or asks you to choose.
-* The user asks to skip questions.
-* You have asked 4-5 questions without producing anything concrete.
+- You have enough context for a useful first version.
+- Remaining unknowns are minor or easier to resolve by reacting to a draft.
+- The user shows impatience or asks you to choose.
+- The user asks to skip questions.
+- You have asked 4-5 questions without producing anything concrete.
 
 When producing, include assumptions only where they affect the result. Do not end with a long list of additional questions.
 
 ## Adaptation rules
 
-* If the user answers with rich context, drop rigid multiple-choice scaffolding and respond naturally.
-* If the user rejects a recommendation, accept the new preference and continue.
-* If the user says "just tell me what you would do", produce a best-guess draft with assumptions.
-* If the user's answer changes the shape of the consultation, re-scope out loud in one sentence.
-* If the task becomes factual or fully specified, stop consulting and execute.
-* If the task is high-stakes financially, legally, medically, or safety-wise, slow down and ask for the missing critical constraint rather than guessing.
+- If the user answers with rich context, drop rigid multiple-choice scaffolding and respond naturally.
+- If the user rejects a recommendation, accept the new preference and continue without defending it.
+- If the user says "just tell me what you would do", produce a best-guess draft with assumptions.
+- If the user's answer changes the shape of the consultation, re-scope out loud in one sentence.
+- If the task becomes factual or fully specified, stop consulting and execute.
+- If the task is high-stakes financially, legally, medically, or safety-wise, slow down and ask for the missing critical constraint rather than guessing.
 
 ## Review checklist
 
 Before responding, verify:
 
-* [ ] The task genuinely needs unstated preferences, constraints, or trade-offs.
-* [ ] The opener names the goal and decision dimensions briefly.
-* [ ] The message asks about one decision only.
-* [ ] A recommendation appears only when there is a defensible default.
-* [ ] Multiple-choice options are short and mutually distinct.
-* [ ] The flow will stop and produce once enough context exists.
-* [ ] The user can override the recommendation without debate.
-* [ ] The response does not become a long questionnaire.
+- [ ] The task genuinely needs unstated preferences, constraints, or trade-offs.
+- [ ] The opener names the goal and decision dimensions briefly.
+- [ ] The message asks about one decision only.
+- [ ] A recommendation appears only when there is a defensible default.
+- [ ] Multiple-choice options are short and mutually distinct.
+- [ ] The flow will stop and produce once enough context exists.
+- [ ] The user can override the recommendation without debate.
+- [ ] The response does not become a long questionnaire.
 
 ## Examples
 
@@ -167,9 +171,9 @@ For a weekend, the first branch is depth versus coverage. I recommend 2 neighbor
 
 Which pace fits?
 
-* A) 2 neighborhoods, deeper
-* B) 3-4 highlights across the city
-* C) Pick for me after I share interests
+- A) 2 neighborhoods, deeper
+- B) 3-4 highlights across the city
+- C) Pick for me after I share interests
 
 </example>
 
@@ -183,9 +187,9 @@ For most resignations, I recommend warm and professional because it preserves th
 
 Which tone fits?
 
-* A) Warm and grateful
-* B) Brief and neutral
-* C) Firm and minimal
+- A) Warm and grateful
+- B) Brief and neutral
+- C) Firm and minimal
 
 </example>
 
@@ -199,9 +203,9 @@ For most side projects, I recommend SQLite first because it is simple, fast enou
 
 Which assumption is closest?
 
-* A) Small app, simple relational data
-* B) Need hosted multi-user Postgres from day one
-* C) Special data shape: search, graph, analytics, or time series
+- A) Small app, simple relational data
+- B) Need hosted multi-user Postgres from day one
+- C) Special data shape: search, graph, analytics, or time series
 
 </example>
 
@@ -215,9 +219,9 @@ The biggest branch is usually operating system because it determines software co
 
 Which main use fits best?
 
-* A) General work or creative work — likely Mac
-* B) Gaming or Windows-only software — likely Windows
-* C) Development-heavy workflow — Mac, Linux, or Windows depending on stack
+- A) General work or creative work — likely Mac
+- B) Gaming or Windows-only software — likely Windows
+- C) Development-heavy workflow — Mac, Linux, or Windows depending on stack
 
 </example>
 
@@ -231,8 +235,8 @@ Audience is the highest-leverage first choice. I recommend starting with people 
 
 Who is the initial audience?
 
-* A) People I already know
-* B) Strangers in a niche online community
-* C) A professional audience I want to build credibility with
+- A) People I already know
+- B) Strangers in a niche online community
+- C) A professional audience I want to build credibility with
 
 </example>
