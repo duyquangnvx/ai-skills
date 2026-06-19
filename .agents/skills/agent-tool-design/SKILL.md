@@ -51,7 +51,13 @@ Do not rely on prompt rules for deterministic constraints. Validate IDs, enum me
 
 Prefer partial updates for structured edits: `update_scene(scene_id, updates)` or a narrow patch operation beats asking the agent to resend the whole object.
 
-### 5. Treat tool safety as a session property
+### 5. Keep the tool layer a thin boundary
+
+A tool should parse and validate input, delegate to your existing domain/service code, and shape the result for the agent. It is not where business logic lives. Keep the handler thin so core behavior stays testable and reusable outside the agent context, and so you can rename, split, or merge tools without rewriting the logic underneath.
+
+This differs from Rule 1: Rule 1 decides how many tools and what each exposes to the agent; this rule keeps business rules from accumulating inside the tool handler itself.
+
+### 6. Treat tool safety as a session property
 
 Name destructive tools plainly: `delete_scene`, `send_email`, `make_payment`. Add dry-run or preview modes for high-stakes actions.
 
@@ -60,6 +66,7 @@ Annotations such as read-only/destructive/idempotent/open-world are useful hints
 ## Review Checklist
 
 - [ ] Each tool maps to a real workflow or measured need.
+- [ ] Tool handlers stay thin: validate, delegate to domain logic, shape the response — business rules live in the service/domain layer.
 - [ ] Overlapping tools have a one-sentence disambiguation rule.
 - [ ] Namespacing is consistent across services or domains.
 - [ ] Tool schema is the source of truth for fields, required values, enums, and return shape.
