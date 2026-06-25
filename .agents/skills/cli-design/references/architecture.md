@@ -112,16 +112,16 @@ Three differences from React — and they are the boundaries to hold:
 3. **Views never print** — they return/render through the injected reporter, never `console.log`, so TTY/color/quiet handling stays centralized.
 
 ```typescript
-// ui/views/deploy.ts — "page component", pure
+// commands/deploy/view.ts — "page component" for the slice, pure
 export function renderDeploy(deploy: DeployResult): string {
   return [
-    statusBadge(deploy.status),                     // primitive
-    keyValue({ env: deploy.env, sha: deploy.sha }), // primitive
-    renderTable(deploy.services, ["name", "state"]) // primitive
+    statusBadge(deploy.status),                     // primitive from lib/
+    keyValue({ env: deploy.env, sha: deploy.sha }), // primitive from lib/
+    renderTable(deploy.services, ["name", "state"]) // primitive from lib/
   ].join("\n")
 }
 
-// commands/deploy.ts — the command never knows how the view renders
+// commands/deploy/command.ts — the command never knows how the view renders
 const result = await runDeploy(input)
 ctx.reporter.result(result, renderDeploy)  // human → view; --json → serialize
 ```
