@@ -25,7 +25,7 @@ export async function createUser(input: CreateUserInput): Promise<User> {
 
 ## Structure scales with the CLI
 
-Do NOT impose backend layering (hexagonal / ports-and-adapters, `core`/`domain`/`infrastructure` folders) on a CLI — its commands are already its boundary, and the extra indirection makes the code harder to trace. Grow the structure only when the current shape hurts:
+Do NOT impose backend layering on a CLI *upfront*. Its commands are already its boundary, and premature layers add indirection that's hard to trace. The harm is three specific things — **not folder names**: (1) **interface/port indirection** — core depending on adapter *interfaces*, mocks, adapter classes; (2) **organizing by technical layer** so one feature scatters across folders; (3) **laying structure down before the code needs it**. Grouping deep modules that *already exist* into folders — even a `core/`, `domain/`, or `adapters/` directory — is fine; it's the indirection and the prematurity that hurt, not the names. Grow the structure only when the current shape hurts:
 
 1. **A single file** until it hurts.
 2. **One file per command**, directory tree mirroring the command tree; keep the tree shallow — beyond three levels is a signal to regroup.
@@ -43,6 +43,8 @@ export async function syncProjects(
 ```
 
 Treat nondeterminism (clock, random, UUID) the same way: take it as a parameter where a test needs to pin it.
+
+Once several deep modules exist, grouping them into a folder (e.g. `core/`, or a `domain/`/`adapters/` split when the data-owning vs boundary-crossing distinction earns its visibility) is fine — provided it stays a grouping, not a layering: no interface/port indirection, and feature slices stay vertical (each command keeps its `{command, logic, view}` together). The folders name a role; the module's `index.js` barrel is the seam.
 
 ## Inject context instead of touching globals
 
