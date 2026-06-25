@@ -49,7 +49,7 @@ Treat nondeterminism (clock, random, UUID) the same way: take it as a parameter 
 
 ### A grown-CLI skeleton
 
-A worked layout once the CLI has grown past a single file — generic names, adapt freely. Smaller CLIs collapse the right-hand folders (no `core/` yet, logic inline in the slice); larger ones split `core/` as shown:
+A worked layout once the CLI has grown past a single file — generic names, adapt freely. The chain is `command.ts` → `service.ts` → `core/`: parse in the command, the slice's own use-case logic in `service.ts`, rules shared across commands in `core/`. A small slice collapses the middle — the action calls a `core/` function (or inlines) directly, exactly as the intro example does; `service.ts` appears once a command's logic outgrows its action. `core/` itself appears only once logic is reused across commands:
 
 ```
 src/
@@ -58,10 +58,10 @@ src/
   errors.ts  exit-codes.ts # typed domain errors + the single exit-code map
   commands/                # one folder per command (a noun); slice stays vertical
     user/                  #   noun verb: `mycli user create`, `mycli user list`
-      command.ts           #     thin: define subcommands, parse → call core → reporter
-      service.ts           #     the command's use-case logic
+      command.ts           #     thin: define subcommands, parse → call service → reporter
+      service.ts           #     this command's own use-case logic (calls core/ for shared rules)
       view.ts              #     human rendering only (--json bypasses it)
-  core/                    # framework-agnostic logic shared across commands
+  core/                    # logic shared across commands (one command's logic stays in its slice)
     user.ts                #   plain data in, plain data out; no argv/console
   lib/                     # primitives: reporter, paths, config loader, fs helpers
 ```
