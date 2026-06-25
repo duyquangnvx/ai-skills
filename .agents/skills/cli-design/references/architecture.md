@@ -9,10 +9,11 @@ A command file does exactly three things: parse args/flags, call a core function
 The core then becomes plain functions (plain data in, plain data out) that can be unit-tested without spawning a process, and reused unchanged behind other entry points — a library export, an HTTP handler, or an MCP server. Logic welded into command handlers can only ever be a CLI and is painful to test.
 
 ```typescript
-// commands/user/create.ts — thin: parse → delegate → format
-import { createUser } from "../core/user.js";
+// commands/user/command.ts — thin: one slice per noun; each subcommand's action
+import { createUser } from "../../core/user.js";
 
-export async function run(args: { email: string; name: string }) {
+// inside the `user create` action — parse → delegate → format
+export async function runCreate(args: { email: string; name: string }) {
   const user = await createUser(args);   // delegate, no logic here
   printUser(user);                       // format for terminal
 }
