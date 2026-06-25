@@ -67,7 +67,7 @@ AI agents are now first-class CLI users, and they fail differently from humans: 
 
 ## The one architectural rule that matters most
 
-Keep commands thin and the core fat. A command file does exactly three things — parse args/flags, call a core function, format the result. Business rules live in core functions that know nothing about argv, the parsing framework, or `console`. This is what makes the CLI unit-testable without spawning processes. Structure scales with the CLI — a single file until it hurts, then one module per command; do NOT impose backend layering (hexagonal / ports-and-adapters) *upfront* — premature indirection is hard to trace (grouping deep modules that already exist into folders is fine, the harm is the interface indirection, not folder names). Context-injection, reporter, and error-boundary patterns: `references/architecture.md`.
+Keep commands thin and the core fat. A command file does exactly three things — parse args/flags, call a core function, format the result. Business rules live in core functions that know nothing about argv, the parsing framework, or `console`. This is what makes the CLI unit-testable without spawning processes. Structure scales with the CLI — a single file until it hurts, then one module per command; do NOT impose backend layering before the code needs it, or add interface indirection (core depending on adapter interfaces/mocks) — premature indirection is hard to trace, and folder *names* are never the issue. Grouping deep modules into folders, context-injection, reporter, and error-boundary patterns: `references/architecture.md`.
 
 ## Choosing the TypeScript stack
 

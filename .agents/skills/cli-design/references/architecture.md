@@ -25,7 +25,7 @@ export async function createUser(input: CreateUserInput): Promise<User> {
 
 ## Structure scales with the CLI
 
-Do NOT impose backend layering on a CLI *upfront*. Its commands are already its boundary, and premature layers add indirection that's hard to trace. The harm is three specific things — **not folder names**: (1) **interface/port indirection** — core depending on adapter *interfaces*, mocks, adapter classes; (2) **organizing by technical layer** so one feature scatters across folders; (3) **laying structure down before the code needs it**. Grouping deep modules that *already exist* into folders — even a `core/`, `domain/`, or `adapters/` directory — is fine; it's the indirection and the prematurity that hurt, not the names. Grow the structure only when the current shape hurts:
+Do NOT impose backend layering on a CLI *upfront*. Its commands are already its boundary, and premature layers add indirection that's hard to trace. The harm is three specific things — **not folder names**: (1) **interface/port indirection** — core depending on adapter *interfaces*, mocks, adapter classes; (2) **organizing by technical layer** so one feature scatters across folders; (3) **laying structure down before the code needs it**. Folder names are never the anti-pattern (see *Where the fat core lives* below). Grow the structure only when the current shape hurts:
 
 1. **A single file** until it hurts.
 2. **One file per command**, directory tree mirroring the command tree; keep the tree shallow — beyond three levels is a signal to regroup.
@@ -44,7 +44,28 @@ export async function syncProjects(
 
 Treat nondeterminism (clock, random, UUID) the same way: take it as a parameter where a test needs to pin it.
 
-Once several deep modules exist, grouping them into a folder (e.g. `core/`, or a `domain/`/`adapters/` split when the data-owning vs boundary-crossing distinction earns its visibility) is fine — provided it stays a grouping, not a layering: no interface/port indirection, and feature slices stay vertical (each command keeps its `{command, logic, view}` together). The folders name a role; the module's `index.js` barrel is the seam.
+**Where the fat core lives scales the same way.** Inline in the command file at first; a per-command module next; a shared `core/` folder once logic is reused across commands (see the skeleton below; growing `core/` into role-named folders comes after it). None of this is the layering warned against: **"ports-and-adapters" names an *indirection* pattern** (core depending on adapter *interfaces*, mocks, adapter classes), **not a folder literally named `adapters/`**. A folder that merely groups concrete modules behind their `index.js` barrels — DI still by plain function parameters, feature slices still vertical (each command keeps its `{command, logic, view}` together) — is a grouping, not a layer.
+
+### A grown-CLI skeleton
+
+A worked layout once the CLI has grown past a single file — generic names, adapt freely. Smaller CLIs collapse the right-hand folders (no `core/` yet, logic inline in the slice); larger ones split `core/` as shown:
+
+```
+src/
+  cli.ts                   # entry: bootstrap → fast-paths (--version) → dispatch
+  context.ts               # CliContext: injected streams, env, cwd, reporter
+  errors.ts  exit-codes.ts # typed domain errors + the single exit-code map
+  commands/                # one folder per command (a noun); slice stays vertical
+    user/                  #   noun verb: `mycli user create`, `mycli user list`
+      command.ts           #     thin: define subcommands, parse → call core → reporter
+      service.ts           #     the command's use-case logic
+      view.ts              #     human rendering only (--json bypasses it)
+  core/                    # framework-agnostic logic shared across commands
+    user.ts                #   plain data in, plain data out; no argv/console
+  lib/                     # primitives: reporter, paths, config loader, fs helpers
+```
+
+`core/` is the default home for shared logic, and the skeleton above (with `core/`) is the end-state for most CLIs. **Only when a flat `core/` grows to enough deep modules that scanning it hurts**, replace that single `core/` with two sibling folders sitting where it was — `domain/` (data-owners) and `adapters/` (boundary-crossers: HTTP/DB/LLM clients), both beside `commands/`. There is no `core/` afterward — the two folders take its place (they are siblings, never nested inside a `core/`). Everything else is unchanged: `commands/` stays vertical, `lib/` stays put. This split is optional polish, not a milestone to aim for.
 
 ## Inject context instead of touching globals
 
