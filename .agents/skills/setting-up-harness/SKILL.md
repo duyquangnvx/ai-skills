@@ -324,11 +324,22 @@ direction → skip the file, mark `Roadmap: none yet` in CLAUDE.md, and do NOT
 invent phases.
 
 Phases must be vertical slices — each ships something demoable end-to-end,
-not "build the data layer first, then the UI." Order by dependency. Detail
-the next phase or two; leave later ones as a name plus one line. Prefer
-acceptance criteria checkable without subjective judgment — a demo that runs,
-an output that exists, a flow that completes — so an agent picking up the
-phase can verify done-ness independently.
+not "build the data layer first, then the UI." On a pipeline- or DAG-shaped
+product the same trap wears a disguise: finishing one stage to full depth
+before the product emits any usable output is horizontal slicing too — a slice
+runs a thin path through *all* stages (a walking skeleton), then later phases
+thicken it. Order by dependency. Detail the next phase or two; leave later
+ones as a name plus one line. Prefer acceptance criteria checkable without
+subjective judgment — a demo that runs, an output that exists, a flow that
+completes — so an agent picking up the phase can verify done-ness
+independently.
+
+Narrow the *scope*, never the *structure*. A slice touches few features but
+runs through the real architectural seams — storage, adapters, stage
+boundaries — never a bypass a later phase must tear out; that bypass is the
+technical debt, not the thin scope. A parked feature earns a reserved
+interface, not a shortcut: defer the implementation, keep the seam. This is
+what separates a walking skeleton from throwaway scaffolding.
 
 This file owns scope: In/Out per phase and the Definition of Done live here
 and nowhere else. `decisions.md` records *why* a scope call was made;
@@ -339,7 +350,8 @@ and nowhere else. `decisions.md` records *why* a scope call was made;
 
 > Provisional best guess, not a contract — re-plan as implementation reveals
 > what you couldn't know up front. Each phase is a vertical slice, demoable
-> end-to-end.
+> end-to-end: narrow in scope but routed through the real architecture, not a
+> single stage or layer finished in isolation.
 
 | # | Phase | Status | Ships |
 |---|-------|--------|-------|
@@ -365,6 +377,10 @@ and nowhere else. `decisions.md` records *why* a scope call was made;
   build-vs-buy question for its In-scope items (stdlib vs small
   battle-tested lib vs hand-roll); record picks with their tradeoff in
   docs/decisions.md. The manifest stays the source of truth for what's used.
+  Decide here too what is built *real* vs *stubbed*: the architectural seams
+  the slice runs through are built real even at one-feature depth — only
+  feature breadth is stubbed. A stub behind a real seam is scope; a bypass
+  around the seam is the debt a later phase pays.
 - A phase ships → flip its Status, then re-read this file before starting
   the next phase — what shipped usually reveals something the plan didn't
   know. Re-plan here if needed, and sweep `docs/decisions.md` per its header.
