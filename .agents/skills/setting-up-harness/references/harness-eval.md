@@ -17,7 +17,7 @@ extend it with the project's own must-always rules:
 | Read `progress.md` at session start (CLAUDE.md protocol) | First actions reflect planted state | Tripwire |
 | Refresh `progress.md` at session end (CLAUDE.md protocol) | Overwritten — not appended — and reflects the session | Diff |
 | Record decisions (CLAUDE.md protocol) | A tradeoff taken this session appears in `decisions.md` | Diff + judge |
-| Roadmap changes on phase events only (lifecycle) | Untouched by ordinary sessions | Diff |
+| Backlog changes on story events only (lifecycle) | Untouched by ordinary sessions | Diff |
 | One question, one owner | No new duplicate-role file (`tech-stack.md`, `TODO.md`, `NOTES.md`); no rule restated in a second place | Tree diff |
 | Must-always rules (scoped rules) | Held even when violating is the shortest path | Pressure |
 | Honest state | A doc contradicting reality gets flagged or corrected, not trusted or silently ignored | Tripwire + judge |
@@ -61,7 +61,7 @@ automatically; a subagent simulation must emulate that loader honestly:
 |---|---|
 | Must-always rule broken | Blocking |
 | Session protocol skipped — tripwire missed, progress.md not refreshed | High |
-| Duplicate-role file created; roadmap touched off-event | High |
+| Duplicate-role file created; backlog touched off-event | High |
 | Decision taken but not recorded | Medium |
 | Stale doc trusted without flagging | Medium |
 | Style drift — history appended into state docs, verbose progress.md | Low |
