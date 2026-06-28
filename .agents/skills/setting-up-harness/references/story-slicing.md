@@ -1,114 +1,128 @@
-# Story Slicing — cutting epics into vertical-slice user stories
+# Story Slicing — ordering and cutting the work
 
 Load this when slicing a selected epic into stories, or refining a story to
-Ready. It holds the craft the backlog/story templates assume: how to cut a slice
-that is vertical, how to write acceptance an agent can verify, and the
-Ready/Done gates.
+Ready. It carries two ordering models, how to cut a story under each, how to
+write acceptance an agent can verify, and the Ready/Done gates.
 
-## The one test that matters
+## Pick the ordering model first
 
-A user story is a **vertical slice**: it delivers something observable
-end-to-end — a demo that runs, an output that exists, a flow that completes —
-narrow in feature scope but routed through the real architectural seams.
+One predicate decides it: **is early external feedback a goal?** (shipping an
+MVP, validating with users/stakeholders, requirements still uncertain).
 
-It is **not** a technical stage, a layer, or a task. The reliable tell of a bad
-slice is an actor that is the system or a tier, not a person:
+- **No → dependency order (default).** The common case for this skill: a solo
+  tool, or a build from a settled spec. Shipping is not the driver, so a thin
+  demoable slice buys little; dependency order avoids stub-debt and dependency
+  inversions.
+- **Yes → vertical slices (variant).** Early feedback outweighs the friction of
+  stubs and re-traversal.
+
+The universal gates (acceptance, Ready, Done, lazy slicing) apply to both.
+
+## Default model — dependency order, risk front-loaded
+
+Order stories so each is built on **real, finished predecessors**. Within what
+the dependency graph allows, do the **hardest / most-uncertain core first** — if
+that core is wrong, everything built on the plan is wasted. The spec's own
+dependency DAG is usually the backbone; the lane (`high-risk`/`spike`) tells you
+what to pull early.
+
+A story here is a **capability built real and independently verifiable** — a test
+passes, an output exists. It does **not** have to be demoable end-to-end to a
+user, and a **stage-shaped story is fine** (in a pipeline, "build the segmenter"
+is a legitimate story when it is built real and verifiable). This is the opposite
+of the variant below — do not force a thin vertical path here.
+
+**Reserve a seam, never a bypass.** When a predecessor genuinely must wait, build
+the story against the predecessor's **interface with a stub/fake behind the real
+seam** — ideally a fake that doubles as a permanent test double. A shortcut that
+routes *around* the seam is the debt a later story tears out. This keeps "build on
+real predecessors" honest when one isn't ready yet.
+
+**Integration smoke (optional).** If many components are built independently and
+the spec has NOT fixed the contracts between them, run one thin end-to-end path
+early as a one-time integration check. When the spec pins those contracts, that
+risk is pre-paid — skip it; it is not the organizing principle here.
+
+Anti-patterns this order prevents:
+
+- **Deferring the hard core** — saving the riskiest capability for late.
+- **Bypassing a seam** — routing around an unbuilt dependency instead of stubbing
+  behind its real interface.
+- **A story you cannot verify** — a half-built capability with no test/output.
+  Even a stage-story must pass acceptance on its own.
+
+## Variant model — vertical slices (only when early feedback is the goal)
+
+Here a story is a **vertical slice**: demoable end-to-end, narrow in feature
+scope but routed through the real seams — not a lone stage or layer. The actor is
+a person, never the system:
 
 ```
-WRONG (horizontal — a pipeline stage, nothing demoable):
+WRONG (a pipeline stage, nothing demoable):
   As the system, I want to fetch the page HTML, so that it can be processed.
-  As the system, I want to store the extracted article.
-
-RIGHT (vertical — one thin path a user can observe):
-  As a reader, I want to save a URL and see its extracted text in the reader,
-  so that I can read it later.   (touches save → fetch → extract → store → render,
-                                  each seam real but thin: one happy path, one site)
+RIGHT (one thin path a user observes):
+  As a reader, I want to save a URL and read its extracted text in the reader.
 ```
 
-If you catch yourself writing one story per stage (fetch / extract / store), you
-are slicing horizontally. Collapse them into one thin vertical story, then split
-*that* by the patterns below when it is too big.
+Build a **spine slice first** — one thin path crossing the dependency chain
+end-to-end (a walking skeleton), every seam real at one-feature depth, breadth
+stubbed — then widen. A stub behind a real seam is scope; a bypass around it is
+debt.
 
-## INVEST — the slice quality check
+### INVEST — the slice quality check (variant)
 
 | Letter | Means | Fails when |
 |---|---|---|
-| **I**ndependent | Can be built/shipped without waiting on a sibling | Ordered chain where each needs the previous tier |
-| **N**egotiable | Captures intent, not a frozen task list | Reads like a spec dump |
-| **V**aluable | Observable value to a user or the running product | "As the system…"; no demoable outcome |
-| **E**stimable | You can assign a lane (tiny/normal/high-risk) | Too vague or too unknown → needs a `spike` first |
-| **S**mall | Ships in one go | "Almost there" for a long stretch → split it |
-| **T**estable | Has acceptance an agent can verify alone | "works well", "is fast" with no observable check |
+| Independent | Buildable/shippable without waiting on a sibling | a strict prerequisite chain |
+| Negotiable | Captures intent, not a frozen task list | reads like a spec dump |
+| Valuable | Observable value to a user | "As the system…"; no demoable outcome |
+| Estimable | You can assign a lane | too vague/unknown → spike first |
+| Small | Ships in one go | "almost there" for a long stretch |
+| Testable | Has agent-verifiable acceptance | "works well" with no check |
 
-## Splitting patterns — when a story is too big
+### Splitting patterns (variant) — when a slice is too big
 
-Split *along* the value, never *across* the layers. Pick the first pattern that
-fits:
+| Pattern | Split by |
+|---|---|
+| Workflow steps | the user's path; ship the spine step first |
+| Business-rule variation | one rule now, variants later |
+| Happy / error path | success now, failure handling next |
+| Data variation | one data shape now, more later |
+| Operations (CRUD) | one operation per story |
+| Interface / platform | one surface now |
+| Spike | a time-boxed research story that ends in an answer |
 
-| Pattern | Split by | Example |
-|---|---|---|
-| Workflow steps | The user's path; ship the spine step first | Save+read first; tag/search later stories |
-| Business-rule variation | One rule now, variants later | Extract standard articles now; paywalled/PDF later |
-| Happy / error path | Success now, failure handling next | Save a good URL; failed-fetch retry as its own story |
-| Data variation | One data shape now, more later | English articles now; RTL/CJK typography later |
-| Operations (CRUD) | One operation per story | Create+read now; delete/edit later |
-| Interface / platform | One surface now | API + minimal UI now; mobile polish later |
-| Spike | A time-boxed research story that ends in an **answer**, not an artifact | "Decide extraction lib" → records the pick in decisions.md |
-
-A `spike` is the right move for a `high-risk` lane: resolve the unknown, record
-the decision, then the real story becomes `normal`.
-
-## The spine slice (walking skeleton) — build first
-
-Before widening any epic, build one thin slice that crosses the dependency chain
-end-to-end with fakes/stubs — proving the architecture's seams connect. It may
-span several epics. Its acceptance is "the spine runs end-to-end; an output
-exists", not feature completeness. Everything after it thickens a seam that
-already works.
-
-The discipline that separates a walking skeleton from throwaway scaffolding:
-every seam the spine runs through is built **real** even at one-feature depth —
-only feature *breadth* is stubbed. A stub behind a real seam is scope; a bypass
-*around* a seam is the debt a later story tears out.
-
-## Acceptance criteria — agent-verifiable, Gherkin
+## Acceptance criteria — agent-verifiable, Gherkin (both models)
 
 Write each as Given/When/Then, checkable without subjective judgment:
 
 ```
-- [ ] Given a saved URL with a readable article,
-      When extraction runs,
-      Then the reader view shows the title and body with no nav/ads.
+- [ ] Given <context>, When <action>, Then <observable outcome>.
 ```
 
-Prefer an observable artifact (a file exists, an endpoint returns 200, a flow
-completes) over a quality adjective. "Reads nicely" is not acceptance; "renders
-title + body, no boilerplate nodes in output" is.
+Prefer an observable artifact (a file exists, an endpoint returns 200, a test
+passes) over a quality adjective. "Reads nicely" is not acceptance.
 
-## Definition of Ready — gate into In Progress
+## Definition of Ready — gate into In Progress (both models)
 
-A story may start only when:
-
-- [ ] It is a vertical slice (INVEST-checked), not a task or a layer.
+- [ ] Dependencies are built, or stand behind a real seam (stub/fake, not a bypass).
 - [ ] Acceptance criteria are written and agent-verifiable.
 - [ ] In/Out scope is explicit.
-- [ ] Dependencies are done, or stand behind a real seam (stub, not bypass).
-- [ ] High-risk unknowns are spiked (lane `high-risk` resolved, or a `spike`
-      story created).
-- [ ] Build-vs-buy and real-vs-stub are decided; durable picks recorded in
-      `docs/decisions.md`.
+- [ ] High-risk unknowns are spiked (lane `high-risk` resolved, or a `spike` story created).
+- [ ] Build-vs-buy decided; durable picks recorded in `docs/decisions.md`.
+- [ ] (variant) It is a vertical slice, not a lone stage/layer.
 
-## Definition of Done — story
+## Definition of Done — story (both models)
 
-- [ ] All acceptance criteria pass (demo runs / output exists / flow completes).
+- [ ] All acceptance criteria pass (a test passes / an output exists / a flow completes).
 - [ ] Tests per the repo's standard.
 - [ ] `docs/architecture.md` updated if the structure changed.
 - [ ] Durable notes promoted from the packet to `docs/decisions.md`.
 - [ ] Status flipped to `done` in `docs/backlog.md`; packet marked Done.
 
-## Lazy slicing — do not pre-cut the whole backlog
+## Lazy slicing — do not pre-cut the whole backlog (both models)
 
 Create a story packet when the story is selected for work, or when a product
 decision needs a durable home — not up front. An epic stays `unsliced` until you
 pick it; a story stays a `candidate` row until you slice it. Pre-writing every
-packet plans against assumptions that shipping the spine will overturn.
+packet plans against assumptions early work will overturn.

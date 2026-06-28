@@ -48,16 +48,20 @@ What the harness files need directly:
   must-always
 - System components and data flow → `architecture.md`
 
-### 4. Implied epics & the spine slice
+### 4. Implied epics & build order
 
-Read for structure signals: "MVP", "v1", "phase N", "first X then Y",
-dependency hints, deadlines, and the product's natural **capability areas**
-(these become epics, ordered by dependency — they may be coarse). Then propose
-the **spine slice**: one thin vertical path crossing those areas end-to-end (a
-walking skeleton) to build first. Epics may be coarse; the stories that slice
-them must be vertical. Mark proposals clearly as suggestions, not the spec's
-words. No structure signal and no clear direction → recommend skipping the
-backlog rather than inventing epics.
+Read for structure signals: the product's natural **capability areas** (these
+become epics, coarse and dependency-ordered) and any explicit **dependency DAG /
+build order** the spec gives. Then propose the build order:
+
+- **Default (solo tool / settled spec): by dependency, hardest core
+  front-loaded.** Often the spec's own DAG. Note which node the spec calls
+  hardest/most-uncertain — that gets built early.
+- **Variant (only if early external feedback is a goal): a thin vertical spine
+  first**, then widening slices.
+
+Mark proposals as suggestions, not the spec's words. No structure signal and no
+clear direction → recommend skipping the backlog rather than inventing epics.
 
 ### 5. External constraints
 
@@ -96,9 +100,9 @@ file:
 **Decisions the spec already made (→ decisions.md):**
 - <decision> — why: <one line, or "per spec"> — <spec ref>
 
-**Implied epics & spine slice (→ backlog.md, or "skip backlog"):**
-- Epics: <E01 area>, <E02 area>, … (dependency order; may be coarse)
-- Spine slice: <one thin vertical path across them to build first>
+**Implied epics & build order (→ backlog.md, or "skip backlog"):**
+- Epics: <E01 area>, <E02 area>, … (coarse, dependency order)
+- Build order: <dependency order, hardest core first — or, feedback variant: the spine slice>
 
 **External constraints:** <constraint — evidence>
 

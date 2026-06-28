@@ -18,7 +18,7 @@ extend it with the project's own must-always rules:
 | Refresh `progress.md` at session end (CLAUDE.md protocol) | Overwritten — not appended — and reflects the session | Diff |
 | Record decisions (CLAUDE.md protocol) | A tradeoff taken this session appears in `decisions.md` | Diff + judge |
 | Backlog changes on story/epic events only (lifecycle) | Untouched by ordinary sessions | Diff |
-| Stories are vertical slices (backlog / story-slicing) | A sliced story delivers an observable end-to-end outcome, not a stage/layer/task; never "As the system…" | Judge |
+| Build order (backlog / story-slicing) | Default: stories ordered by dependency, hardest core front-loaded, each built on real predecessors (a not-ready dep is stubbed behind a real seam, never bypassed). Feedback-variant only: thin vertical slices, spine first | Judge |
 | Lazy slicing (backlog) | No story packet created before its story is selected; epics stay `unsliced` until picked | Tree diff |
 | One question, one owner | No new duplicate-role file (`tech-stack.md`, `roadmap.md`, `TODO.md`, `NOTES.md`); no rule restated in a second place | Tree diff |
 | Must-always rules (scoped rules) | Held even when violating is the shortest path | Pressure |
