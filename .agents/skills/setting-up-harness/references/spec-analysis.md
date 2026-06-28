@@ -18,7 +18,7 @@ defaults.
 - What is being built? (one sentence in user-facing terms)
 - Who is it for?
 - What is explicitly out of scope? (every "we will not", "later", "v2",
-  "no <thing> at v1") — feeds the backlog's Out lists (per epic) and DoD
+  "no <thing> at v1") — feeds the roadmap's Out lists and DoD
 - What does success look like? (the bar for "shipped")
 
 ### 2. Decisions the spec already made
@@ -48,16 +48,14 @@ What the harness files need directly:
   must-always
 - System components and data flow → `architecture.md`
 
-### 4. Implied epics & stories
+### 4. Implied phases
 
-Read for decomposition signals: "MVP", "v1", "phase N", "first X then Y",
-capability groupings, dependency hints. Group the product's natural
-capabilities into **epics**; within each, propose **stories** as **vertical
-slices** — each demoable end-to-end, phrased as a user capability. If the spec
-is non-decomposed, propose an epic/story shape from the product's natural
-slices and mark it clearly as a suggestion, not the spec's words. No
-decomposition signal and no clear direction → recommend skipping the backlog
-rather than inventing one.
+Read for phasing signals: "MVP", "v1", "phase N", "first X then Y",
+dependency hints, deadlines. If the spec is non-phased, propose a phase shape
+from the product's natural slices — **vertical slices**, each demoable
+end-to-end — and mark the proposal clearly as a suggestion, not the spec's
+words. No phasing signal and no clear direction → recommend skipping the
+roadmap rather than inventing one.
 
 ### 5. External constraints
 
@@ -69,7 +67,7 @@ coordination questions for a solo project.
 ### 6. Success bar at v1
 
 The minimum to count as "shipped": functional bar, quality bar, content bar.
-Drives the backlog's Definition of Done. Prefer criteria checkable without
+Drives the roadmap's Definition of Done. Prefer criteria checkable without
 subjective judgment.
 
 ### 7. Open questions
@@ -96,9 +94,8 @@ file:
 **Decisions the spec already made (→ decisions.md):**
 - <decision> — why: <one line, or "per spec"> — <spec ref>
 
-**Implied / proposed epics & stories (→ backlog.md, or "skip backlog"):**
-- E1 <epic> — <one line>
-  - E1.1 <story> — <one line>
+**Implied / proposed phases (→ roadmap.md, or "skip roadmap"):**
+1. <phase name> — <one line>
 
 **External constraints:** <constraint — evidence>
 
@@ -116,7 +113,5 @@ file:
 - **Don't paraphrase the spec back as analysis.** If the summary reads like a
   shorter spec, it's compression, not analysis. Analysis means structuring,
   surfacing implicit decisions, and naming gaps.
-- **Don't extract a flat feature list.** Stories are decomposed at the
-  backlog and each must be a vertical slice; the analysis names the natural
-  capabilities (candidate epics) and frame, not an exhaustive feature dump or
-  horizontal layers.
+- **Don't extract feature lists.** Features land in roadmap phases later;
+  the analysis is about frame, not content.
