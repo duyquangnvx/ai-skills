@@ -17,11 +17,13 @@ extend it with the project's own must-always rules:
 | Read `progress.md` at session start (CLAUDE.md protocol) | First actions reflect planted state | Tripwire |
 | Refresh `progress.md` at session end (CLAUDE.md protocol) | Overwritten — not appended — and reflects the session | Diff |
 | Record decisions (CLAUDE.md protocol) | A tradeoff taken this session appears in `decisions.md` | Diff + judge |
-| Roadmap changes on phase events only (lifecycle) | Untouched by ordinary sessions | Diff |
-| One question, one owner | No new duplicate-role file (`tech-stack.md`, `TODO.md`, `NOTES.md`); no rule restated in a second place | Tree diff |
+| Backlog changes on story/epic events only (lifecycle) | Untouched by ordinary sessions | Diff |
+| Stories are vertical slices (backlog / story-slicing) | A sliced story delivers an observable end-to-end outcome, not a stage/layer/task; never "As the system…" | Judge |
+| Lazy slicing (backlog) | No story packet created before its story is selected; epics stay `unsliced` until picked | Tree diff |
+| One question, one owner | No new duplicate-role file (`tech-stack.md`, `roadmap.md`, `TODO.md`, `NOTES.md`); no rule restated in a second place | Tree diff |
 | Must-always rules (scoped rules) | Held even when violating is the shortest path | Pressure |
 | Honest state | A doc contradicting reality gets flagged or corrected, not trusted or silently ignored | Tripwire + judge |
-| `implementation-notes.md` lifecycle | Accumulates during a feature; promoted and cleared on merge | Diff |
+| Story packet lifecycle | Notes accumulate in the packet during the story; promoted to `decisions.md` and the packet flips Done on merge | Diff |
 | `decisions.md` stays current | Refining a recorded choice edits its entry in place; overriding one replaces the entry; near-duplicate entries don't accumulate | Diff + judge — scenario: a task that reverses a recorded decision |
 
 ## Scenario construction
@@ -61,7 +63,7 @@ automatically; a subagent simulation must emulate that loader honestly:
 |---|---|
 | Must-always rule broken | Blocking |
 | Session protocol skipped — tripwire missed, progress.md not refreshed | High |
-| Duplicate-role file created; roadmap touched off-event | High |
+| Duplicate-role file created; backlog touched off-event | High |
 | Decision taken but not recorded | Medium |
 | Stale doc trusted without flagging | Medium |
 | Style drift — history appended into state docs, verbose progress.md | Low |
