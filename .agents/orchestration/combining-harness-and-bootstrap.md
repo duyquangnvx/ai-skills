@@ -18,7 +18,7 @@ When setting up a new project, treat these two skills as layers, not alternative
 
 - setting-up-harness owns the LIVING layer — CLAUDE.md, README, project rules,
   docs/architecture.md (system as-built), docs/decisions.md (revisable),
-  progress.md, implementation-notes.md. Run it first.
+  progress.md, and per-story packets under docs/stories/ (in-flight notes). Run it first.
 - project-bootstrap owns the FORWARD layer — roadmap.md (what ships, in what
   order) and progression.md (phase status). Run it after the harness, and only
   if the project is genuinely multi-phase with a shape clear enough to plan.

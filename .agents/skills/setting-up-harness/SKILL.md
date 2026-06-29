@@ -460,10 +460,10 @@ Goal: <the capability this builds — one or two lines.>
      On merge: promote durable items to docs/decisions.md, flip Done. -->
 ```
 
-The packet replaces a global implementation-notes file: in-flight notes live per
-story and are promoted to `decisions.md` on merge. A story may start only when it
-passes the Definition of Ready, and is Done only when its acceptance passes —
-both checklists live in `references/story-slicing.md`.
+In-flight notes live in the packet's `Notes` section, scoped to one story, and are
+promoted to `decisions.md` on merge. A story may start only when it passes the
+Definition of Ready, and is Done only when its acceptance passes — both checklists
+live in `references/story-slicing.md`.
 
 `CHANGELOG.md` — create only if the project ships user-visible releases; use
 the Keep a Changelog format. Otherwise skip it.
@@ -488,10 +488,9 @@ log:
 - Blocked:
 ```
 
-In-flight notes do **not** get a global file. The current story's packet
-(`docs/stories/US-XXX.md`, see step 5) is its single home: off-spec decisions,
-changes, and tradeoffs accumulate in its `Notes` section, and on merge the
-durable items are promoted to `docs/decisions.md` and the story flips to `done`.
+In-flight notes have no working-memory file of their own. The current story's
+packet (`docs/stories/US-XXX.md`, see step 5) is their single home — off-spec
+decisions, changes, and tradeoffs accumulate in its `Notes` section.
 
 ### 7. Prune and verify
 
