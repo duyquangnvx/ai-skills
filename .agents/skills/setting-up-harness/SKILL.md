@@ -290,8 +290,11 @@ not standing law — when new information makes one wrong, replace it. This is
 whose `Expires` condition shipped, replace any superseded entry still here.
 
 Keep each entry to the tradeoff and the *why* — link the spec or plan for the
-detail; an entry that summarizes its spec will outgrow the file. One entry per
-distinct tradeoff, not per spec sentence. A settled choice plain in the code or
+detail; an entry that summarizes its spec will outgrow the file. An enumerated
+rejected-alternatives analysis or long derivation is detail too: move it to
+`docs/decisions/<slug>.md` and keep Decision/Why/Tradeoff + a one-line pointer
+here. One entry per distinct tradeoff, not per spec sentence. A settled choice
+plain in the code or
 already owned by `architecture.md` is owned *there* — duplicating it here is the
 two-owners anti-pattern and the main way this log bloats. The test for an entry:
 could a future session undo this by mistake if the *why* were gone?
@@ -313,15 +316,12 @@ fabricated one. One entry per distinct tradeoff, not per spec sentence — specs
 often restate the same choice as both a principle and a decision; de-dupe to
 the tradeoff. An entry records the tradeoff and the why — link the spec or
 plan for everything else; an entry that summarizes its spec will outgrow the
-file. When keeping a decision from being relitigated needs an enumerated
-rejected-alternatives analysis or a long derivation, that block is *detail*, not
-the decision: move it to `docs/decisions/<slug>.md` and keep `Decision` + `Why` +
-`Tradeoff` plus a one-line pointer inline. That enumerated block is the part that
-reliably bloats the log; the chosen decision itself is usually a few lines. The
-linked doc is deleted with its pointer when the decision is superseded. This is the
-one shape that earns its own file — a plain Decision/Why/Tradeoff stays fully
-inline, no file. Not every implementation choice is a decision: a settled choice plain
-in the code or already in `architecture.md` is owned there — duplicating it
+file. The header's rejected-alternatives escape valve (extract a long
+enumerated-alternatives block to `docs/decisions/<slug>.md` behind a pointer) is
+the one shape that earns its own file; the linked doc is deleted with its pointer
+when the decision is superseded. Not every implementation choice is a decision: a
+settled choice plain in the code or already in `architecture.md` is owned there —
+duplicating it
 here is the two-owners anti-pattern and the main way the log bloats. A
 *deferral* is different: "use JSONL until we pick a store" guards a future
 session against building the deferred thing prematurely, so it earns an entry
