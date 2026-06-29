@@ -300,6 +300,8 @@ could a future session undo this by mistake if the *why* were gone?
 
 - Decision: <what was chosen — one or two lines, not the whole design>
 - Why: <reasoning at the time; `per spec` when the spec asserts it without reasoning>
+- Tradeoff: <what choosing this costs — what gets harder or is given up; if you
+  can't name one, it may not be a decision worth logging>
 - Expires: <for stopgaps only — the condition that retires this entry>  (omit if standing)
 - Supersedes: <prior choice — one-line reason it changed>  (omit if none)
 - Source: <spec section, discussion, PR>  (optional — include when traceable)
@@ -311,7 +313,12 @@ fabricated one. One entry per distinct tradeoff, not per spec sentence — specs
 often restate the same choice as both a principle and a decision; de-dupe to
 the tradeoff. An entry records the tradeoff and the why — link the spec or
 plan for everything else; an entry that summarizes its spec will outgrow the
-file. Not every implementation choice is a decision: a settled choice plain
+file. When a single decision's *own* rationale genuinely needs depth beyond a few
+lines, extract that one to `docs/decisions/<slug>.md` and leave a one-line pointer
+entry here — the main file stays a current-state glance, and the deep doc is
+deleted with its pointer when the decision is superseded. This is an escape valve,
+not the default: most decisions are a few lines and stay inline. Not every
+implementation choice is a decision: a settled choice plain
 in the code or already in `architecture.md` is owned there — duplicating it
 here is the two-owners anti-pattern and the main way the log bloats. A
 *deferral* is different: "use JSONL until we pick a store" guards a future
@@ -410,10 +417,12 @@ not keep a non-goals list.
   (or stubbed behind a real seam), write acceptance, set In/Out, spike high-risk
   unknowns, decide build-vs-buy, record durable picks in docs/decisions.md. The
   manifest stays the source of truth for what's used.
-- A story is done → flip its Status to `done`, promote durable packet notes to
-  docs/decisions.md, update architecture.md if structure changed, then re-read
-  this file before the next story — what you built usually reveals something the
-  plan didn't know. Re-order if needed, and sweep docs/decisions.md per its header.
+- A story is done → flip its Status to `done`; in one pass over docs/decisions.md,
+  promote durable packet notes IN and sweep stale ones OUT (delete entries whose
+  `Expires` shipped, replace any superseded) — adding without sweeping is how the
+  log bloats; update architecture.md if structure changed; then re-read this file
+  before the next story — what you built usually reveals something the plan didn't
+  know, so re-order if needed.
 - An epic is `done` when all its stories are done.
 - Scope changes mid-story → update In/Out in the packet, record the why in
   docs/decisions.md.
