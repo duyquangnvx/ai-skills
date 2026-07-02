@@ -256,21 +256,55 @@ duplicates context for no benefit.
 ### 5. docs/
 
 `docs/architecture.md` — state doc, describes the system as it is now. Open
-with 2-4 lines of product shape (what kind of product, for whom) so the
-system description has a frame; everything below is components, data flow,
-dependencies. When a structure exists because of a recorded decision, link
-the decision instead of restating its reasoning:
+with 2-4 lines of product shape (what kind of product, for whom) so the system
+description has a frame. Below that is the container view — the runnable parts,
+how they connect, and the external systems they touch. When the system has ~3+
+runnable parts or ~4+ boxes, render that view as ONE mermaid diagram and let it
+own the picture — it *replaces* prose components/data-flow/dependencies, it does
+not add to them; a single-component or single-file system stays prose, no diagram.
+Text diagram only (mermaid), never an image — the agent must be able to read,
+diff, and overwrite it — and never C4 L3/L4, since code is the source of truth.
+When a structure exists because of a recorded decision, link the decision instead
+of restating its reasoning:
 
 ```markdown
 # Architecture
 
 <2-4 lines: what kind of product this is, for whom.>
 
-How the system is **now**. Overwrite when it changes; do not keep history.
+How the system is **now**. Overwrite when it changes — the diagram too; do not
+keep history.
 
-## Components
-## Data flow
-## External dependencies
+## Containers
+
+<!-- Runnable parts, how they connect, external systems they touch. ~3+ runnable
+parts or ~4+ boxes → one mermaid flowchart owns this and replaces the prose lines
+below; fewer → keep the prose, no diagram. Never draw C4 L3/L4 — code is the
+source of truth. -->
+
+<a mermaid flowchart, OR — for a simple system — these prose lines:>
+
+- Components: <the runnable parts / modules>
+- Data flow: <how a request or action moves through them>
+- External dependencies: <the services, APIs, libraries that matter>
+
+## Notes
+
+<!-- Only what the diagram can't carry: constraints, invariants, and why a
+structure is the way it is — link the decision, don't restate it. -->
+```
+
+A container diagram is a plain mermaid `flowchart` (not the formal `C4Container`
+syntax — keep it robust); one diagram carries components, data flow, and external
+systems at once, which is why it replaces the three prose lines rather than adding
+to them:
+
+```mermaid
+flowchart LR
+  user([User]) --> web[Web app · React]
+  web --> api[API · Node]
+  api --> db[(Postgres)]
+  api --> mail{{SendGrid}}
 ```
 
 `docs/decisions.md` — one log for the rationale a git diff will not surface
