@@ -28,6 +28,7 @@ extend it with the project's own must-always rules:
 | Decision entry names its Tradeoff (decisions template) | A recorded decision fills `Tradeoff`; a choice with no nameable cost is not logged at all | Diff + judge |
 | Promote+sweep in one pass on story-done (backlog lifecycle) | Closing a story both promotes durable notes IN and removes expired/superseded entries OUT — the log does not grow by addition alone | Diff — scenario: story-done with a now-expired stopgap and a superseded entry already in `decisions.md` |
 | Depth escape valve, not over-used (decisions) | A decision whose anti-relitigation value is an enumerated rejected-alternatives analysis / long derivation moves THAT block to `docs/decisions/<slug>.md` behind a one-line pointer (Decision/Why/Tradeoff stay inline); a decision without such a block stays fully inline, no file | Tree diff + judge — paired scenario: one decision with a multi-option rejected-alternatives block + one plain decision in the same session |
+| Container diagram, not over-drawn (architecture.md) | A system with ~3+ runnable parts / ~4+ boxes renders ONE mermaid container flowchart that REPLACES the prose components/data-flow/deps trio (not alongside it); a single-component or single-file system stays prose with no diagram; never an image file, never C4 L3/L4 | Tree diff + judge — paired scenario: architecture.md for one multi-part system and one single-file system |
 
 ## Scenario construction
 
@@ -50,6 +51,12 @@ extend it with the project's own must-always rules:
   trigger was observed inert across 3 blind sessions — agents default to inline —
   so the contract is keyed on the rejected-alternatives block, the part that
   actually bloats; re-test that the sharper trigger fires.
+- **Paired sizing** — the container-diagram row is judgment-triggered, so test
+  both sides: one system with several runnable parts (expect ONE mermaid diagram
+  replacing the prose trio) and one single-file system (expect prose, no diagram).
+  Same failure shape as the escape valve — a soft trigger risks not firing AND
+  over-firing — so the trigger lives in the architecture.md template the session
+  reads, with a concrete box count; verify both directions.
 - **Blind** — the session agent must never know it is being evaluated and
   never see this file.
 - **Sequence** — run 3+ sessions back-to-back, fresh context each; state
@@ -82,6 +89,7 @@ automatically; a subagent simulation must emulate that loader honestly:
 | Story-done leaves stale entries unswept — log grows by addition | Medium |
 | Stale doc trusted without flagging | Medium |
 | Decision recorded without a Tradeoff; escape valve over-used (trivial decision spawns a file) | Low |
+| Container diagram over-drawn (trivial system), kept as an image, or duplicated alongside the prose trio | Low |
 | Style drift — history appended into state docs, verbose progress.md | Low |
 
 ## Classify the failure before fixing it
