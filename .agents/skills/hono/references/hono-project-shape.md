@@ -320,7 +320,7 @@ export async function checkout(deps: { db: Db }, input: CheckoutInput) {
 
 ### 4.8 Bước chạy nền & pipeline dài
 
-Default: **pg-boss** — job queue chạy trên chính Postgres của app: không thêm hạ tầng mới, có sẵn retry/backoff/cron. (Variation: BullMQ nếu hạ tầng đã có Redis.) Wrap thành factory `lib/queue.ts` (`createQueue(env.DATABASE_URL)`) và thêm `queue` vào `Deps` — như mọi dependency khác.
+Default: **pg-boss** — job queue chạy trên chính Postgres của app: không thêm hạ tầng mới, có sẵn retry/backoff/cron. (Variation: BullMQ nếu hạ tầng đã có Redis; **SQLite → §4.9** vì pg-boss/BullMQ đều cần Postgres/Redis.) Wrap thành factory `lib/queue.ts` (`createQueue(env.DATABASE_URL)`) và thêm `queue` vào `Deps` — như mọi dependency khác.
 
 - `<module>.jobs.ts`: export tên job (hằng, dạng `'<module>.<action>'`) + handler **factory nhận deps** — handler chỉ gọi service, không chứa logic.
 - `src/worker.ts`: `createWorker(deps)` import mọi `*.jobs.ts`, đăng ký `.work()` với pg-boss, export `startWorker(deps)` / `stopWorker()`.
@@ -328,6 +328,34 @@ Default: **pg-boss** — job queue chạy trên chính Postgres của app: khôn
 - Scale: cùng một Docker image, tách vai trò bằng env — container A `SERVE_WEB=true RUN_WORKER=false`, container B ngược lại. Không cần entry hay image mới.
 - Pipeline nhiều bước: mỗi step một job; step nào xong thì cập nhật bảng `<x>_runs` (status/step/progress) **trong cùng transaction với công việc của step**, rồi enqueue step kế sau commit. Fail ở step nào retry đúng step đó (step phải idempotent — redelivery an toàn), resume được từ giữa chừng.
 - Pipeline LLM/agent dùng đúng shape này: mỗi bước gọi model là một job có retry riêng, state nằm trong bảng runs (resume khi một call fail), progress trả về UI qua poll hoặc SSE.
+
+### 4.9 Biến thể SQLite: hàng đợi "lane theo tài nguyên" tự cuộn
+
+pg-boss/BullMQ (§4.8) đều cần Postgres/Redis. Khi DB là **SQLite** (tool một-node, §7.4) và công việc bị chặn bởi **tài nguyên khan hiếm cụ thể** — 1 GPU, một API rate-limited, một scraper phải giữ politeness — chứ không phải throughput chung, thì tự cuộn hàng đợi ngay trên bảng `jobs` là đúng quy mô và không thêm hạ tầng. Vẫn giữ nguyên "run-as-resource" (§4.6) cho pipeline dài; phần này chỉ thay *cơ chế chạy* pg-boss bằng loop tay.
+
+**Bảng `jobs`** (`db/schema/jobs.ts`): `id`, `type` (phân lane), `status` (`queued|running|done|failed|cancelled`), `priority` (int, default 0), `payload` (json nullable — vd `{ itemIds }`), `error`, `created_at`. Một job phủ nhiều item — **không** tách một-row-một-item.
+
+**Lane = một vòng lặp tuần tự lọc theo `type`.** Nhiều lane chạy song song vì **ăn tài nguyên khác nhau** (network / external-LLM / GPU); mỗi lane tự nó tuần tự. Node đơn luồng không phải vấn đề: các lane hoặc IO-bound (HTTP tới service ngoài) hoặc là child process (ffmpeg) — đều nhường CPU. Ghép lane theo *tài nguyên*, không theo *tốc độ*: hai loại việc tranh cùng một GPU phải chung lane.
+
+Rules:
+
+1. **MUST claim job nguyên tử bằng transaction đồng bộ** của better-sqlite3: trong một `db.transaction`, chọn job `queued` của lane theo `priority DESC, created_at ASC LIMIT 1` rồi `UPDATE status='running'` ngay trong cùng transaction. SQLite single-writer + transaction ngắn này đủ chống hai lane giành cùng job — đây là lý do chọn better-sqlite3 sync thay vì driver async.
+2. **MUST resume khi boot:** mọi job `running` → `queued`. Bước trong pipeline phải idempotent để redelivery an toàn (như §4.8).
+3. **Granularity:** worker lặp item *bên trong* job. Đơn vị **priority và cancel là item, không phải job**: check cờ `cancelled` **giữa mỗi item**, item đang chạy cho chạy nốt.
+4. **Cancel/pause:** set `status='cancelled'`; không kill giữa item.
+5. Sort trong lane: `priority DESC, created_at ASC`. "Ưu tiên việc này" = enqueue priority cao; backlog priority 0.
+
+**Đặt file — đồng dạng §4.8, chỉ đổi ruột:**
+
+- `lib/queue.ts`: `createQueue(db)` — factory bọc bảng `jobs` (`enqueue`, `claim`, `complete`, `fail`, `cancel`, `resetRunning`); thêm `queue` vào `Deps` như mọi dependency. **NEVER** cho lane tự import db singleton.
+- `<module>.jobs.ts`: tên job (`'<module>.<action>'`) + handler factory nhận deps — chỉ gọi service, không logic (giống §4.8).
+- `worker.ts`: `startWorker(deps)` spawn các lane loop, `stopWorker()` dừng chúng ở **ranh giới item**. Map loại job → lane ở đây.
+
+**Chạy ở đâu:** default cùng process với API (một-node, một-writer — đơn giản nhất; gọi `startWorker(deps)` trong `index.ts` sau `buildDeps`). Tách worker sang process riêng thì **MUST** bật **WAL mode** và vẫn giữ **đúng một writer** — SQLite không cho nhiều writer đồng thời. Gate vai trò bằng env như §4.8 (`RUN_WORKER`).
+
+**Progress ra UI:** poll `GET /api/<x>-runs/:id` (RPC-typed) hoặc SSE `streamSSE` cho realtime; khi client connect, **emit snapshot đọc từ DB trước** rồi mới stream tiếp — client vào giữa job không thấy trắng.
+
+**Rời biến thể này → escape hatch:** cần nhiều node/nhiều writer, hoặc throughput vượt một-writer-SQLite → quay lại default §4.8 (Postgres + pg-boss) hoặc §12.8 (Redis + BullMQ). Shape module không đổi khi chuyển.
 
 ---
 
@@ -518,7 +546,7 @@ Lý do tồn tại: response 400 mặc định của `zValidator` có shape riê
 - Schema: `src/db/schema/*.ts`, table snake_case số nhiều, export từ `src/db/schema/index.ts`.
 - `src/db/index.ts` export `createDb(url)` (factory — **không** export instance) và các type `Db`, `DbConn` (mục 4.7). Đóng kết nối khi shutdown qua `db.$client.end()` (pg Pool) / `db.$client.close()` (better-sqlite3).
 - Migrations: `drizzle-kit generate` → commit thư mục `drizzle/`; apply bằng `drizzle-kit migrate` trong CI/CD trước khi start container mới.
-- Variation point: SQLite cho tool nhỏ; Kysely nếu team quen. Đổi ORM không được đổi shape thư mục.
+- Variation point: SQLite cho tool nhỏ; Kysely nếu team quen. Đổi ORM không được đổi shape thư mục. Hàng đợi trên SQLite: **§4.9** (pg-boss/BullMQ cần Postgres/Redis, không dùng được).
 
 ### 7.5 `middleware/request-logger.ts`
 

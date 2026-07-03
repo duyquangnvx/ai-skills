@@ -120,12 +120,23 @@ export async function checkout(deps: { db: Db }, input: CheckoutInput) {
 
 ### Background jobs
 
-Default queue: **pg-boss** on the app's existing Postgres (BullMQ+Redis only if Redis already exists). Wrap as `lib/queue.ts` `createQueue(url)` and add `queue` to `Deps`.
+Default queue: **pg-boss** on the app's existing Postgres (BullMQ+Redis only if Redis already exists; **SQLite → resource-lane variant below**, since pg-boss/BullMQ both need Postgres/Redis). Wrap as `lib/queue.ts` `createQueue(url)` and add `queue` to `Deps`.
 
 - `<module>.jobs.ts`: job name constants (`'<module>.<action>'`) + handler **factories taking deps**; handlers only call services.
 - `worker.ts`: `createWorker(deps)` registers every `*.jobs.ts` via `.work()`; exports `startWorker(deps)`/`stopWorker()`.
 - `index.ts`: `await deps.queue.start()` in **every** role (the API enqueues too); only consumer registration is gated by `env.RUN_WORKER` (`z.stringbool().default(true)`). Shutdown order: `stopWorker()` → stop queue → close db. Scale by role with the same Docker image via env.
 - Multi-step pipelines: one job per step; each step updates the `<x>_runs` row **in the same transaction as its work**, then enqueues the next step after commit. Steps must be idempotent so retries/redelivery are safe and the run resumes mid-pipeline.
+
+**SQLite variant — self-rolled resource-lane queue.** When the DB is SQLite (single-node tool) and work is gated by a **specific scarce resource** (one GPU, a rate-limited API, a politeness-limited scraper) rather than throughput, roll the queue on a `jobs` table instead — pg-boss/BullMQ need Postgres/Redis. Keep run-as-resource (above); only the run mechanism changes.
+
+- `jobs` table (`db/schema/jobs.ts`): `id`, `type` (partitions lanes), `status` (`queued|running|done|failed|cancelled`), `priority`, `payload` (json, e.g. `{ itemIds }`), `error`, `created_at`. One job spans many items — never one-row-per-item.
+- **Lane = one sequential loop filtered by `type`.** Lanes run in parallel because they consume **different resources** (network / external-LLM / GPU); each lane is serial. Single-threaded Node is fine — lanes are IO-bound (HTTP to external services) or child processes (ffmpeg). Group lanes by *resource*, not speed: two kinds of work contending the same GPU share a lane.
+- **Atomic claim** via better-sqlite3's synchronous transaction: in one `db.transaction`, pick the lane's `queued` job by `priority DESC, created_at ASC LIMIT 1` and `UPDATE status='running'` in the same transaction. SQLite's single-writer + short transaction prevents two lanes grabbing the same job — this is why sync better-sqlite3 over an async driver.
+- **Resume on boot:** all `running` → `queued`; steps stay idempotent.
+- **Granularity:** the worker loops items *inside* a job; **priority and cancel act at the item level** (check the `cancelled` flag between items, let the running item finish).
+- Files mirror the pg-boss layout: `lib/queue.ts` `createQueue(db)` (wraps the table: `enqueue`/`claim`/`complete`/`fail`/`cancel`/`resetRunning`, added to `Deps`); `<module>.jobs.ts` handler factories; `worker.ts` `startWorker(deps)` spawning the lane loops, `stopWorker()` halting them at an item boundary.
+- **Where it runs:** default in-process with the API (single node, single writer — simplest; call `startWorker(deps)` in `index.ts`). A separate worker process **must** enable **WAL mode** and keep **exactly one writer** — SQLite forbids concurrent writers. Gate the role by env (`RUN_WORKER`) like pg-boss.
+- Outgrow it (multiple nodes/writers, throughput past a single SQLite writer) → back to pg-boss on Postgres or BullMQ+Redis. Module shape is unchanged.
 
 ## Key skeletons
 
