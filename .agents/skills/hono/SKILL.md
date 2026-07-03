@@ -7,9 +7,16 @@ description: Use when building Hono web applications or when the user asks about
 
 Build Hono web applications. This skill provides inline API knowledge for AI. Use `npx hono request` to test endpoints. If the `hono-docs` MCP server is configured, prefer its tools for the latest documentation over the inline reference.
 
-## Server Scaffolding (project standard)
+## Project Standard (scaffolding)
 
-**REQUIRED:** When scaffolding a new Hono server app, adding a feature module, or restructuring server files, read [references/server-scaffolding.md](references/server-scaffolding.md) FIRST and follow its canonical file tree, naming vocabulary, and invariants exactly. It defines the standard shape shared across all our repos (feature modules, `Deps` injection, RPC-safe error handling, response contract). If the repo contains `docs/hono-project-shape.md`, that document is the full source of truth (fullstack: web, RPC client, deploy) — read it as well.
+**REQUIRED:** When scaffolding a Hono app, adding a module, or restructuring server files, follow the project standard exactly (canonical file tree, naming, invariants, RPC-safe error handling, response contract). It is the shape shared across all our repos. Read the reference that matches the task:
+
+| Task | Read |
+|------|------|
+| Scaffold a new app; understand the structure, naming, invariants, RPC rules, response contract | [references/project-standard.md](references/project-standard.md) — read FIRST |
+| Write code for a module or the core lib/config files (env, deps, app, validate, errors, logger, a resource module, fixtures, index) | [references/module-skeletons.md](references/module-skeletons.md) |
+| Cross-domain feature, cross-module transaction, background jobs, SQLite queue, or scaling past the simple standard | [references/scaling-patterns.md](references/scaling-patterns.md) |
+| Wire the web/SPA, RPC client, dev proxy, or deploy (Docker) | [references/fullstack-deploy.md](references/fullstack-deploy.md) |
 
 ## Hono CLI Usage
 
