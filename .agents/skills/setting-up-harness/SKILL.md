@@ -149,11 +149,8 @@ entirely and add it when the first command lands.
 3. At session end: refresh `docs/progress.md`; accumulate off-spec notes in the
    current story packet; record a choice in `docs/decisions.md` if a future
    session could undo it by mistake — a real tradeoff, or a stopgap guarding
-   against premature work ("X until Y", with an `Expires`). Keep the entry to the
-   tradeoff and the *why* — link the spec or plan for the rest; an entry that
-   restates its spec will outgrow the file. Skip routine choices the code already
-   shows; a choice that lives in `architecture.md` is owned there, not duplicated
-   here.
+   against premature work ("X until Y", with an `Expires`). What qualifies and
+   how to write the entry is owned by that file's header.
 
 ## Conventions
 
@@ -315,11 +312,9 @@ flowchart LR
 ```
 
 `docs/decisions.md` — one log for the rationale a git diff will not surface
-cheaply, technical and product-level alike: a library pick, a pattern
-adopted, a limitation accepted, a scope call. A decision records reasoning
-at a point in time; it is revisable context, not a binding rule. Keep only
-currently-active decisions; when one is overridden, replace its entry and
-note what superseded it — git holds the full history:
+cheaply, technical and product-level alike: a library pick, a pattern adopted,
+a limitation accepted, a scope call. The header below owns the discipline —
+revisable context, replace on supersede, sweep on story ship:
 
 ```markdown
 # Decisions
@@ -332,14 +327,15 @@ whose `Expires` condition shipped, replace any superseded entry still here.
 
 Keep each entry to the tradeoff and the *why* — link the spec or plan for the
 detail; an entry that summarizes its spec will outgrow the file. An enumerated
-rejected-alternatives analysis or long derivation is detail too: move it to
-`docs/decisions/<slug>.md` and keep Decision/Why/Tradeoff + a one-line pointer
-here. One entry per distinct tradeoff, not per spec sentence. A settled choice
-plain in the code or
-already owned by `architecture.md` is owned *there* — duplicating it here is the
-two-owners anti-pattern and the main way this log bloats. The test for an entry — could a future session undo
-this by mistake if the *why* were gone? — comes down to the three criteria
-below; all must hold.
+rejected-alternatives analysis or long derivation is detail too: move that
+block to `docs/decisions/<slug>.md` behind a one-line pointer, keep
+Decision/Why/Tradeoff inline, and delete the linked doc with its pointer when
+the decision is superseded. One entry per distinct tradeoff, not per spec
+sentence. A settled choice plain in the code or already owned by
+`architecture.md` is owned *there* — duplicating it here is the two-owners
+anti-pattern and the main way this log bloats. The test for an entry — could a
+future session undo this by mistake if the *why* were gone? — comes down to
+the three criteria below; all must hold.
 
 ## When a choice earns an entry
 
@@ -355,6 +351,10 @@ If a decision is easy to reverse, skip it — you'll just reverse it. If it's no
 surprising, nobody will wonder why. If there was no real alternative, there's
 nothing to record beyond "we did the obvious thing."
 
+One exception: a *deferral* ("use JSONL until we pick a store") is easy to
+reverse, yet earns an entry with an `Expires` — it guards a future session
+against building the deferred thing prematurely.
+
 ## <YYYY-MM-DD> — <short title>
 
 - Decision: <what was chosen — one or two lines, not the whole design>
@@ -368,21 +368,10 @@ nothing to record beyond "we did the obvious thing."
 
 Never invent a decision. Pre-populate only with choices the spec states
 explicitly or the user confirmed; a sparse honest log beats a complete-looking
-fabricated one. One entry per distinct tradeoff, not per spec sentence — specs
-often restate the same choice as both a principle and a decision; de-dupe to
-the tradeoff. An entry records the tradeoff and the why — link the spec or
-plan for everything else; an entry that summarizes its spec will outgrow the
-file. The header's rejected-alternatives escape valve (extract a long
-enumerated-alternatives block to `docs/decisions/<slug>.md` behind a pointer) is
-the one shape that earns its own file; the linked doc is deleted with its pointer
-when the decision is superseded. Not every implementation choice is a decision: a
-settled choice plain in the code or already in `architecture.md` is owned there —
-duplicating it
-here is the two-owners anti-pattern and the main way the log bloats. A
-*deferral* is different: "use JSONL until we pick a store" guards a future
-session against building the deferred thing prematurely, so it earns an entry
-with an `Expires`. The test is the protocol's: could a future session undo
-this by mistake if the *why* were gone?
+fabricated one. Specs often restate one choice as both a principle and a
+decision — de-dupe to the tradeoff. Everything else — what earns an entry, the
+escape valve, the sweep — is owned by the header above, which ships with the
+generated file.
 
 `docs/backlog.md` — the forward view: what to build, in what order, where the
 epics and stories stand. **Create it only when a spec or a clear direction
@@ -393,35 +382,11 @@ and do NOT invent epics.
 layer- or stage-flavored ("Frontend", "Foundation", "Ingestion"). An epic is a
 container; ordering and building happen at the **story** level.
 
-**Ordering model — pick by one predicate: is early external feedback a goal?**
-
-- **No (default — a solo tool, or a build from a settled spec): order by
-  dependency, front-load risk.** Build each story on **real, finished
-  predecessors**; do the hardest / most-uncertain core as early as its
-  dependencies allow — if the core is wrong, everything built on the plan is
-  wasted. A story here is a **capability built real and independently verifiable**
-  (a test passes, an output exists); it need NOT be demoable end-to-end to a user,
-  and a **stage-shaped story is fine**. This is the common case for this skill's
-  audience — shipping is not the driver, so a thin demoable slice buys little
-  while dependency order avoids stub-debt and dependency inversions.
-- **Yes (variant — shipping an MVP, validating with users, requirements still
-  uncertain): order by thin vertical slices.** Each story ships something demoable
-  end-to-end (a walking-skeleton spine first, then widen), accepting stubs and
-  re-traversal because early feedback outweighs that friction.
-
-Read `references/story-slicing.md` when slicing an epic — it carries both models
-and the universal Ready/Done gates.
-
-**Reserve a seam, never a bypass (both models).** When a dependency genuinely
-isn't ready, build against its **interface with a stub/fake behind the real
-seam** — ideally a fake that doubles as a permanent test double. A shortcut that
-routes *around* the seam is the debt a later story tears out; this is what keeps
-"build on real predecessors" honest when one must wait.
-
-**Integration smoke (optional).** If many components are built independently and
-the spec has NOT already fixed the contracts between them, build one thin
-end-to-end path early as a one-time integration check. When the spec pins those
-contracts (a detailed design doc), that risk is pre-paid — skip it.
+**Ordering model.** Decided in the interview (step 1) by the one predicate —
+is early external feedback a goal? — with dependency order, risk front-loaded,
+as the default. `references/story-slicing.md` owns both models, the
+seam-vs-bypass rule, the optional integration smoke, and the universal
+Ready/Done gates; read it when slicing an epic.
 
 **Lazy slicing.** Keep epics `unsliced` and stories as `candidate` rows until
 selected. Do NOT pre-write every story packet — create one when the story is
@@ -627,16 +592,9 @@ are the cross-cutting failures no single step owns:
   pointers, cross-logging every change in three files — structure that exists
   to be maintained, not to prevent mistakes. The discipline that matters: don't
   invent, keep one owner, keep acceptance verifiable.
-- **Deferring the hard core, or bypassing a seam.** The two debts dependency
-  order exists to prevent: saving the riskiest/most-uncertain capability for late
-  (front-load it — if it fails, work built on the plan is wasted), and routing
-  *around* an unbuilt dependency instead of stubbing *behind* its real seam (the
-  bypass is what a later story tears out). *(Feedback variant only: a lone
-  technical-stage story with no demoable outcome is also an anti-pattern there —
-  stories must be vertical.)*
-- **Pre-cutting the whole backlog.** Writing every story packet up front, or
-  detailing epics not yet selected. Keep epics `unsliced` and stories
-  `candidate` rows until picked — packets are created lazily, one at a time.
+- Ordering failures — deferring the hard core, bypassing a seam, pre-cutting
+  the backlog — are owned by `references/story-slicing.md` (per-model
+  anti-pattern lists) and re-checked in step 7; they are not restated here.
 
 ## Reference files
 
