@@ -337,10 +337,11 @@ rejected-alternatives analysis or long derivation is detail too: move it to
 here. One entry per distinct tradeoff, not per spec sentence. A settled choice
 plain in the code or
 already owned by `architecture.md` is owned *there* — duplicating it here is the
-two-owners anti-pattern and the main way this log bloats. The test for an entry:
-could a future session undo this by mistake if the *why* were gone?
+two-owners anti-pattern and the main way this log bloats. The test for an entry — could a future session undo
+this by mistake if the *why* were gone? — comes down to the three criteria
+below; all must hold.
 
-## When to offer an ADR
+## When a choice earns an entry
 
 All three of these must be true:
 
