@@ -7,7 +7,10 @@ write acceptance an agent can verify, and the Ready/Done gates.
 ## Pick the ordering model first
 
 One predicate decides it: **is early external feedback a goal?** (shipping an
-MVP, validating with users/stakeholders, requirements still uncertain).
+MVP, validating with users/stakeholders, requirements still uncertain). Present
+this call to the user as a recommendation with its reasoning and confirm before
+slicing — it shapes the whole backlog; recommend the default unless the spec or
+context signals MVP or user validation.
 
 - **No → dependency order (default).** The common case for this skill: a solo
   tool, or a build from a settled spec. Shipping is not the driver, so a thin

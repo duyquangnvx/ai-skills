@@ -92,6 +92,13 @@ Then ask only what neither the spec nor the code answers. Keep it short:
 - Any conventions or gotchas already decided that an agent could not guess.
 - If a backlog will exist: the epic horizon (is v1 the only horizon, or is
   there v2/v3 thinking?), the natural capability areas, and the bar for "shipped".
+- If a backlog will exist: which slicing model to order stories by. Present your
+  recommendation with its reasoning and confirm before slicing — the call shapes
+  the whole backlog. Decide by one predicate, *is early external feedback a goal?*
+  (ship an MVP, validate with users, requirements still uncertain): **no →
+  dependency order, risk front-loaded (default); yes → vertical slices, spine
+  first**. Recommend the default unless the spec or context signals MVP or user
+  validation. (references/story-slicing.md)
 - Any project-specific tuning of the plan/implement workflow — what counts as
   a "large" task here, when to skip planning, review batching, guardrails.
   Skip if the defaults are used.
@@ -332,6 +339,20 @@ plain in the code or
 already owned by `architecture.md` is owned *there* — duplicating it here is the
 two-owners anti-pattern and the main way this log bloats. The test for an entry:
 could a future session undo this by mistake if the *why* were gone?
+
+## When to offer an ADR
+
+All three of these must be true:
+
+1. **Hard to reverse** — the cost of changing your mind later is meaningful.
+2. **Surprising without context** — a future reader will look at the code and
+   wonder "why on earth did they do it this way?"
+3. **The result of a real trade-off** — there were genuine alternatives and you
+   picked one for specific reasons.
+
+If a decision is easy to reverse, skip it — you'll just reverse it. If it's not
+surprising, nobody will wonder why. If there was no real alternative, there's
+nothing to record beyond "we did the obvious thing."
 
 ## <YYYY-MM-DD> — <short title>
 
