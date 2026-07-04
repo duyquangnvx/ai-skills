@@ -404,10 +404,12 @@ not keep a non-goals list.
 
 > Provisional, not a contract — re-order as implementation reveals what you
 > couldn't know up front. Epics are coarse capability containers, dependency-
-> ordered. Stories are the work-units you build. DEFAULT: order stories by
-> dependency, front-load the hardest core, build each on real predecessors.
-> VARIANT (only if early external feedback is a goal): order by thin vertical
-> slices, each demoable end-to-end, spine first.
+> ordered. Stories are the work-units you build.
+> Ordering: <write ONLY the model chosen in the interview — default:
+> "dependency order, hardest core front-loaded, each story built on real
+> predecessors"; feedback variant: "thin vertical slices, each demoable
+> end-to-end, spine first">. Switching models is a real tradeoff — record it
+> in docs/decisions.md, don't drift.
 
 ## Epics (unsliced until selected)
 
@@ -434,8 +436,8 @@ not keep a non-goals list.
 
 ## How this file evolves
 
-- Select an epic to slice → break it into stories ordered by dependency (risk
-  front-loaded), add candidate rows. (Read references/story-slicing.md.)
+- Select an epic to slice → break it into stories per the Ordering line above,
+  add candidate rows. (Read references/story-slicing.md.)
 - Select a story → create its packet and refine to Ready: confirm deps are built
   (or stubbed behind a real seam), write acceptance, set In/Out, spike high-risk
   unknowns, decide build-vs-buy, record durable picks in docs/decisions.md. The
@@ -536,9 +538,9 @@ decisions, changes, and tradeoffs accumulate in its `Notes` section.
 - Confirm one owner per question: product/epic scope only in `backlog.md`,
   per-story scope only in the story packet, decision reasoning only in
   `decisions.md`, no rule stated in both `CLAUDE.md` and a scoped rule file.
-- If a backlog exists: epics are coarse and dependency-ordered; stories are
-  ordered by dependency with the hardest core front-loaded (or, in the feedback
-  variant, vertical slices with a spine first); each selected story's packet has
+- If a backlog exists: epics are coarse and dependency-ordered; the file
+  states ONLY the ordering model chosen in the interview, and the stories
+  follow it; each selected story's packet has
   In/Out and agent-verifiable acceptance; no story packet was pre-cut before
   selection; and no epic, story, or decision was invented beyond what the spec or
   user actually said.
