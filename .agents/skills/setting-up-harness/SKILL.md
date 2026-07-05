@@ -9,6 +9,7 @@ description: >-
   existing repos that have no agent-facing docs yet. Do NOT use to design a
   feature (that is brainstorming) and do NOT use to add language or
   tech-stack rules — those live outside the project and load on demand.
+disable-model-invocation: true
 ---
 
 # Claude Harness Setup (Agent Onboarding)
