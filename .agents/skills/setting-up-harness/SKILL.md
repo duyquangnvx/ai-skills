@@ -92,13 +92,12 @@ Then ask only what neither the spec nor the code answers. Keep it short:
 - Any conventions or gotchas already decided that an agent could not guess.
 - If a backlog will exist: the epic horizon (is v1 the only horizon, or is
   there v2/v3 thinking?), the natural capability areas, and the bar for "shipped".
-- If a backlog will exist: which slicing model to order stories by. Present your
-  recommendation with its reasoning and confirm before slicing — the call shapes
-  the whole backlog. Decide by one predicate, *is early external feedback a goal?*
-  (ship an MVP, validate with users, requirements still uncertain): **no →
-  dependency order, risk front-loaded (default); yes → vertical slices, spine
-  first**. Recommend the default unless the spec or context signals MVP or user
-  validation. (references/story-slicing.md)
+- If a backlog will exist: per epic, what **usable** means — the observable
+  surface (UI, CLI, endpoint) a person touches to exercise the capability —
+  and the risk register: research questions that could invalidate the plan
+  (→ spikes) and integration contracts the spec leaves unpinned (→ at most
+  one walking-skeleton story). Confirm both before slicing.
+  (references/story-slicing.md owns the model.)
 - Any project-specific tuning of the plan/implement workflow — what counts as
   a "large" task here, when to skip planning, review batching, guardrails.
   Skip if the defaults are used.
@@ -378,15 +377,19 @@ epics and stories stand. **Create it only when a spec or a clear direction
 exists.** No direction → skip the file, mark `Backlog: none yet` in CLAUDE.md,
 and do NOT invent epics.
 
-**Epics are coarse capability containers, ordered by dependency** — they may be
-layer- or stage-flavored ("Frontend", "Foundation", "Ingestion"). An epic is a
-container; ordering and building happen at the **story** level.
+**Epics are coarse capability containers, ordered by dependency.** Name each
+for the capability a person gets ("Novel Library", "Rendering"), never for a
+layer or stage ("Frontend", "Database") — and a spec's milestones are *its*
+plan, not automatically the epic set: re-derive the capabilities, then check
+them against the milestones. An epic is a container; ordering and building
+happen at the **story** level.
 
-**Ordering model.** Decided in the interview (step 1) by the one predicate —
-is early external feedback a goal? — with dependency order, risk front-loaded,
-as the default. `references/story-slicing.md` owns both models, the
-seam-vs-bypass rule, the optional integration smoke, and the universal
-Ready/Done gates; read it when slicing an epic.
+**Ordering model.** One model: capability epics in dependency order, stories
+as vertical slices (usable increments), risk handled by the toolkit — spike /
+walking-skeleton story / `high-risk` lane — never by reshaping the epic
+structure. `references/story-slicing.md` owns the model, the seam-vs-bypass
+rule, the risk toolkit, and the Ready/Done gates; read it when slicing an
+epic.
 
 **Lazy slicing.** Keep epics `unsliced` and stories as `candidate` rows until
 selected. Do NOT pre-write every story packet — create one when the story is
@@ -404,31 +407,30 @@ not keep a non-goals list.
 
 > Provisional, not a contract — re-order as implementation reveals what you
 > couldn't know up front. Epics are coarse capability containers, dependency-
-> ordered. Stories are the work-units you build.
-> Ordering: <write ONLY the model chosen in the interview — default:
-> "dependency order, hardest core front-loaded, each story built on real
-> predecessors"; feedback variant: "thin vertical slices, each demoable
-> end-to-end, spine first">. Switching models is a real tradeoff — record it
-> in docs/decisions.md, don't drift.
+> ordered; each is done when its "Usable means" holds. Stories are vertical
+> slices — the work-units you build. Risk is handled by spikes, at most one
+> walking-skeleton story, and the high-risk lane — never by reshaping this
+> structure (references/story-slicing.md).
 
 ## Epics (unsliced until selected)
 
-| Epic | Description | Depends on | Status |
-|------|-------------|-----------|--------|
-| E01 | <capability area> | — | unsliced |
-| E02 | <…> | E01 | unsliced |
+| Epic | Capability | Usable means | Depends on | Status |
+|------|-----------|--------------|-----------|--------|
+| E01 | <capability a person gets> | <surface they touch to exercise it> | — | unsliced |
+| E02 | <…> | <…> | E01 | unsliced |
 
 ## Build order
 
-<Dependency order of the work, hardest/most-uncertain core front-loaded.
-(Feedback variant instead: the thin vertical spine to build first.)>
+<Dependency order of the capabilities. List spikes that can jump the queue as
+soon as their inputs exist, and external lead-time items (audits, approvals)
+to start early in parallel.>
 
 ## Story backlog (prioritized; sliced into a packet when selected)
 
 | Story | Epic | Lane | Status | Builds (one line) |
 |-------|------|------|--------|-------------------|
-| US-001 | E01 | high-risk | ready | <the hardest core — or, variant: the spine> |
-| US-002 | E02 | normal | candidate | <…> |
+| US-001 | E01 | normal | ready | As <the operator>, <goal> — <slice, surface included> |
+| SP-001 | E0X | spike | ready | <research question> → decision in docs/decisions.md; code discarded |
 
 ## Definition of Done — v1
 
@@ -436,7 +438,7 @@ not keep a non-goals list.
 
 ## How this file evolves
 
-- Select an epic to slice → break it into stories per the Ordering line above,
+- Select an epic to slice → break it into stories per the model,
   add candidate rows. (Read references/story-slicing.md.)
 - Select a story → create its packet and refine to Ready: confirm deps are built
   (or stubbed behind a real seam), write acceptance, set In/Out, spike high-risk
@@ -456,10 +458,11 @@ not keep a non-goals list.
 ```
 
 Lane is the risk/effort shape, never calendar time: `tiny / normal / high-risk /
-spike`. Lane drives the default ordering — front-load `high-risk`/`spike` work as
-soon as dependencies allow. A `spike` is a research story that ends in a recorded
-decision, not an artifact. Story status moves `candidate` → `ready` (packet
-exists, passes Definition of Ready) → `in progress` → `done`.
+spike`. Front-load `high-risk` work as soon as dependencies allow; a `spike`
+jumps the queue as soon as its inputs exist. A `spike` is a research story that
+ends in a recorded decision, not an artifact — its code is throwaway. Story
+status moves `candidate` → `ready` (packet exists, passes Definition of Ready)
+→ `in progress` → `done`.
 
 `docs/stories/` — per-story packets, created lazily. `docs/stories/README.md`
 indexes the live packets and restates the lazy-slicing rule. Each selected story
@@ -469,8 +472,9 @@ acceptance, In/Out, plan, and in-flight notes all live there:
 ```markdown
 # US-001 — <title>   ·   Epic E01   ·   Lane: high-risk
 
-Goal: <the capability this builds — one or two lines.>
-<!-- Feedback variant: phrase as "As a <role>, I want <goal>, so that <benefit>." -->
+Goal: As <the operator/user>, I want <goal>, so that <benefit>.
+<!-- Stage-shaped story (consumer is code, not a person): one line on the
+     capability, plus — Consumer: <the story/code that calls this>. -->
 
 ## Acceptance (agent-verifiable, Gherkin)
 
@@ -538,12 +542,13 @@ decisions, changes, and tradeoffs accumulate in its `Notes` section.
 - Confirm one owner per question: product/epic scope only in `backlog.md`,
   per-story scope only in the story packet, decision reasoning only in
   `decisions.md`, no rule stated in both `CLAUDE.md` and a scoped rule file.
-- If a backlog exists: epics are coarse and dependency-ordered; the file
-  states ONLY the ordering model chosen in the interview, and the stories
-  follow it; each selected story's packet has
-  In/Out and agent-verifiable acceptance; no story packet was pre-cut before
-  selection; and no epic, story, or decision was invented beyond what the spec or
-  user actually said.
+- If a backlog exists: epics are capabilities with a real "Usable means" per
+  row, dependency-ordered; stories are vertical slices unless their packet
+  names a code consumer; every research question is a spike ending in a
+  decisions.md entry, and at most one walking-skeleton story exists; each
+  selected story's packet has In/Out and agent-verifiable acceptance; no
+  story packet was pre-cut before selection; and no epic, story, or decision
+  was invented beyond what the spec or user actually said.
 - Confirm every file created has real content or was deliberately skipped —
   no fabricated placeholders.
 - Confirm no file was created whose role an existing doc already fills (see
@@ -594,18 +599,19 @@ are the cross-cutting failures no single step owns:
   pointers, cross-logging every change in three files — structure that exists
   to be maintained, not to prevent mistakes. The discipline that matters: don't
   invent, keep one owner, keep acceptance verifiable.
-- Ordering failures — deferring the hard core, bypassing a seam, pre-cutting
-  the backlog — are owned by `references/story-slicing.md` (per-model
-  anti-pattern lists) and re-checked in step 7; they are not restated here.
+- Ordering failures — a quality question answered by a build instead of a
+  spike, a walking skeleton grown into an epic, bypassing a seam, pre-cutting
+  the backlog — are owned by `references/story-slicing.md` and re-checked in
+  step 7; they are not restated here.
 
 ## Reference files
 
 - `references/spec-analysis.md` — checklist for extracting harness-relevant
   facts and gaps from a spec before generating anything.
-- `references/story-slicing.md` — the two ordering models (default
-  dependency-order + risk-first; variant vertical-slice/spine with INVEST and
-  splitting patterns) and the universal Ready/Done gates. Read when slicing an
-  epic into stories or refining a story to Ready.
+- `references/story-slicing.md` — the slicing model (capability epics with
+  usable surfaces, vertical stories, INVEST, splitting patterns), the risk
+  toolkit (spike / walking skeleton / lane), and the Ready/Done gates. Read
+  when slicing an epic into stories or refining a story to Ready.
 - `references/harness-eval.md` — behavioral contracts and blind-session
   methodology for verifying a generated harness actually steers later
   sessions. Run after setup on a new project shape, or when a rule keeps

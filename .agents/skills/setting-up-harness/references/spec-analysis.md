@@ -48,17 +48,20 @@ What the harness files need directly:
   must-always
 - System components and data flow → `architecture.md`
 
-### 4. Implied epics & build order
+### 4. Implied epics, risk register & build order
 
-Read for structure signals: the product's natural **capability areas** (these
-become epics, coarse and dependency-ordered) and any explicit **dependency DAG /
-build order** the spec gives. Then propose the build order:
+Read for structure signals: the product's natural **capability areas** — these
+become epics, coarse and dependency-ordered; for each, note what **usable**
+would mean (the surface a person touches to exercise it). A spec's milestones
+are *its* plan, not automatically the epic set: re-derive the capabilities,
+then check them against the milestones.
 
-- **Default (solo tool / settled spec): by dependency, hardest core
-  front-loaded.** Often the spec's own DAG. Note which node the spec calls
-  hardest/most-uncertain — that gets built early.
-- **Variant (only if early external feedback is a goal): a thin vertical spine
-  first**, then widening slices.
+Separately, extract the **risk register**:
+
+- research questions that could invalidate the plan → spike candidates
+- integration contracts the spec leaves unpinned → walking-skeleton candidate
+  (one thin story at most)
+- external lead-time items (audits, approvals, reviews) → start-early notes
 
 Mark proposals as suggestions, not the spec's words. No structure signal and no
 clear direction → recommend skipping the backlog rather than inventing epics.
@@ -101,8 +104,9 @@ file:
 - <decision> — why: <one line, or "per spec"> — <spec ref>
 
 **Implied epics & build order (→ backlog.md, or "skip backlog"):**
-- Epics: <E01 area>, <E02 area>, … (coarse, dependency order)
-- Build order: <dependency order, hardest core first — or, feedback variant: the spine slice>
+- Epics: <E01 area (usable: <surface>)>, <E02 area (usable: <…>)>, … (dependency order)
+- Build order: <dependency order of the capabilities>
+- Risk register: <spike candidates · unpinned contracts · external lead-times>
 
 **External constraints:** <constraint — evidence>
 
