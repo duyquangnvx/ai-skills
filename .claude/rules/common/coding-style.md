@@ -5,9 +5,11 @@
 ALWAYS create new objects, NEVER mutate existing ones:
 
 ```
+
 // Pseudocode
 WRONG:  modify(original, field, value) → changes original in-place
 CORRECT: update(original, field, value) → returns new copy with change
+
 ```
 
 Rationale: Immutable data prevents hidden side effects, makes debugging easier, and enables safe concurrency.
@@ -25,16 +27,31 @@ Rationale: Immutable data prevents hidden side effects, makes debugging easier, 
 - Extract repeated logic into shared functions or utilities
 - Avoid copy-paste implementation drift
 - Introduce abstractions when repetition is real, not speculative
+- Duplication is better than the wrong abstraction
+- Extract shared logic only when repeated code has the same reason to change
 
 ### Build vs. Buy (Total Cost, Not Fewest Deps)
 
-Choose by total cost of ownership, not by "fewest dependencies". Priority:
+Decide by total cost of ownership — writing, maintaining, and owning its edge
+cases forever — not by "fewest deps."
 
-1. **Stdlib** when it solves it cleanly in a line or two.
-2. **A small, battle-tested leaf lib** when the logic is non-trivial (Unicode/diacritics, parsing, locale, paths, security). Adding the dep is cheaper than hand-rolling it plus owning its tests and edge cases forever.
-3. **Hand-roll** only when the logic is genuinely trivial and project-specific.
+1. **Stdlib** when the built-in solves it cleanly in a line or two.
+2. **A small, battle-tested leaf lib** for non-trivial logic (Unicode,
+   parsing, locale, paths, security). Cheaper than hand-rolling it and owning
+   its edge cases forever.
+3. **Hand-roll** only when the logic is trivial *and* project-specific.
 
-"Stdlib first" means *don't add a dep for what the built-in already does cleanly* — NOT *re-implement what a small lib already solves*. Still avoid heavy or redundant deps when a lighter option fits.
+"Stdlib first" = don't add a dep for what the built-in already does — NOT
+re-implement what a small lib solves.
+
+**Engineers often underestimate the cost of hand-rolling. Counter that bias:**
+
+- **Decide at write-time, not review-time.** Before writing >a few lines that
+  parse/transform/normalize external input, name the leaf lib that already does it.
+- **"Trivial" is about input space, not line count.** Unbounded or adversarial
+  input is never trivial — can't enumerate it → use the lib.
+- **Justify rejecting the lib, not adopting it.** "It's only a few lines" isn't
+  a reason. Valid: output-model fight, large shape mismatch, heavy/abandoned dep.
 
 ## File Organization
 
@@ -55,6 +72,9 @@ ALWAYS handle errors comprehensively:
 ## Input Validation
 
 ALWAYS validate at system boundaries:
+- Validate at trust boundaries: user input, API responses, file uploads,
+  environment variables, webhooks, and database records crossing into
+  typed/domain code
 - Validate all user input before processing
 - Use schema-based validation where available
 - Fail fast with clear error messages
