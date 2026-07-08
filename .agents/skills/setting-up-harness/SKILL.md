@@ -68,9 +68,8 @@ deliberately skipped).
 1. Analyze the spec (if one exists) and interview for the rest.
 2. Write a lean root `CLAUDE.md`.
 3. Write a human-facing `README.md`.
-4. Create `.claude/rules/project/` with the **ADR-writing rule** (step 5) — the
-   one scoped rule this harness always warrants — plus any other genuine
-   path-scoped rule.
+4. Create `.claude/rules/project/` with the **ADR-writing rule** — the one scoped
+   rule this harness always warrants — plus any other genuine path-scoped rule.
 5. Create `docs/` — `architecture.md`, seed `docs/adr/` with an ADR per
    decision the spec already made (lazily; skip the dir if none), and (with a
    spec or clear direction) `backlog.md` plus the `docs/stories/` index.
@@ -150,9 +149,7 @@ entirely and add it when the first command lands.
    in `docs/backlog.md`).
 3. At session end: refresh `docs/progress.md`; accumulate off-spec notes in the
    current story packet; if a choice could be undone by mistake later, record an
-   ADR in `docs/adr/`. The ADR rule (`.claude/rules/project/adr.md`) owns the
-   bar, the format, and the append-only/supersede discipline — it loads when you
-   open an ADR.
+   ADR in `docs/adr/`.
 
 ## Conventions
 
@@ -177,7 +174,7 @@ creating a parallel file.
 
 If no backlog exists, drop protocol line 2 and write `Backlog: none yet` in
 the Docs list so a later session knows the gap is deliberate. If a legacy
-planning doc owns the forward view (see Authority), point the Docs list at it
+planning doc owns the forward view, point the Docs list at it
 instead of `none yet`.
 
 Keep the `Conventions` section honest: an empty section beats invented rules.
@@ -189,8 +186,8 @@ anything where one miss is a failure). For must-always items, state the intent
 in prose AND name the deterministic mechanism that should enforce it — a hook,
 a lint rule, a CI check — inline next to the rule (e.g. `— enforce via:
 pre-commit hook`). Setting those up may be out of scope for this skill,
-but the classification table is not: report it in step 7 so nothing
-must-always is left resting on prose alone.
+but the classification is not — nothing must-always may be left resting on
+prose alone.
 
 **Fill the `Workflow` section conditionally.** The available-skills list
 already shows whether a plan/implement workflow plugin (interview → planning →
@@ -198,7 +195,7 @@ execution) is present. If it is, leave the section to
 project-specific tuning only and let the plugin drive interview → plan →
 implement → doc updates. If no such plugin is present, replace the section
 with a brief explicit pointer: for large or multi-file tasks, explore → plan
-→ implement → verify → commit, then update docs per the rules below.
+→ implement → verify → commit, then update the affected docs.
 
 ### 3. README
 
@@ -237,8 +234,8 @@ restating every command.>
 
 Scoped rules load **only when a file matching their `paths:` glob is touched** —
 carrying discipline that matters at a specific moment without taxing every
-session. This harness always warrants one: the **ADR-writing rule**, which step 5
-owns — create `.claude/rules/project/` with it.
+session. This harness always warrants one — the **ADR-writing rule** for `docs/adr/`;
+create `.claude/rules/project/` with it.
 
 Add further rule files **only** for a genuine project-specific rule, each scoped
 to the paths it applies to so it loads only when those files are touched:
@@ -323,15 +320,12 @@ limitation accepted, a scope call. Create the directory **lazily**, with the
 first ADR; the filename number is a stable handle (`ADR-0006`) that backlog rows,
 other ADRs, and `architecture.md` link to.
 
-*What* earns an ADR and *how* to write one has two homes, one owner each, because
-a later session in the target repo never loads this skill:
-
-- **CLAUDE.md protocol** (always loaded) carries only the *trigger* — "a choice a
-  future session could undo by mistake → record an ADR" — and points at the rule.
-- **`.claude/rules/project/adr.md`** owns the *bar and format*. Scoped to
-  `docs/adr/**`, it loads exactly when a session opens an ADR. Emit it at setup
-  even while `docs/adr/` is still empty (step 4) — make the rule lazy too and the
-  bar is what gets forgotten. It stays dormant until the first ADR is touched:
+The bar — *what* earns an ADR and *how* to write one — lives in the scoped rule
+`.claude/rules/project/adr.md`, not in CLAUDE.md: a later session never loads this
+skill, and CLAUDE.md's always-on protocol needs only the *trigger* ("a choice a
+future session could undo by mistake → record an ADR"). Create the rule at setup
+even before any ADR exists — else the bar is what gets forgotten; it sits dormant
+until the first ADR file appears, then:
 
 ```markdown
 ---
@@ -402,7 +396,7 @@ the whole backlog plans against assumptions early work will overturn.
 
 `backlog.md` owns product/epic scope: the epic list + dependencies, the build
 order, the product-level Definition of Done and out-of-scope, and story priority
-+ lane. The **story packet** (below) owns per-story scope: In/Out, acceptance,
++ lane. The **story packet** owns per-story scope: In/Out, acceptance,
 plan. An ADR in `docs/adr/` records *why* a scope call was made; `architecture.md`
 does not keep a non-goals list.
 
@@ -531,14 +525,14 @@ log:
 ```
 
 In-flight notes have no working-memory file of their own. The current story's
-packet (`docs/stories/US-XXX.md`, see step 5) is their single home — off-spec
+packet (`docs/stories/US-XXX.md`) is their single home — off-spec
 decisions, changes, and tradeoffs accumulate in its `Notes` section.
 
 ### 7. Prune and verify
 
 - Re-read `CLAUDE.md` and delete any line that restates the stack, a config
   file, or a default the model already follows — except the curated
-  `Commands` table (the deliberate exception; see step 2).
+  `Commands` table (the deliberate exception).
 - Confirm `README.md` and `CLAUDE.md` do not duplicate the same overview or
   command list — one owns it, the other points to it. The one-line framing
   each file opens with is exempt: an audience-specific one-liner per file is
@@ -548,7 +542,7 @@ decisions, changes, and tradeoffs accumulate in its `Notes` section.
   `docs/adr/`, no rule stated in both `CLAUDE.md` and a scoped rule file.
 - Confirm `.claude/rules/project/adr.md` exists, is scoped to `docs/adr/**`, and
   owns the ADR bar (three criteria, append-only, keep-to-the-decision); CLAUDE.md's
-  protocol carries only the trigger + a pointer to it, not the three criteria.
+  protocol carries only the trigger — not the three criteria, and no pointer to the rule.
 - If a backlog exists: epics are capabilities with a real "Usable means" per
   row, dependency-ordered; stories are vertical slices unless their packet
   names a code consumer; every research question is a spike ending in an
@@ -562,7 +556,7 @@ decisions, changes, and tradeoffs accumulate in its `Notes` section.
   Authority) — replace any such file with a link to the existing doc.
 - Confirm no language/tech-stack rule leaked into `.claude/rules/project/`.
 - Report the file tree and a one-line purpose for each file, plus the
-  advisory vs must-always classification table from step 2 — flagging any
+  advisory vs must-always classification table — flagging any
   must-always rule that has no deterministic enforcement yet.
 
 ---
@@ -586,12 +580,12 @@ flips to `done` — short enough to scan, never a second unmaintained history.
 `CLAUDE.md` has its own maintenance rule: lines earn their place through
 observed mistakes, not anticipation. The agent making the same mistake twice
 is a candidate line; a rule being repeatedly ignored means the file is past
-its budget — re-run the step-7 prune pass. A stale instruction is worse than
+its budget — re-run the prune pass. A stale instruction is worse than
 a missing one: it spends compliance on something untrue.
 
 ## Anti-patterns
 
-Each step above carries its own discipline (and step 7 re-checks it); these
+Each step carries its own discipline (re-checked in the prune pass); these
 are the cross-cutting failures no single step owns:
 
 - **Treating advisory rules as guarantees.** `CLAUDE.md` and project rules are
@@ -612,7 +606,7 @@ are the cross-cutting failures no single step owns:
 - Ordering failures — a quality question answered by a build instead of a
   spike, a walking skeleton grown into an epic, bypassing a seam, pre-cutting
   the backlog — are owned by `references/story-slicing.md` and re-checked in
-  step 7; they are not restated here.
+  the prune pass; they are not restated here.
 
 ## Reference files
 
