@@ -39,7 +39,7 @@ same question drift apart, and the agent cannot tell which is true.
 |------|---------|-------------|
 | `CLAUDE.md` | How do I work here? How do I start a session? | Override; rarely changes |
 | `README.md` | What is this? How does a human set it up? | Override |
-| `.claude/rules/project/*.md` | Rules scoped to specific paths | Override |
+| `.claude/rules/project/*.md` | Rules scoped to specific paths (always incl. the ADR-writing rule) | Override |
 | `docs/architecture.md` | How is the system built **now**? | Override on change |
 | `docs/adr/*.md` | Why is it this way? | Append; mark superseded (never delete) |
 | `docs/backlog.md` *(only with a spec or clear direction)* | What to build, in what order? Which epic/story are we in? | On story/epic events only |
@@ -68,8 +68,9 @@ deliberately skipped).
 1. Analyze the spec (if one exists) and interview for the rest.
 2. Write a lean root `CLAUDE.md`.
 3. Write a human-facing `README.md`.
-4. If a genuine path-scoped rule exists, create `.claude/rules/project/`
-   with its first rule file; otherwise skip — no rule means no directory.
+4. Create `.claude/rules/project/` with the **ADR-writing rule** (step 5) — the
+   one scoped rule this harness always warrants — plus any other genuine
+   path-scoped rule.
 5. Create `docs/` — `architecture.md`, seed `docs/adr/` with an ADR per
    decision the spec already made (lazily; skip the dir if none), and (with a
    spec or clear direction) `backlog.md` plus the `docs/stories/` index.
@@ -148,10 +149,10 @@ entirely and add it when the first command lands.
 2. Working a story? Read its packet `docs/stories/US-XXX.md` (and its epic row
    in `docs/backlog.md`).
 3. At session end: refresh `docs/progress.md`; accumulate off-spec notes in the
-   current story packet; if a choice could be undone by mistake later (a real
-   tradeoff, or a stopgap "X until Y", with an `Expires`), record an ADR in
-   `docs/adr/` — one numbered file per decision, matching the existing ADRs.
-   ADRs are append-only: supersede, never delete.
+   current story packet; if a choice could be undone by mistake later, record an
+   ADR in `docs/adr/`. The ADR rule (`.claude/rules/project/adr.md`) owns the
+   bar, the format, and the append-only/supersede discipline — it loads when you
+   open an ADR.
 
 ## Conventions
 
@@ -234,10 +235,13 @@ restating every command.>
 
 ### 4. .claude/rules/project/
 
-Create the directory together with its first rule file — no rule warranted
-yet means no directory either. Add a rule file **only** when there is a
-genuine project-specific rule, and scope it to the paths it applies to so it
-loads only when those files are touched:
+Scoped rules load **only when a file matching their `paths:` glob is touched** —
+carrying discipline that matters at a specific moment without taxing every
+session. This harness always warrants one: the **ADR-writing rule**, which step 5
+owns — create `.claude/rules/project/` with it.
+
+Add further rule files **only** for a genuine project-specific rule, each scoped
+to the paths it applies to so it loads only when those files are touched:
 
 ```markdown
 ---
@@ -312,84 +316,65 @@ flowchart LR
   api --> mail{{SendGrid}}
 ```
 
-`docs/adr/` — the decision log as numbered ADRs (Architecture Decision
-Records), **one file per decision**: `0001-<slug>.md`, `0002-<slug>.md`, …. It
-holds the rationale a git diff will not surface cheaply, technical and
-product-level alike: a library pick, a pattern adopted, a limitation accepted, a
-scope call. Create the directory **lazily**, with the first ADR. Numbering gives
-every decision a stable handle (`ADR-0006`) that backlog rows, other ADRs, and
-`architecture.md` link to. The template below is the whole format — an ADR is
-self-describing, so nothing outside `docs/adr/` needs to define it.
+`docs/adr/` — the decision log as numbered ADRs (Architecture Decision Records),
+one file per decision (`0001-<slug>.md`, `0002-<slug>.md`, …). It holds the
+rationale a git diff won't surface cheaply — a library pick, a pattern adopted, a
+limitation accepted, a scope call. Create the directory **lazily**, with the
+first ADR; the filename number is a stable handle (`ADR-0006`) that backlog rows,
+other ADRs, and `architecture.md` link to.
 
-**Append-only; supersede, don't overwrite.** ADRs accumulate — an ADR is never
-deleted. When a later decision overrides an earlier one, write a **new** ADR and
-mark the old one superseded (a `status:` frontmatter line `superseded by
-ADR-NNNN`, or a one-line amendment note at the top of the old file). Git keeps
-the raw history; the superseded marker keeps the *trail* readable — a future
-session sees both the old reasoning and what replaced it. On each story ship,
-sweep `docs/adr/`: mark newly-superseded ADRs, and retire stopgap ADRs whose
-`Expires` condition shipped (mark them closed/superseded — don't delete).
+*What* earns an ADR and *how* to write one has two homes, one owner each, because
+a later session in the target repo never loads this skill:
 
-**Keep each ADR to the decision — not the notes.** An ADR is Decision / Why /
-Tradeoff. Reference detail — selector or probe tables, an enumerated
-rejected-alternatives analysis, a long derivation — is **not** the decision: it
-bloats the ADR and usually duplicates what the code, fixtures, or spec already
-own (the two-owners anti-pattern, and the main way an ADR log rots). Move that
-detail to where it is owned — the code/fixtures it informed, or a sibling
-`docs/adr/NNNN-<slug>-notes.md` behind a one-line pointer — and keep
-Decision/Why/Tradeoff inline. A **spike's output is a decision, not its probe
-log**: record the GO/no-go and the durable facts, point at the fixtures for the
-disposable selectors. A settled choice plain in the code or already owned by
-`architecture.md` is owned *there* — don't restate it as an ADR.
-
-## When a choice earns an ADR
-
-All three of these must be true:
-
-1. **Hard to reverse** — the cost of changing your mind later is meaningful.
-2. **Surprising without context** — a future reader will look at the code and
-   wonder "why on earth did they do it this way?"
-3. **The result of a real trade-off** — there were genuine alternatives and you
-   picked one for specific reasons.
-
-If a decision is easy to reverse, skip it — you'll just reverse it. If it's not
-surprising, nobody will wonder why. If there was no real alternative, there's
-nothing to record beyond "we did the obvious thing."
-
-One exception: a *deferral* ("use JSONL until we pick a store") is easy to
-reverse, yet earns an ADR with an `Expires` — it guards a future session
-against building the deferred thing prematurely.
-
-## ADR template
+- **CLAUDE.md protocol** (always loaded) carries only the *trigger* — "a choice a
+  future session could undo by mistake → record an ADR" — and points at the rule.
+- **`.claude/rules/project/adr.md`** owns the *bar and format*. Scoped to
+  `docs/adr/**`, it loads exactly when a session opens an ADR. Emit it at setup
+  even while `docs/adr/` is still empty (step 4) — make the rule lazy too and the
+  bar is what gets forgotten. It stays dormant until the first ADR is touched:
 
 ```markdown
 ---
-status: accepted            # accepted | superseded by ADR-NNNN  (omit while simple)
+paths:
+  - "docs/adr/**"
 ---
-# <short title of the decision>
-<!-- the ADR-NNNN handle is the filename number; the H1 is just the title -->
+# Writing an ADR
 
+You're here because you're adding or editing an ADR in `docs/adr/` — this repo's
+decision log (numbered `NNNN-<slug>.md`, one file per decision).
 
-- Decision: <what was chosen — one or two lines, not the whole design>
-- Why: <reasoning at the time; `per spec` when the spec asserts it without reasoning>
-- Tradeoff: <what choosing this costs — what gets harder or is given up; if you
-  can't name one, it may not be a decision worth recording>
-- Expires: <for stopgaps only — the condition that retires this ADR>  (omit if standing)
-- Supersedes: <ADR-NNNN — one-line reason it changed>  (omit if none)
-- Source: <spec section, discussion, PR>  (optional — include when traceable)
+## A choice earns an ADR only if all three hold
+1. **Hard to reverse** — changing your mind later costs something real.
+2. **Surprising without context** — a future reader will wonder "why this way?"
+3. **A real trade-off** — genuine alternatives existed; you picked one for reasons.
+
+Easy to reverse, unsurprising, or no real alternative → no ADR. One exception: a
+*stopgap* ("X until Y") earns an ADR with an `Expires`, to stop a later session
+building the deferred thing early.
+
+## Append-only — supersede, never overwrite or delete
+A wrong ADR is never edited into a different decision and never deleted. Write a
+**new** ADR and mark the old one `superseded by ADR-NNNN` (status frontmatter, or
+a one-line note at its top). Git keeps the history; the marker keeps the trail
+readable.
+
+## Keep it to the decision — not the notes
+An ADR is Decision / Why / Tradeoff. Reference detail — selector/probe tables,
+enumerated rejected-alternatives, long derivations — bloats the ADR and
+duplicates what code, fixtures, or the spec already own. Put it where it is owned
+(the code/fixtures, or a sibling `NNNN-<slug>-notes.md`) behind a one-line
+pointer. A spike's output is a decision, not its probe log. No nameable
+`Tradeoff` → not an ADR.
+
+Fields: `status` frontmatter (omit while simple), an H1 title, then `Decision` /
+`Why` / `Tradeoff`; add `Expires` for a stopgap and `Supersedes: ADR-NNNN` when it
+replaces one. Match the existing ADRs; a trivial one can be a sentence or two.
 ```
 
-An ADR can collapse to a sentence or two — the value is recording *that* a
-decision was made and *why*, not filling every field. Add `Considered options` /
-`Consequences` only when the rejected alternatives or downstream effects are
-genuinely worth remembering, and keep the *enumerated* analysis out of the ADR
-per the escape valve above.
-
-Never invent a decision. Pre-populate `docs/adr/` only with choices the spec
-states explicitly or the user confirmed; a sparse honest log beats a
-complete-looking fabricated one. Specs often restate one choice as both a
-principle and a decision — de-dupe to the tradeoff. The `Tradeoff` field is the
-filter: a choice with no nameable cost is not an ADR.
+At setup, seed `docs/adr/` with one ADR per decision the spec states explicitly
+or the user confirmed (`references/spec-analysis.md` lists them) — never invent
+one; where a spec frames a choice as both a principle and a decision, de-dupe to
+the single tradeoff.
 
 `docs/backlog.md` — the forward view: what to build, in what order, where the
 epics and stories stand. **Create it only when a spec or a clear direction
@@ -561,6 +546,9 @@ decisions, changes, and tradeoffs accumulate in its `Notes` section.
 - Confirm one owner per question: product/epic scope only in `backlog.md`,
   per-story scope only in the story packet, decision reasoning only in
   `docs/adr/`, no rule stated in both `CLAUDE.md` and a scoped rule file.
+- Confirm `.claude/rules/project/adr.md` exists, is scoped to `docs/adr/**`, and
+  owns the ADR bar (three criteria, append-only, keep-to-the-decision); CLAUDE.md's
+  protocol carries only the trigger + a pointer to it, not the three criteria.
 - If a backlog exists: epics are capabilities with a real "Usable means" per
   row, dependency-ordered; stories are vertical slices unless their packet
   names a code consumer; every research question is a spike ending in an
@@ -587,11 +575,9 @@ Two update modes (the *What this produces* table tags each file):
   `architecture.md` and `progress.md` overwrite in place; `backlog.md` updates
   on story/epic events only — ship, scope change, re-slice — never as a session log.
 - **Accumulate (record):** `docs/adr/` and `CHANGELOG.md` (if present). ADRs are
-  append-only and numbered — a superseded ADR is *marked* (`superseded by
-  ADR-NNNN`), not deleted, so the decision trail stays readable; git plus those
-  markers are the project's durable rationale history. CHANGELOG is the
-  append-only record of user-visible change. The override docs are only the
-  current snapshot on top.
+  append-only and numbered — superseded, never deleted; CHANGELOG is the
+  append-only record of user-visible change. Together with git these hold the
+  project's durable history; the override docs are only the current snapshot on top.
 
 A `docs/stories/US-XXX.md` packet sits between: its `Notes` accumulate within one
 story, then on merge the durable items become ADRs in `docs/adr/` and the story

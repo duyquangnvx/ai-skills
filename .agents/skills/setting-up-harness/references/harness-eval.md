@@ -55,9 +55,9 @@ extend it with the project's own must-always rules:
 - **Paired sizing** — the container-diagram row is judgment-triggered, so test
   both sides: one system with several runnable parts (expect ONE mermaid diagram
   replacing the prose trio) and one single-file system (expect prose, no diagram).
-  Same failure shape as the escape valve — a soft trigger risks not firing AND
-  over-firing — so the trigger lives in the architecture.md template the session
-  reads, with a concrete box count; verify both directions.
+  Same failure shape as the ADR-discipline row — a soft trigger risks not firing
+  AND over-firing — so the trigger lives in the architecture.md template the
+  session reads, with a concrete box count; verify both directions.
 - **Blind** — the session agent must never know it is being evaluated and
   never see this file.
 - **Sequence** — run 3+ sessions back-to-back, fresh context each; state
@@ -73,6 +73,11 @@ automatically; a subagent simulation must emulate that loader honestly:
   as loader-injected project context, not as user instructions.
 - Paste a path-scoped rule only when the task will touch files matching its
   `paths:` globs — mirroring conditional loading.
+- The ADR bar lives in `.claude/rules/project/adr.md` (scoped to `docs/adr/**`),
+  not CLAUDE.md — paste it for any task that writes or edits an ADR, and check the
+  ADR contracts above against that loaded rule. A task that *should* produce an ADR
+  but never touches `docs/adr/` is the case CLAUDE.md's always-on trigger must
+  catch on its own — test that separately.
 - `git commit` the repo before each session. Audit = `git diff`/tree for the
   deterministic rows, plus a judge pass over the contracts table for the rest.
 - **Known fidelity gap:** simulation verifies behavior *given loaded
