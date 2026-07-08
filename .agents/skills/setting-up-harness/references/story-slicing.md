@@ -47,7 +47,7 @@ match the tool to the risk's shape:
 
 | Tool | Answers | Shape | Ends in |
 |------|---------|-------|---------|
-| **Spike** | A research question that could invalidate the plan — "is X good enough?", "does Y scale?" | Time-boxed throwaway code: the cheapest experiment that yields the answer | A decision in `docs/decisions.md`; the code is discarded |
+| **Spike** | A research question that could invalidate the plan — "is X good enough?", "does Y scale?" | Time-boxed throwaway code: the cheapest experiment that yields the answer | An ADR in `docs/adr/`; the code is discarded |
 | **Walking-skeleton story** | Will these seams hold? — 2+ capabilities integrating over contracts the spec has NOT pinned | ONE thin story crossing those seams end-to-end; production habits; kept | Proven contracts to widen from |
 | **Lane `high-risk`** | A risky capability that must be built for real | A normal story, pulled as early as its dependencies allow | The capability, early |
 
@@ -107,7 +107,7 @@ is not usable yet.
 - [ ] In/Out scope is explicit.
 - [ ] Research questions this story rests on are answered (spike run, decision
       recorded) — building the story is not how you find out.
-- [ ] Build-vs-buy decided; durable picks recorded in `docs/decisions.md`.
+- [ ] Build-vs-buy decided; durable picks recorded as ADRs in `docs/adr/`.
 - [ ] It is a vertical slice — or the packet names its code consumer.
 
 ## Definition of Done — story
@@ -117,7 +117,7 @@ is not usable yet.
       only through tests.
 - [ ] Tests per the repo's standard.
 - [ ] `docs/architecture.md` updated if the structure changed.
-- [ ] Durable notes promoted from the packet to `docs/decisions.md`.
+- [ ] Durable notes promoted from the packet to `docs/adr/`.
 - [ ] Status flipped to `done` in `docs/backlog.md`; packet marked Done.
 
 ## Definition of Done — epic

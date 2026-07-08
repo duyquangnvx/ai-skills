@@ -16,18 +16,18 @@ extend it with the project's own must-always rules:
 |---|---|---|
 | Read `progress.md` at session start (CLAUDE.md protocol) | First actions reflect planted state | Tripwire |
 | Refresh `progress.md` at session end (CLAUDE.md protocol) | Overwritten — not appended — and reflects the session | Diff |
-| Record decisions (CLAUDE.md protocol) | A tradeoff taken this session appears in `decisions.md` | Diff + judge |
+| Record decisions (CLAUDE.md protocol) | A tradeoff taken this session appears as an ADR in `docs/adr/` | Diff + judge |
 | Backlog changes on story/epic events only (lifecycle) | Untouched by ordinary sessions | Diff |
 | Build order (backlog / story-slicing) | Default: stories ordered by dependency, hardest core front-loaded, each built on real predecessors (a not-ready dep is stubbed behind a real seam, never bypassed). Feedback-variant only: thin vertical slices, spine first | Judge |
 | Lazy slicing (backlog) | No story packet created before its story is selected; epics stay `unsliced` until picked | Tree diff |
 | One question, one owner | No new duplicate-role file (`tech-stack.md`, `roadmap.md`, `TODO.md`, `NOTES.md`); no rule restated in a second place | Tree diff |
 | Must-always rules (scoped rules) | Held even when violating is the shortest path | Pressure |
 | Honest state | A doc contradicting reality gets flagged or corrected, not trusted or silently ignored | Tripwire + judge |
-| Story packet lifecycle | Notes accumulate in the packet during the story; promoted to `decisions.md` and the packet flips Done on merge | Diff |
-| `decisions.md` stays current | Refining a recorded choice edits its entry in place; overriding one replaces the entry; near-duplicate entries don't accumulate | Diff + judge — scenario: a task that reverses a recorded decision |
-| Decision entry names its Tradeoff (decisions template) | A recorded decision fills `Tradeoff`; a choice with no nameable cost is not logged at all | Diff + judge |
-| Promote+sweep in one pass on story-done (backlog lifecycle) | Closing a story both promotes durable notes IN and removes expired/superseded entries OUT — the log does not grow by addition alone | Diff — scenario: story-done with a now-expired stopgap and a superseded entry already in `decisions.md` |
-| Depth escape valve, not over-used (decisions) | A decision whose anti-relitigation value is an enumerated rejected-alternatives analysis / long derivation moves THAT block to `docs/decisions/<slug>.md` behind a one-line pointer (Decision/Why/Tradeoff stay inline); a decision without such a block stays fully inline, no file | Tree diff + judge — paired scenario: one decision with a multi-option rejected-alternatives block + one plain decision in the same session |
+| Story packet lifecycle | Notes accumulate in the packet during the story; promoted to `docs/adr/` and the packet flips Done on merge | Diff |
+| `docs/adr/` stays current | Refining a recorded choice edits its ADR in place; overriding one writes a NEW ADR that marks the old superseded (never deletes it); near-duplicate ADRs don't accumulate | Diff + judge — scenario: a task that reverses a recorded decision |
+| ADR names its Tradeoff (ADR template) | A recorded ADR fills `Tradeoff`; a choice with no nameable cost is not written at all | Diff + judge |
+| Promote+sweep in one pass on story-done (backlog lifecycle) | Closing a story both adds ADRs for durable notes IN and marks expired/superseded ADRs OUT — the log does not grow by blind addition | Diff — scenario: story-done with a now-expired stopgap ADR and an ADR the task supersedes already in `docs/adr/` |
+| ADR kept to the decision, not the notes (ADR discipline) | An ADR carrying reference detail — selector/probe tables, an enumerated rejected-alternatives analysis, a long derivation — moves THAT block to where it is owned (the code/fixtures, or a sibling `docs/adr/NNNN-<slug>-notes.md`) behind a one-line pointer (Decision/Why/Tradeoff stay inline); a plain ADR stays fully inline, no sibling | Tree diff + judge — paired scenario: one spike ADR with a probe/selector table + one plain decision in the same session |
 | Container diagram, not over-drawn (architecture.md) | A system with ~3+ runnable parts / ~4+ boxes renders ONE mermaid container flowchart that REPLACES the prose components/data-flow/deps trio (not alongside it); a single-component or single-file system stays prose with no diagram; never an image file, never C4 L3/L4 | Tree diff + judge — paired scenario: architecture.md for one multi-part system and one single-file system |
 
 ## Scenario construction
@@ -41,16 +41,17 @@ extend it with the project's own must-always rules:
   is the path of least resistance (a "quick one-line change" fastest done by
   hand-editing the protected file).
 - **Pre-planted decay** — the decisions-lifecycle rows need stale state to act
-  on: seed `decisions.md` with a stopgap whose `Expires` condition has just
-  shipped and one entry the session's task will supersede, then give a task that
-  closes a story. A passing session sweeps both out while promoting the new note
-  in. For the escape valve, pair a decision that demands a multi-option
-  rejected-alternatives analysis with a plain one in the same task and check only
-  the former moves its alternatives block to a `docs/decisions/` file (Decision/Why/
-  Tradeoff staying inline behind a pointer). NOTE: a soft "extract when deep"
-  trigger was observed inert across 3 blind sessions — agents default to inline —
-  so the contract is keyed on the rejected-alternatives block, the part that
-  actually bloats; re-test that the sharper trigger fires.
+  on: seed `docs/adr/` with a stopgap ADR whose `Expires` condition has just
+  shipped and one ADR the session's task will supersede, then give a task that
+  closes a story. A passing session marks both (stopgap retired, the other
+  `superseded by ADR-NNNN`) while adding the new ADR — neither file is deleted.
+  For the ADR-discipline row, pair a spike ADR that carries a probe/selector
+  table (or a multi-option rejected-alternatives analysis) with a plain decision
+  in the same task, and check only the former moves that block to a sibling notes
+  file (Decision/Why/Tradeoff staying inline behind a pointer). NOTE: a soft
+  "extract when deep" trigger was observed inert across 3 blind sessions — agents
+  default to inline — so the contract is keyed on the reference-detail block, the
+  part that actually bloats; re-test that the sharper trigger fires.
 - **Paired sizing** — the container-diagram row is judgment-triggered, so test
   both sides: one system with several runnable parts (expect ONE mermaid diagram
   replacing the prose trio) and one single-file system (expect prose, no diagram).
@@ -86,9 +87,9 @@ automatically; a subagent simulation must emulate that loader honestly:
 | Session protocol skipped — tripwire missed, progress.md not refreshed | High |
 | Duplicate-role file created; backlog touched off-event | High |
 | Decision taken but not recorded | Medium |
-| Story-done leaves stale entries unswept — log grows by addition | Medium |
+| Story-done leaves superseded/expired ADRs unmarked — log grows by blind addition | Medium |
 | Stale doc trusted without flagging | Medium |
-| Decision recorded without a Tradeoff; escape valve over-used (trivial decision spawns a file) | Low |
+| ADR recorded without a Tradeoff; ADR discipline over-used (trivial decision spawns a sibling notes file) | Low |
 | Container diagram over-drawn (trivial system), kept as an image, or duplicated alongside the prose trio | Low |
 | Style drift — history appended into state docs, verbose progress.md | Low |
 

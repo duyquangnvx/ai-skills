@@ -41,7 +41,7 @@ same question drift apart, and the agent cannot tell which is true.
 | `README.md` | What is this? How does a human set it up? | Override |
 | `.claude/rules/project/*.md` | Rules scoped to specific paths | Override |
 | `docs/architecture.md` | How is the system built **now**? | Override on change |
-| `docs/decisions.md` | Why is it this way? | Replace entry on supersede |
+| `docs/adr/*.md` | Why is it this way? | Append; mark superseded (never delete) |
 | `docs/backlog.md` *(only with a spec or clear direction)* | What to build, in what order? Which epic/story are we in? | On story/epic events only |
 | `docs/progress.md` | Where is work **today**? | Override every session |
 | `docs/stories/US-*.md` *(created lazily)* | What is this story; what went off-spec building it? | Accumulate then reset per story |
@@ -70,8 +70,9 @@ deliberately skipped).
 3. Write a human-facing `README.md`.
 4. If a genuine path-scoped rule exists, create `.claude/rules/project/`
    with its first rule file; otherwise skip — no rule means no directory.
-5. Create `docs/` — `architecture.md`, `decisions.md`, and (with a spec or
-   clear direction) `backlog.md` plus the `docs/stories/` index.
+5. Create `docs/` — `architecture.md`, seed `docs/adr/` with an ADR per
+   decision the spec already made (lazily; skip the dir if none), and (with a
+   spec or clear direction) `backlog.md` plus the `docs/stories/` index.
 6. Create the working-memory files in `docs/`.
 7. Prune pass and verify.
 
@@ -147,10 +148,10 @@ entirely and add it when the first command lands.
 2. Working a story? Read its packet `docs/stories/US-XXX.md` (and its epic row
    in `docs/backlog.md`).
 3. At session end: refresh `docs/progress.md`; accumulate off-spec notes in the
-   current story packet; record a choice in `docs/decisions.md` if a future
-   session could undo it by mistake — a real tradeoff, or a stopgap guarding
-   against premature work ("X until Y", with an `Expires`). What qualifies and
-   how to write the entry is owned by that file's header.
+   current story packet; if a choice could be undone by mistake later (a real
+   tradeoff, or a stopgap "X until Y", with an `Expires`), record an ADR in
+   `docs/adr/` — one numbered file per decision, matching the existing ADRs.
+   ADRs are append-only: supersede, never delete.
 
 ## Conventions
 
@@ -163,7 +164,7 @@ entirely and add it when the first command lands.
 ## Docs
 
 - Architecture (current state): docs/architecture.md
-- Decisions (why; revisable): docs/decisions.md
+- Decisions (why; ADRs): docs/adr/
 - Backlog (epics + stories + status): docs/backlog.md
 - Stories (per-story packets): docs/stories/
 - Current state: docs/progress.md
@@ -311,33 +312,37 @@ flowchart LR
   api --> mail{{SendGrid}}
 ```
 
-`docs/decisions.md` — one log for the rationale a git diff will not surface
-cheaply, technical and product-level alike: a library pick, a pattern adopted,
-a limitation accepted, a scope call. The header below owns the discipline —
-revisable context, replace on supersede, sweep on story ship:
+`docs/adr/` — the decision log as numbered ADRs (Architecture Decision
+Records), **one file per decision**: `0001-<slug>.md`, `0002-<slug>.md`, …. It
+holds the rationale a git diff will not surface cheaply, technical and
+product-level alike: a library pick, a pattern adopted, a limitation accepted, a
+scope call. Create the directory **lazily**, with the first ADR. Numbering gives
+every decision a stable handle (`ADR-0006`) that backlog rows, other ADRs, and
+`architecture.md` link to. The template below is the whole format — an ADR is
+self-describing, so nothing outside `docs/adr/` needs to define it.
 
-```markdown
-# Decisions
+**Append-only; supersede, don't overwrite.** ADRs accumulate — an ADR is never
+deleted. When a later decision overrides an earlier one, write a **new** ADR and
+mark the old one superseded (a `status:` frontmatter line `superseded by
+ADR-NNNN`, or a one-line amendment note at the top of the old file). Git keeps
+the raw history; the superseded marker keeps the *trail* readable — a future
+session sees both the old reasoning and what replaced it. On each story ship,
+sweep `docs/adr/`: mark newly-superseded ADRs, and retire stopgap ADRs whose
+`Expires` condition shipped (mark them closed/superseded — don't delete).
 
-Record choices with real tradeoffs. Each entry is the reasoning at the time,
-not standing law — when new information makes one wrong, replace it. This is
-**not an append-only ADR log**: superseded entries are replaced, not retained
-— git keeps the history. On each story ship, sweep this file: delete entries
-whose `Expires` condition shipped, replace any superseded entry still here.
+**Keep each ADR to the decision — not the notes.** An ADR is Decision / Why /
+Tradeoff. Reference detail — selector or probe tables, an enumerated
+rejected-alternatives analysis, a long derivation — is **not** the decision: it
+bloats the ADR and usually duplicates what the code, fixtures, or spec already
+own (the two-owners anti-pattern, and the main way an ADR log rots). Move that
+detail to where it is owned — the code/fixtures it informed, or a sibling
+`docs/adr/NNNN-<slug>-notes.md` behind a one-line pointer — and keep
+Decision/Why/Tradeoff inline. A **spike's output is a decision, not its probe
+log**: record the GO/no-go and the durable facts, point at the fixtures for the
+disposable selectors. A settled choice plain in the code or already owned by
+`architecture.md` is owned *there* — don't restate it as an ADR.
 
-Keep each entry to the tradeoff and the *why* — link the spec or plan for the
-detail; an entry that summarizes its spec will outgrow the file. An enumerated
-rejected-alternatives analysis or long derivation is detail too: move that
-block to `docs/decisions/<slug>.md` behind a one-line pointer, keep
-Decision/Why/Tradeoff inline, and delete the linked doc with its pointer when
-the decision is superseded. One entry per distinct tradeoff, not per spec
-sentence. A settled choice plain in the code or already owned by
-`architecture.md` is owned *there* — duplicating it here is the two-owners
-anti-pattern and the main way this log bloats. The test for an entry — could a
-future session undo this by mistake if the *why* were gone? — comes down to
-the three criteria below; all must hold.
-
-## When a choice earns an entry
+## When a choice earns an ADR
 
 All three of these must be true:
 
@@ -352,26 +357,39 @@ surprising, nobody will wonder why. If there was no real alternative, there's
 nothing to record beyond "we did the obvious thing."
 
 One exception: a *deferral* ("use JSONL until we pick a store") is easy to
-reverse, yet earns an entry with an `Expires` — it guards a future session
+reverse, yet earns an ADR with an `Expires` — it guards a future session
 against building the deferred thing prematurely.
 
-## <YYYY-MM-DD> — <short title>
+## ADR template
+
+```markdown
+---
+status: accepted            # accepted | superseded by ADR-NNNN  (omit while simple)
+---
+# <short title of the decision>
+<!-- the ADR-NNNN handle is the filename number; the H1 is just the title -->
+
 
 - Decision: <what was chosen — one or two lines, not the whole design>
 - Why: <reasoning at the time; `per spec` when the spec asserts it without reasoning>
 - Tradeoff: <what choosing this costs — what gets harder or is given up; if you
-  can't name one, it may not be a decision worth logging>
-- Expires: <for stopgaps only — the condition that retires this entry>  (omit if standing)
-- Supersedes: <prior choice — one-line reason it changed>  (omit if none)
+  can't name one, it may not be a decision worth recording>
+- Expires: <for stopgaps only — the condition that retires this ADR>  (omit if standing)
+- Supersedes: <ADR-NNNN — one-line reason it changed>  (omit if none)
 - Source: <spec section, discussion, PR>  (optional — include when traceable)
 ```
 
-Never invent a decision. Pre-populate only with choices the spec states
-explicitly or the user confirmed; a sparse honest log beats a complete-looking
-fabricated one. Specs often restate one choice as both a principle and a
-decision — de-dupe to the tradeoff. Everything else — what earns an entry, the
-escape valve, the sweep — is owned by the header above, which ships with the
-generated file.
+An ADR can collapse to a sentence or two — the value is recording *that* a
+decision was made and *why*, not filling every field. Add `Considered options` /
+`Consequences` only when the rejected alternatives or downstream effects are
+genuinely worth remembering, and keep the *enumerated* analysis out of the ADR
+per the escape valve above.
+
+Never invent a decision. Pre-populate `docs/adr/` only with choices the spec
+states explicitly or the user confirmed; a sparse honest log beats a
+complete-looking fabricated one. Specs often restate one choice as both a
+principle and a decision — de-dupe to the tradeoff. The `Tradeoff` field is the
+filter: a choice with no nameable cost is not an ADR.
 
 `docs/backlog.md` — the forward view: what to build, in what order, where the
 epics and stories stand. **Create it only when a spec or a clear direction
@@ -400,8 +418,8 @@ the whole backlog plans against assumptions early work will overturn.
 `backlog.md` owns product/epic scope: the epic list + dependencies, the build
 order, the product-level Definition of Done and out-of-scope, and story priority
 + lane. The **story packet** (below) owns per-story scope: In/Out, acceptance,
-plan. `decisions.md` records *why* a scope call was made; `architecture.md` does
-not keep a non-goals list.
+plan. An ADR in `docs/adr/` records *why* a scope call was made; `architecture.md`
+does not keep a non-goals list.
 
 ```markdown
 # Backlog
@@ -431,7 +449,7 @@ to start early in parallel.>
 | Story | Epic | Lane | Status | Builds (one line) |
 |-------|------|------|--------|-------------------|
 | US-001 | E01 | normal | ready | As <the operator>, <goal> — <slice, surface included> |
-| SP-001 | E0X | spike | ready | <research question> → decision in docs/decisions.md; code discarded |
+| SP-001 | E0X | spike | ready | <research question> → ADR in docs/adr/; code discarded |
 
 ## Definition of Done — v1
 
@@ -443,17 +461,17 @@ to start early in parallel.>
   add candidate rows. (Read references/story-slicing.md.)
 - Select a story → create its packet and refine to Ready: confirm deps are built
   (or stubbed behind a real seam), write acceptance, set In/Out, spike high-risk
-  unknowns, decide build-vs-buy, record durable picks in docs/decisions.md. The
+  unknowns, decide build-vs-buy, record durable picks as ADRs in docs/adr/. The
   manifest stays the source of truth for what's used.
-- A story is done → flip its Status to `done`; in one pass over docs/decisions.md,
-  promote durable packet notes IN and sweep stale ones OUT (delete entries whose
-  `Expires` shipped, replace any superseded) — adding without sweeping is how the
-  log bloats; update architecture.md if structure changed; then re-read this file
+- A story is done → flip its Status to `done`; in one pass over docs/adr/, add
+  ADRs for durable packet notes and sweep stale ones (mark newly-superseded ADRs,
+  retire expired stopgaps — supersede, never delete) — appending without sweeping
+  is how the log rots; update architecture.md if structure changed; then re-read this file
   before the next story — what you built usually reveals something the plan didn't
   know, so re-order if needed.
 - An epic is `done` when all its stories are done.
-- Scope changes mid-story → update In/Out in the packet, record the why in
-  docs/decisions.md.
+- Scope changes mid-story → update In/Out in the packet, record the why as an
+  ADR in docs/adr/.
 - A story too big to finish in one go → split it. Two small stories beat one long
   "almost there."
 ```
@@ -496,11 +514,11 @@ Goal: As <the operator/user>, I want <goal>, so that <benefit>.
 ## Notes (in-flight)
 
 <!-- Off-spec decisions, changes, tradeoffs during this story.
-     On merge: promote durable items to docs/decisions.md, flip Done. -->
+     On merge: promote durable items to docs/adr/, flip Done. -->
 ```
 
 In-flight notes live in the packet's `Notes` section, scoped to one story, and are
-promoted to `decisions.md` on merge. A story may start only when it passes the
+promoted to `docs/adr/` on merge. A story may start only when it passes the
 Definition of Ready, and is Done only when its acceptance passes — both checklists
 live in `references/story-slicing.md`.
 
@@ -542,11 +560,11 @@ decisions, changes, and tradeoffs accumulate in its `Notes` section.
   sanctioned, prose beyond that is not.
 - Confirm one owner per question: product/epic scope only in `backlog.md`,
   per-story scope only in the story packet, decision reasoning only in
-  `decisions.md`, no rule stated in both `CLAUDE.md` and a scoped rule file.
+  `docs/adr/`, no rule stated in both `CLAUDE.md` and a scoped rule file.
 - If a backlog exists: epics are capabilities with a real "Usable means" per
   row, dependency-ordered; stories are vertical slices unless their packet
-  names a code consumer; every research question is a spike ending in a
-  decisions.md entry, and at most one walking-skeleton story exists; each
+  names a code consumer; every research question is a spike ending in an
+  ADR, and at most one walking-skeleton story exists; each
   selected story's packet has In/Out and agent-verifiable acceptance; no
   story packet was pre-cut before selection; and no epic, story, or decision
   was invented beyond what the spec or user actually said.
@@ -566,15 +584,17 @@ decisions, changes, and tradeoffs accumulate in its `Notes` section.
 Two update modes (the *What this produces* table tags each file):
 
 - **Override (latest only):** describes the present; git keeps the history.
-  `decisions.md` is the nuance — point-in-time context, not standing law; its
-  replace-on-supersede rule lives in step 5. `backlog.md` updates on story/epic
-  events only — ship, scope change, re-slice — never as a session log.
-- **Accumulate (record):** `CHANGELOG.md`, if present. The append-only record
-  of user-visible change. Together with git it is the project's durable
-  history; the override docs are only its current snapshot.
+  `architecture.md` and `progress.md` overwrite in place; `backlog.md` updates
+  on story/epic events only — ship, scope change, re-slice — never as a session log.
+- **Accumulate (record):** `docs/adr/` and `CHANGELOG.md` (if present). ADRs are
+  append-only and numbered — a superseded ADR is *marked* (`superseded by
+  ADR-NNNN`), not deleted, so the decision trail stays readable; git plus those
+  markers are the project's durable rationale history. CHANGELOG is the
+  append-only record of user-visible change. The override docs are only the
+  current snapshot on top.
 
 A `docs/stories/US-XXX.md` packet sits between: its `Notes` accumulate within one
-story, then on merge the durable items move to `docs/decisions.md` and the story
+story, then on merge the durable items become ADRs in `docs/adr/` and the story
 flips to `done` — short enough to scan, never a second unmaintained history.
 
 `CLAUDE.md` has its own maintenance rule: lines earn their place through
@@ -595,11 +615,14 @@ are the cross-cutting failures no single step owns:
 - **A standalone tech-stack doc.** Manifests and lockfiles are the source of
   truth for what is used and are read on demand; a `tech-stack.md` only
   duplicates them and drifts. Record the *choice* of stack — when it carried a
-  real tradeoff — in `docs/decisions.md` instead.
-- **Ceremony over discipline.** Sequential decision IDs, mandatory source
-  pointers, cross-logging every change in three files — structure that exists
-  to be maintained, not to prevent mistakes. The discipline that matters: don't
-  invent, keep one owner, keep acceptance verifiable.
+  real tradeoff — as an ADR in `docs/adr/` instead.
+- **Ceremony over discipline.** Status-lifecycle theater on every ADR (a
+  proposed→accepted→deprecated dance where a one-paragraph note would do),
+  mandatory source pointers, cross-logging every change in three files —
+  structure that exists to be maintained, not to prevent mistakes. ADR
+  *numbering* is not ceremony: it is a cheap, stable cross-reference handle
+  (scan the highest, increment). The discipline that matters: don't invent,
+  keep one owner, keep acceptance verifiable.
 - Ordering failures — a quality question answered by a build instead of a
   spike, a walking skeleton grown into an epic, bypassing a seam, pre-cutting
   the backlog — are owned by `references/story-slicing.md` and re-checked in

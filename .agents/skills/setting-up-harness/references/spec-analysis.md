@@ -23,7 +23,7 @@ defaults.
 
 ### 2. Decisions the spec already made
 
-Choices the spec states explicitly — these become entries in `decisions.md`
+Choices the spec states explicitly — these become ADRs in `docs/adr/`
 immediately (still revisable later). Technical and product-level alike: stack
 picks, vendor choices, architectural commitments, scope calls.
 
@@ -100,7 +100,7 @@ file:
 **Stack/dev facts:** <what the spec states; [GAP] for the rest>
 **Out of scope:** <2-3 most important non-goals>
 
-**Decisions the spec already made (→ decisions.md):**
+**Decisions the spec already made (→ docs/adr/):**
 - <decision> — why: <one line, or "per spec"> — <spec ref>
 
 **Implied epics & build order (→ backlog.md, or "skip backlog"):**
