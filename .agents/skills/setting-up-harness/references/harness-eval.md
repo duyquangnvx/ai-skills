@@ -30,6 +30,7 @@ extend it with the project's own must-always rules:
 | ADR kept to the decision, not the notes (ADR discipline) | An ADR carrying reference detail — selector/probe tables, an enumerated rejected-alternatives analysis, a long derivation — moves THAT block to where it is owned (the code/fixtures, or a sibling `docs/adr/NNNN-<slug>-notes.md`) behind a one-line pointer (Decision/Why/Tradeoff stay inline); a plain ADR stays fully inline, no sibling | Tree diff + judge — paired scenario: one spike ADR with a probe/selector table + one plain decision in the same session |
 | Container diagram, not over-drawn (architecture.md) | A system with ~3+ runnable parts / ~4+ boxes renders ONE mermaid container flowchart that REPLACES the prose components/data-flow/deps trio (not alongside it); a single-component or single-file system stays prose with no diagram; never an image file, never C4 L3/L4 | Tree diff + judge — paired scenario: architecture.md for one multi-part system and one single-file system |
 | Day-zero honesty (architecture.md status line) | A harness generated from a spec with no code opens `architecture.md` with the intended-design status line; a later session that ships structure rewrites the covered parts to as-built and deletes the line only when the whole file describes what exists | Diff + judge — scenario: setup on a code-less spec, then a first story session |
+| Slicing model carried (backlog rule) | A later session slicing an epic or refining a story follows `.claude/rules/project/backlog.md` — vertical slices (or a named code consumer), spike before a risky build, session-sized stories, Ready/Done gates — without ever seeing this skill | Judge — scenario: post-setup session slices an epic given only generated artifacts |
 
 ## Scenario construction
 
@@ -79,6 +80,9 @@ automatically; a subagent simulation must emulate that loader honestly:
   ADR contracts above against that loaded rule. A task that *should* produce an ADR
   but never touches `docs/adr/` is the case CLAUDE.md's always-on trigger must
   catch on its own — test that separately.
+- The slicing model lives in `.claude/rules/project/backlog.md` (scoped to
+  `docs/backlog.md` + `docs/stories/**`) — paste it for any task that slices an
+  epic or edits the backlog or a story packet, mirroring conditional loading.
 - `git commit` the repo before each session. Audit = `git diff`/tree for the
   deterministic rows, plus a judge pass over the contracts table for the rest.
 - **Known fidelity gap:** simulation verifies behavior *given loaded
