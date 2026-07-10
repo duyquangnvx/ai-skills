@@ -1,0 +1,7 @@
+interface:
+  display_name: "Flow Prompt Language"
+  short_description: "Design agent prompts as business flows"
+  default_prompt: "Use $flow-prompt-language to design a tool-calling business agent prompt with explicit flows, branches, retries, and outcomes."
+
+policy:
+  allow_implicit_invocation: true

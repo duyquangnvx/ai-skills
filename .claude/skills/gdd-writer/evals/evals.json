@@ -1,0 +1,282 @@
+{
+  "skill_name": "gdd-writer",
+  "notes": "Four test prompts covering Lean / Standard / Comprehensive / Functional-Spec tiers. Each prompt is intentionally rich enough that the skill should skip the clarifying-question step (Step 1 of the workflow) and go straight to drafting. Assertions are objectively verifiable by inspecting the produced Markdown file in the run's output directory.",
+  "evals": [
+    {
+      "id": 1,
+      "name": "lean-jam-puzzle-platformer",
+      "prompt": "I'm doing a 48-hour Ludum Dare jam this weekend, solo. The game is a tiny puzzle-platformer called Possessable about a ghost who can possess any small object in the level (boxes, lamps, books) and use that object's unique movement ability to solve room-sized puzzles. Think Celeste's level density meets Spiritfarer's vibe. Target is HTML5/itch. I need a one-page GDD I can pin to my second monitor — just enough to keep me focused, nothing more. Genre is singleplayer, no story beyond environmental, no monetization (free on itch).",
+      "expected_output": "A single Lean-tier Markdown GDD saved as `possessable-GDD.md` (or similar slug) in the working directory. Should include the mandatory three (Pitch + Core Loop + Pillars, Mechanics, Art/UI), plus Scope/Schedule for the jam constraint. Should NOT include Story, Monetization, Networking, Tech, AI, Localization, or Accessibility sections.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "output_file_saved_to_cwd_not_sandbox",
+          "description": "A .md file is written to the working directory, not to /mnt/user-data/outputs/ or any other hard-coded sandbox path."
+        },
+        {
+          "name": "filename_is_slugified",
+          "description": "Filename uses lowercase letters, digits, and hyphens only — no spaces, no underscores, no special characters, ends in `-GDD.md` or `.md`."
+        },
+        {
+          "name": "contains_mandatory_pitch_section",
+          "description": "Document contains a Pitch / Concept / Overview heading with concrete content (not placeholder)."
+        },
+        {
+          "name": "contains_mandatory_core_loop_section",
+          "description": "Document contains a Core Loop section that describes the loop in roughly one sentence or a tight bullet chain."
+        },
+        {
+          "name": "contains_mandatory_design_pillars_section",
+          "description": "Document contains a Design Pillars heading with 2–4 specific, decision-constraining pillars (not vague filler like 'fun and engaging')."
+        },
+        {
+          "name": "contains_mandatory_mechanics_section",
+          "description": "Document contains a Mechanics heading detailed enough to start prototyping — names specific verbs/abilities like possess, jump, swap."
+        },
+        {
+          "name": "contains_mandatory_art_or_ui_section",
+          "description": "Document contains an Art Direction and/or UI/UX heading."
+        },
+        {
+          "name": "no_placeholder_text_leaked",
+          "description": "Document contains no literal template scaffolding such as `[describe`, `<Influence #`, `[Two sentences`, `[TODO]`, `[fill in`, or empty bracketed prompts."
+        },
+        {
+          "name": "tbd_uses_blockquote_format",
+          "description": "Any TBDs in the document are formatted as `> **TBD:** ...` blockquotes, not as bare TODO comments or inline placeholders."
+        },
+        {
+          "name": "no_monetization_section_for_jam",
+          "description": "Because the user said free jam game, the document does NOT contain a Monetization, Pricing, or Business Model section."
+        },
+        {
+          "name": "no_multiplayer_or_networking_section",
+          "description": "Because the user said singleplayer, the document does NOT contain a Multiplayer or Networking section."
+        },
+        {
+          "name": "no_localization_section_for_jam",
+          "description": "Because of the lean jam scope, no Localization section."
+        },
+        {
+          "name": "respects_lean_tier_size",
+          "description": "Document is roughly one-pager scale: under ~600 words and under ~8 top-level sections."
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "standard-indie-roguelike-deckbuilder",
+      "prompt": "We're a 6-person indie studio (2 devs, 2 artists, 1 designer, 1 producer) about to start a 12-month production on a roguelike deckbuilder for Steam called Echoes of the Tideborne. It's Slay the Spire's combat structure crossed with Sunless Sea's tone — ocean-faring, mystery, dread. Singleplayer only. Players build a deck of crew cards (each crew member is a card with abilities) and sail between haunted islands, fighting sea creatures with card-based turn combat. Run lengths ~60 minutes. We want to sell for $19.99 with optional cosmetic DLC later. Art direction is hand-painted gouache, dark teal/rust palette. We need a GDD we can hand to the whole team for kickoff next Monday. Skip deep tech sections — Unity team handles that internally.",
+      "expected_output": "A Standard-tier Markdown GDD with ~10–15 sections. Includes the mandatory three, plus Levels/Content (islands), Monetization (Steam $19.99 + cosmetic DLC), Scope/Schedule (12-month), Art Direction with palette and references. Should NOT include Multiplayer/Networking, deep AI, deep Tech, or AAA-only sections like Localization plan or extensive Audio middleware.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "output_file_saved_to_cwd_not_sandbox",
+          "description": "A .md file is written to the working directory, not /mnt/user-data/outputs/."
+        },
+        {
+          "name": "filename_is_slugified",
+          "description": "Filename uses lowercase letters, digits, hyphens only."
+        },
+        {
+          "name": "contains_mandatory_three_sections",
+          "description": "Document contains all three mandatory sections: Pitch/Core Loop/Pillars, Mechanics, and Art/UI."
+        },
+        {
+          "name": "contains_monetization_section",
+          "description": "Document contains a Monetization or Pricing section that references the $19.99 Steam price and the cosmetic DLC plan."
+        },
+        {
+          "name": "contains_scope_or_schedule_section",
+          "description": "Document contains a Scope, Schedule, or Production Plan section that acknowledges the 12-month timeline and 6-person team."
+        },
+        {
+          "name": "contains_content_or_levels_section",
+          "description": "Document contains a Content, Levels, or World section discussing the islands/run structure."
+        },
+        {
+          "name": "no_multiplayer_or_networking_section",
+          "description": "Document does NOT contain a Multiplayer or Networking section."
+        },
+        {
+          "name": "no_deep_tech_section",
+          "description": "Document does NOT contain a deep Technical Architecture / Engine Internals section — the user said tech is handled internally."
+        },
+        {
+          "name": "no_placeholder_text_leaked",
+          "description": "No literal template scaffolding remains: `[describe`, `<Influence #`, `[Two sentences`, `[fill in`."
+        },
+        {
+          "name": "tbd_uses_blockquote_format",
+          "description": "Any TBDs use `> **TBD:** ...` blockquote format."
+        },
+        {
+          "name": "art_section_mentions_palette_and_medium",
+          "description": "Art Direction section names the gouache medium and the dark teal/rust palette explicitly."
+        },
+        {
+          "name": "respects_standard_tier_size",
+          "description": "Document has between ~10 and ~16 top-level (## level) sections — neither one-pager nor full AAA spec."
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "comprehensive-aaa-open-world-rpg",
+      "prompt": "I'm a creative director pitching a full AAA open-world action-RPG called Veilreach Saga to a major publisher next month. Setting: post-cataclysm fantasy continent reclaimed by elder beasts; players are Veilwardens who can pierce the spirit realm. Combat is third-person melee + magic (think Elden Ring meets Horizon: Forbidden West). Open world is roughly 80 km² with 4 distinct biomes, ~80 hours main campaign + side content. Co-op for up to 3 players (drop-in/drop-out), no PvP. PC + PS5 + Xbox Series. Premium pricing $69.99 + season pass model. Multi-platform launch in ~3.5 years with a ~120-person studio. I need the FULL design document — everything a publisher exec and a department head would want to see. Don't skimp.",
+      "expected_output": "A Comprehensive-tier Markdown GDD covering all major areas: Pitch/Pillars, Mechanics, Story/World, Characters, Levels/World, AI behavior, Multiplayer (co-op), UI/UX, Audio, Tech overview, Art Direction, Monetization (premium + season pass), Accessibility, Localization, Scope/Schedule, Risks, Team, Milestones.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "output_file_saved_to_cwd_not_sandbox",
+          "description": "A .md file is written to the working directory, not /mnt/user-data/outputs/."
+        },
+        {
+          "name": "filename_is_slugified",
+          "description": "Filename uses lowercase letters, digits, hyphens only."
+        },
+        {
+          "name": "contains_mandatory_three_sections",
+          "description": "Pitch/Core Loop/Pillars, Mechanics, and Art/UI sections all present."
+        },
+        {
+          "name": "contains_story_and_world_sections",
+          "description": "Document contains a Story or Narrative section AND a World/Setting section."
+        },
+        {
+          "name": "contains_multiplayer_section_for_coop",
+          "description": "Document contains a Multiplayer or Co-op section that addresses the 3-player drop-in/drop-out requirement."
+        },
+        {
+          "name": "no_pvp_section",
+          "description": "Document does NOT contain a PvP or Competitive Balance section — user explicitly said no PvP."
+        },
+        {
+          "name": "contains_ai_section",
+          "description": "Document contains an AI / Enemy Behavior section."
+        },
+        {
+          "name": "contains_audio_section",
+          "description": "Document contains an Audio or Sound Design section."
+        },
+        {
+          "name": "contains_tech_section",
+          "description": "Document contains a Tech, Engine, or Technical Overview section."
+        },
+        {
+          "name": "contains_accessibility_section",
+          "description": "Document contains an Accessibility section."
+        },
+        {
+          "name": "contains_localization_section",
+          "description": "Document contains a Localization section."
+        },
+        {
+          "name": "contains_monetization_section",
+          "description": "Document contains a Monetization section that references the $69.99 premium price and the season pass model."
+        },
+        {
+          "name": "contains_risks_section",
+          "description": "Document contains a Risks, Risk Register, or Risk Assessment section."
+        },
+        {
+          "name": "contains_team_or_org_section",
+          "description": "Document contains a Team, Studio, or Organization section addressing the ~120-person studio."
+        },
+        {
+          "name": "no_placeholder_text_leaked",
+          "description": "No literal template scaffolding remains."
+        },
+        {
+          "name": "tbd_uses_blockquote_format",
+          "description": "Any TBDs use `> **TBD:** ...` blockquote format."
+        },
+        {
+          "name": "respects_comprehensive_tier_size",
+          "description": "Document has 17 or more top-level (## level) sections — full production scope."
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "functional-spec-mobile-match3",
+      "prompt": "I'm the lead engineer on a new mobile match-3 puzzle game called Tideglass for iOS 15+ and Android 10+, portrait orientation. We're a 4-person team, MVP target in 6 months. Hybrid network (offline-first play, cloud save sync when online). Free-to-play with rewarded ads + IAP. Reference titles: Royal Match (level pacing + meta progression), Candy Crush Saga (core match mechanics), Toon Blast (booster economy). I need a FUNCTIONAL SPEC the engineers can implement against — data models for board/tile/level, the match-detection algorithm with complexity, lives/energy regen rules, ad placement matrix with anti-frustration commitments, save-state schema with versioning, edge cases for OS-kill and network drop, and a clear acceptance-criteria checklist. Skip marketing fluff, skip detailed narrative (there isn't one), skip multiplayer (single-player only). Numbers can be starting values for playtesting.",
+      "expected_output": "A Functional-Spec tier Markdown GDD saved as `tideglass-GDD.md` (or similar slug). Uses the §0–§13 structure from templates/functional-spec.md. Contains: §0 conventions, §1 overview with pillars and references, §2 core loop with state diagram and win/lose/quit table, §3 data model in TypeScript pseudo-code + match-detection algorithm with O() complexity + state transitions + §3.6 failure/recovery with zero-cost-to-player rule + §3.7 edge case table, §4 content schema + difficulty tiers, §6 currencies including §6.3 lives MUST NOT decrement on crash/OS-kill, §7 ads matrix + §7.4 anti-frustration MUST/MUST NOT rules, §10.1 interruption table + §10.2 save state schema with `version` field, §12 Open Questions with owner+deadline columns, §13 acceptance criteria checklist. Skips story/narrative sections, skips multiplayer/networking sub-sections, keeps §10.4 anti-cheat minimal.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "output_file_saved_to_cwd_not_sandbox",
+          "description": "A .md file is written to the working directory, not /mnt/user-data/outputs/."
+        },
+        {
+          "name": "filename_is_slugified",
+          "description": "Filename uses lowercase letters, digits, hyphens only."
+        },
+        {
+          "name": "leading_instruction_comment_removed",
+          "description": "Document does NOT contain the leading 'FUNCTIONAL-SPEC TIER — AGENT INSTRUCTIONS' HTML comment block from the template — it must be stripped before delivery."
+        },
+        {
+          "name": "uses_must_should_may_ontology",
+          "description": "Document contains explicit MUST and MUST NOT statements (RFC-style) in monetization or resource sections — not vague 'we will' phrasing."
+        },
+        {
+          "name": "data_model_uses_typescript_pseudo_code",
+          "description": "Section 3 (Core systems spec) contains a TypeScript-style `type` declaration with at least one field — e.g. `type Tile = { ... }` or `type Board = { ... }`."
+        },
+        {
+          "name": "algorithm_has_complexity_annotation",
+          "description": "Section 3.4 includes an O() complexity annotation (e.g. `O(n)`, `O(rows * cols)`) for the match-detection algorithm."
+        },
+        {
+          "name": "failure_recovery_zero_cost_documented",
+          "description": "Section 3.6 explicitly states that recovery from system-caused failure costs the player zero (or contains the rule that the player MUST NOT be penalized for crashes / OS-kill / network drops)."
+        },
+        {
+          "name": "lives_section_lists_must_not_decrement_scenarios",
+          "description": "Section 6.3 enumerates scenarios where lives MUST NOT decrement (crash, OS-kill, network drop, or similar system-caused state changes)."
+        },
+        {
+          "name": "ad_matrix_present",
+          "description": "Section 7 contains an Ads Placement table with at least columns for Placement, Type, Frequency."
+        },
+        {
+          "name": "anti_frustration_rules_present",
+          "description": "Section 7.4 lists at least one MUST or MUST NOT anti-frustration commitment (e.g. 'MUST NOT show ads during active gameplay', 'MUST honor remove-ads purchase')."
+        },
+        {
+          "name": "save_state_has_version_field",
+          "description": "Section 10.2 SavedSession type contains a `version: number` field with a comment indicating it exists for schema migration."
+        },
+        {
+          "name": "interruption_table_covers_critical_events",
+          "description": "Section 10.1 interruption table includes rows for at least: home button / app backgrounding, OS-killed app, crash, and network drop."
+        },
+        {
+          "name": "open_questions_has_owner_and_deadline_columns",
+          "description": "Section 12 Open Questions is a table with at least Question, Owner, and Deadline columns (not just TBD blockquotes)."
+        },
+        {
+          "name": "acceptance_criteria_section_present",
+          "description": "Section 13 Acceptance Criteria exists with markdown checkboxes (`- [ ]`) under at least Gameplay, Technical, and Monetization headings."
+        },
+        {
+          "name": "numbers_marked_as_starting_values",
+          "description": "At least one numeric value (regen rate, drop rate, price, threshold) is annotated as a starting value / 'needs playtest tune' / similar — not presented as final."
+        },
+        {
+          "name": "no_multiplayer_or_networking_subsection",
+          "description": "Document does NOT contain a Multiplayer or Networking-architecture section — user said single-player only."
+        },
+        {
+          "name": "no_deep_narrative_sections",
+          "description": "Document does NOT contain Story / Themes / Characters / Plot Structure sections — user said there is no narrative."
+        },
+        {
+          "name": "no_placeholder_text_leaked",
+          "description": "Document contains no `{{...}}` template scaffolding, no literal `[describe`, no `<Influence #`, no unfilled placeholder lines."
+        }
+      ]
+    }
+  ]
+}

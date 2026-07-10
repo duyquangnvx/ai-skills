@@ -1,6 +1,6 @@
 ---
 name: delegating-to-codex
-description: Use when delegating focused work to OpenAI's `codex exec` CLI — second-opinion diagnosis on a stuck bug, context-heavy investigation or refactor, screenshot or design-image analysis (`-i`), image asset generation (gpt-image-2), editing an existing image (overlay text, composite, regenerate a region), structured JSON extraction (`--output-schema`), parallel implementation in an isolated git worktree, repo code review (`codex exec review`), or LLM analysis embedded in a script. Trigger phrases include "get a second opinion", "analyze this screenshot", "generate an icon/banner", "edit this image / add a title", "delegate this to codex", "run a codex pass", or whenever one Claude-side diagnosis attempt has already failed.
+description: Use when delegating focused work to OpenAI's `codex exec` CLI — second-opinion diagnosis on a stuck bug, context-heavy investigation or refactor, screenshot or design-image analysis (`-i`), image asset generation (gpt-image-2), editing an existing image (overlay text, composite, regenerate a region), structured JSON extraction (`--output-schema`), parallel implementation in an isolated git worktree, repo code review (`codex exec review`), or LLM analysis embedded in a script. Trigger phrases include "get a second opinion", "analyze this screenshot", "generate an icon/banner", "edit this image / add a title", "delegate this to codex", "run a codex pass", or whenever one Codex-side diagnosis attempt has already failed.
 ---
 
 # Delegating to Codex
@@ -9,7 +9,7 @@ description: Use when delegating focused work to OpenAI's `codex exec` CLI — s
 
 `codex exec` is OpenAI's headless CLI — single-shot, no TUI, prints the final agent message to stdout. Use it as a *delegated specialist* when one of these is true:
 
-- A different model would give a more useful second opinion than another Claude pass.
+- A different model would give a more useful second opinion than another Codex pass.
 - The task would burn a large chunk of the current context window.
 - The task is visual (a screenshot, mockup, layout image) and you need a model to look at it.
 - The task needs a generated image asset (icon, banner, placeholder).
@@ -215,7 +215,7 @@ These are inline because they're short and load-bearing:
 
 ## Web search
 
-Codex CLI has built-in web search. Don't use it. For one-shot info lookups, Claude's own `WebSearch` is faster, cheaper, and the result lands directly in your context where it can inform the next step. Reach for Codex only when the research and the code work need to happen together in the same delegated turn.
+Codex CLI has built-in web search. Don't use it. For one-shot info lookups, Codex's own `WebSearch` is faster, cheaper, and the result lands directly in your context where it can inform the next step. Reach for Codex only when the research and the code work need to happen together in the same delegated turn.
 
 ## Image generation details
 
@@ -251,4 +251,4 @@ Codex CLI has built-in web search. Don't use it. For one-shot info lookups, Clau
 
 ## Optional: the `openai-codex` plugin
 
-If the user has the `openai-codex` plugin installed and explicitly invokes `/codex:rescue` or `/codex:setup`, those flows are theirs — don't override them with the patterns above. This skill is for *Claude-initiated* delegation during normal work, regardless of whether that plugin is installed.
+If the user has the `openai-codex` plugin installed and explicitly invokes `/codex:rescue` or `/codex:setup`, those flows are theirs — don't override them with the patterns above. This skill is for *Codex-initiated* delegation during normal work, regardless of whether that plugin is installed.
