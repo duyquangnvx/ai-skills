@@ -40,6 +40,13 @@ build the story against the predecessor's **interface with a stub/fake behind
 the real seam** — ideally a fake that doubles as a permanent test double. A
 shortcut that routes *around* the seam is the debt a later story tears out.
 
+**Size a story to one agent session.** The yardstick is not human story
+points: the agent should pick the story up, build it, and run its acceptance
+to pass/fail within a single session, before context degrades. The criterion
+scales with the models — as agents reliably complete longer runs, stories may
+coarsen; re-slice by session, don't hardcode a granularity. Too big for one
+session → split (patterns below).
+
 ## The risk toolkit — de-risk inside the plan, not by reshaping it
 
 Risk never reorders the epic structure. It is handled by three bounded tools;
@@ -71,7 +78,7 @@ match the tool to the risk's shape:
 | Negotiable | Captures intent, not a frozen task list | reads like a spec dump |
 | Valuable | Observable value to its consumer | no demoable outcome and no named code consumer |
 | Estimable | You can assign a lane | too vague/unknown → spike first |
-| Small | Ships in one go | "almost there" for a long stretch |
+| Small | Fits one agent session, acceptance run included | "almost there" for a long stretch |
 | Testable | Has agent-verifiable acceptance | "works well" with no check |
 
 ## Splitting patterns — when a slice is too big

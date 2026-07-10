@@ -270,11 +270,25 @@ own the picture — it *replaces* prose components/data-flow/dependencies, it do
 not add to them; a single-component or single-file system stays prose, no diagram.
 Text diagram only (mermaid), never an image — the agent must be able to read,
 diff, and overwrite it — and never C4 L3/L4, since code is the source of truth.
+
+On a day-zero repo the seeded content comes from the spec, so it is the
+*intended* design, not a current state — never present structure as existing
+when it is not. Open the file with the status line the template carries; as
+stories land, rewrite the covered parts to describe what actually exists, and
+delete the line only when the whole file is as-built. The spec remains the
+record of what was intended; this file owns only what exists — the status
+line bridges the two until they meet.
+
 When a structure exists because of a recorded decision, link the decision instead
 of restating its reasoning:
 
 ```markdown
 # Architecture
+
+> **Status: intended — seeded from the spec; nothing is built yet.**
+<!-- Day-zero repos only; omit when code exists. Rewrite covered parts to
+as-built as stories land; delete this line when the whole file describes
+what exists. -->
 
 <2-4 lines: what kind of product this is, for whom.>
 
@@ -451,8 +465,8 @@ to start early in parallel.>
 - An epic is `done` when all its stories are done.
 - Scope changes mid-story → update In/Out in the packet, record the why as an
   ADR in docs/adr/.
-- A story too big to finish in one go → split it. Two small stories beat one long
-  "almost there."
+- A story too big to finish in one agent session → split it. Two small stories
+  beat one long "almost there."
 ```
 
 Lane is the risk/effort shape, never calendar time: `tiny / normal / high-risk /
@@ -550,6 +564,8 @@ decisions, changes, and tradeoffs accumulate in its `Notes` section.
   selected story's packet has In/Out and agent-verifiable acceptance; no
   story packet was pre-cut before selection; and no epic, story, or decision
   was invented beyond what the spec or user actually said.
+- On a day-zero repo: `architecture.md` opens with the intended-design status
+  line, and nothing is described as existing that is not built yet.
 - Confirm every file created has real content or was deliberately skipped —
   no fabricated placeholders.
 - Confirm no file was created whose role an existing doc already fills (see

@@ -46,7 +46,9 @@ What the harness files need directly:
 - Conventions and invariants an agent could not guess ("X is append-only",
   "never regenerate Y") → CLAUDE.md Conventions, classified advisory vs
   must-always
-- System components and data flow → `architecture.md`
+- System components and data flow → `architecture.md` (seeded as *intended*
+  design — the template's day-zero status line applies until the structure
+  is built)
 
 ### 4. Implied epics, risk register & build order
 
