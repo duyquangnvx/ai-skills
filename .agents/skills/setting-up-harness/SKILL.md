@@ -4,8 +4,9 @@ description: >-
   Use when setting up a repository for work with a coding agent — including
   loosely phrased asks like "set up Claude for this project", "write a
   CLAUDE.md for this repo", "initialize the harness", "bootstrap the agent
-  config", "onboard the agent to this repo", "stand up the project docs", or
-  "bootstrap planning docs from this spec". Covers day-zero repos and
+  config", "onboard the agent to this repo", "stand up the project docs",
+  "bootstrap planning docs from this spec", or "set up this repo so several
+  agent sessions can work it in parallel". Covers day-zero repos and
   existing repos that have no agent-facing docs yet. Do NOT use to design a
   feature (that is brainstorming) and do NOT use to add language or
   tech-stack rules — those live outside the project and load on demand.
@@ -53,10 +54,11 @@ append-only records — superseded or swept, never rewritten.
 | `README.md` | What is this? How does a human set it up? | README.md.tpl | Override |
 | `.claude/rules/project/adr.md` | When/how to write an ADR | rule-adr.md.tpl | Override |
 | `.claude/rules/project/backlog.md` *(with the backlog)* | How to slice, refine, close stories | rule-backlog.md.tpl | Override |
+| `.claude/rules/project/parallel.md` *(only when sessions run in parallel)* | How do lanes claim, fan out, merge? | rule-parallel.md.tpl | Override |
 | `docs/architecture.md` | How is the system built **now**? | architecture.md.tpl | Override on change |
 | `docs/adr/*.md` *(lazily)* | Why is it this way? | format: rule-adr.md.tpl | Accumulate; supersede, never delete |
 | `docs/backlog.md` *(only with a spec or clear direction)* | What to build, in what order? | backlog.md.tpl | On story/epic events only |
-| `docs/progress.md` | Where is work **today**? | progress.md.tpl | Override every session |
+| `docs/progress.md` | Where is work **today**? | progress.md.tpl | Regenerated rollup at serialized points |
 | `docs/stories/US-*.md` *(lazily)* | What is this story; what went off-spec? | story-packet.md.tpl | Accumulate per story, then Done |
 | `CHANGELOG.md` *(optional)* | What changed for users? | — (Keep a Changelog format) | Accumulate |
 
@@ -107,6 +109,11 @@ Then ask only what neither the spec nor the code answers. Keep it short:
   integration contracts the spec leaves unpinned (→ at most one
   walking-skeleton story). Confirm both before slicing
   (`references/story-slicing.md`).
+- Will several agent sessions work this repo **in parallel**? (Specs often
+  state this — "the operator will run N sessions".) If yes: parallel work
+  needs a backlog; ask for the shared **hotspot files** every lane touches
+  (config, route tables, registries, schemas), and whether the repo has a git
+  remote — self-claiming needs one; without it only the operator assigns.
 - Any project-specific tuning of the plan/implement workflow. Skip if
   defaults are used.
 - Will it publish user-visible releases? (decides whether `CHANGELOG.md` exists)
@@ -138,6 +145,9 @@ mistakes, not anticipation; a stale instruction is worse than a missing one.
   implement → verify → commit, then update the affected docs.
 - No backlog → drop protocol line 2 and write `Backlog: none yet` in the Docs
   list (or point at the legacy planning doc) so the gap reads as deliberate.
+- Parallel sessions planned → keep protocol line 4, the one-line pointer to
+  the parallel rule; everywhere else drop it. The coordination protocol
+  itself never lives in CLAUDE.md.
 - An empty `Conventions` section beats invented rules.
 
 ### 3. README.md — templates/README.md.tpl
@@ -160,6 +170,12 @@ are this harness's carriers:
 - **Backlog rule** — `templates/rule-backlog.md.tpl` →
   `.claude/rules/project/backlog.md`. Created together with `docs/backlog.md`;
   it owns the slicing model and the Ready/Done gates at runtime.
+- **Parallel rule** — `templates/rule-parallel.md.tpl` →
+  `.claude/rules/project/parallel.md`. Created only when the interview says
+  sessions will run in parallel (requires a backlog); it owns the lane model
+  (epic = lane), the claim protocol, the fan-out gate, and the merge-time doc
+  protocol. Fill its hotspot list from the interview. CLAUDE.md carries only
+  the one-line pointer (step 2), never the protocol.
 
 Add further rule files only for a genuine project-specific rule, scoped to
 the paths it applies to. A rule that is broadly relevant lives in CLAUDE.md —
@@ -179,8 +195,10 @@ status line, rewrite covered parts to as-built as stories land, and delete it
 only when the whole file describes what exists. When a structure exists
 because of a recorded decision, link the decision instead of restating it.
 
-**`docs/adr/`** — the decision log, numbered `NNNN-<slug>.md`, one file per
-decision; the number is a stable handle (`ADR-0006`) other docs link to.
+**`docs/adr/`** — the decision log, `YYYY-MM-DD-<slug>.md`, one file per
+decision; the dated filename stem is the stable handle other docs link to.
+Dates, never sequence numbers: parallel branches each minting "the next
+number" collide at merge; dates + slugs cannot.
 Create the directory lazily, with the first ADR. At setup, seed one ADR per
 decision the spec states explicitly or the user confirmed
 (`references/spec-analysis.md` lists them) — never invent one; where a spec
@@ -199,8 +217,10 @@ only when a spec or clear direction exists; otherwise skip the file, mark
 - Stories are vertical slices sized to one agent session. Risk is handled by
   the toolkit — spike / at most one walking-skeleton story / `high-risk`
   lane — never by reshaping the epic structure. Lane is risk/effort shape
-  (`tiny / normal / high-risk / spike`), never calendar time; status moves
-  `candidate → ready → in progress → done`.
+  (`tiny / normal / high-risk / spike`), never calendar time. Status is split
+  by owner: the backlog row carries only `candidate → sliced → done` (flipped
+  on story events); the packet's frontmatter owns the live status
+  (`draft → ready → in progress → done`).
 - **Lazy slicing:** epics stay `unsliced` and stories stay `candidate` rows
   until selected; pre-cutting the backlog plans against assumptions early
   work will overturn.
@@ -223,11 +243,14 @@ Changelog format. Otherwise skip it.
 
 ### 6. docs/progress.md — templates/progress.md.tpl
 
-A snapshot for fast resume across cleared context — session-level cadence,
-overwritten every time, never a task log; story/epic status lives in the
-backlog and changes only on story/epic events. In-flight notes have no
-working-memory file of their own: the current story's packet is their single
-home.
+A rollup for fast resume across cleared context — derived from the backlog
+and packet frontmatter, regenerated whole-file at serialized points (session
+end; claim and merge when sessions run in parallel), never hand-written
+prose and never a task log. Packets are the truth; this file is the cache —
+the one sanctioned duplication besides the Commands table, bought for resume
+speed. In-flight notes have no working-memory file of their own: the current
+story's packet is their single home. A repo with no backlog falls back to a
+three-line overwritten snapshot (Now / Next / Blocked).
 
 ### 7. Prune and verify
 
@@ -242,6 +265,13 @@ home.
   the ADR bar; CLAUDE.md carries only the trigger) and — whenever a backlog
   exists — `.claude/rules/project/backlog.md` (scoped to the backlog and
   stories, owns the slicing model and gates).
+- Parallel projects only: `.claude/rules/project/parallel.md` exists (scoped
+  to backlog + stories + progress) with a real hotspot list; CLAUDE.md
+  carries only protocol line 4. Everywhere else: no parallel rule, no
+  protocol line 4, no claim ceremony anywhere — a serial harness must read
+  as if parallelism was never considered.
+- `docs/progress.md` is a regenerated rollup (table + Next), no hand-written
+  prose; ADR files are date-named, no `NNNN-` sequence numbers anywhere.
 - No generated file points into this skill's directory (`references/`,
   `templates/`); every pointer in a generated file resolves inside the repo.
 - On a day-zero repo: `architecture.md` opens with the intended-design status
@@ -273,16 +303,18 @@ home.
 - **Ceremony over discipline.** Status-lifecycle theater on every ADR,
   mandatory source pointers, cross-logging every change in three files —
   structure that exists to be maintained, not to prevent mistakes. (ADR
-  *numbering* is not ceremony: it is a cheap, stable cross-reference handle.)
+  *dated filenames* are not ceremony: a cheap, stable cross-reference handle
+  that survives parallel branches.)
 - **A runtime rule without a carrier.** Guidance stated only in this skill
   never reaches the sessions it is meant to steer — give it a carrier or cut
   it.
 
 ## Reference files
 
-- `templates/` — the exact content each generated file starts from. The two
-  `rule-*.md.tpl` files are also the in-skill owners of the ADR bar and the
-  slicing model — edit the template, never a copy.
+- `templates/` — the exact content each generated file starts from. The three
+  `rule-*.md.tpl` files are also the in-skill owners of the ADR bar, the
+  slicing model, and the parallel-session protocol — edit the template, never
+  a copy.
 - `references/spec-analysis.md` — checklist for extracting harness-relevant
   facts and gaps from a spec before generating anything.
 - `references/story-slicing.md` — setup-time application guide for the

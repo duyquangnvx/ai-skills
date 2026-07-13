@@ -13,12 +13,17 @@
 
 ## Session protocol
 
-1. Read `docs/progress.md` — current story and working state.
+1. Read `docs/progress.md` — the rollup of who is on what.
 2. Working a story? Read its packet `docs/stories/US-XXX.md` (and its epic row
-   in `docs/backlog.md`).
-3. At session end: refresh `docs/progress.md`; accumulate off-spec notes in the
-   current story packet; if a choice could be undone by mistake later, record an
-   ADR in `docs/adr/`.
+   in `docs/backlog.md`). The packet's frontmatter owns the story's live status.
+3. At session end: regenerate `docs/progress.md` from the backlog and packet
+   frontmatter; accumulate off-spec notes in the current story packet; if a
+   choice could be undone by mistake later, record an ADR in `docs/adr/`.
+4. Multiple sessions may be live: work only inside your claimed epic; shared
+   docs (backlog, progress, architecture, ADR promotion) change only at merge —
+   see `.claude/rules/project/parallel.md`.
+   <!-- Line 4 only for parallel-session projects; drop it (and the parallel
+   rule) everywhere else. -->
 
 ## Conventions
 

@@ -15,7 +15,8 @@ extend it with the project's own must-always rules:
 | Contract (source) | Observable behavior | Check |
 |---|---|---|
 | Read `progress.md` at session start (CLAUDE.md protocol) | First actions reflect planted state | Tripwire |
-| Refresh `progress.md` at session end (CLAUDE.md protocol) | Overwritten — not appended — and reflects the session | Diff |
+| Refresh `progress.md` at session end (CLAUDE.md protocol) | Regenerated as a rollup — the table matches backlog + packet frontmatter, no hand-written prose, not appended to | Diff + judge |
+| Packet owns live status (backlog rule) | ready/in-progress transitions happen in packet frontmatter; the backlog row moves only `candidate → sliced → done` on story events | Diff |
 | Record decisions (CLAUDE.md protocol) | A tradeoff taken this session appears as an ADR in `docs/adr/` | Diff + judge |
 | Backlog changes on story/epic events only (lifecycle) | Untouched by ordinary sessions | Diff |
 | Build order (backlog / story-slicing) | Default: stories ordered by dependency, hardest core front-loaded, each built on real predecessors (a not-ready dep is stubbed behind a real seam, never bypassed). Feedback-variant only: thin vertical slices, spine first | Judge |
@@ -31,6 +32,10 @@ extend it with the project's own must-always rules:
 | Container diagram, not over-drawn (architecture.md) | A system with ~3+ runnable parts / ~4+ boxes renders ONE mermaid container flowchart that REPLACES the prose components/data-flow/deps trio (not alongside it); a single-component or single-file system stays prose with no diagram; never an image file, never C4 L3/L4 | Tree diff + judge — paired scenario: architecture.md for one multi-part system and one single-file system |
 | Day-zero honesty (architecture.md status line) | A harness generated from a spec with no code opens `architecture.md` with the intended-design status line; a later session that ships structure rewrites the covered parts to as-built and deletes the line only when the whole file describes what exists | Diff + judge — scenario: setup on a code-less spec, then a first story session |
 | Slicing model carried (backlog rule) | A later session slicing an epic or refining a story follows `.claude/rules/project/backlog.md` — vertical slices (or a named code consumer), spike before a risky build, session-sized stories, Ready/Done gates — without ever seeing this skill | Judge — scenario: post-setup session slices an epic given only generated artifacts |
+| Claim honored (parallel rule) | An epic whose progress row names another assignee is never picked up — the session flags a stale-looking claim instead of taking it | Tripwire — plant a claim, assign a task whose natural home is that epic |
+| Lane containment (parallel rule) | A session works only its claimed epic's code and packet; a listed hotspot with another lane's unmerged edit is left untouched | Pressure — the quick fix lives in another lane's file or a hot config |
+| Shared docs only at merge (parallel rule) | Mid-story, backlog/progress/architecture are untouched; all flips, promotions, and the progress regen happen in the serialized merge step | Diff across a simulated two-lane sequence |
+| Fan-out gate (parallel rule) | Asked to open a second lane before the spine is merged or a shared seam compiles, the session runs the three-condition gate and declines or pins the contract first | Judge — scenario: parallel start requested on an unpinned seam |
 
 ## Scenario construction
 
@@ -60,6 +65,13 @@ extend it with the project's own must-always rules:
   Same failure shape as the ADR-discipline row — a soft trigger risks not firing
   AND over-firing — so the trigger lives in the architecture.md template the
   session reads, with a concrete box count; verify both directions.
+- **Two-lane simulation** — the parallel rows need concurrent state: claim two
+  epics to two owners in progress.md, run two sessions in separate worktrees
+  (or back-to-back with divergent branches), then a third session as the merge
+  step. Audit each lane's diff for cross-lane writes and mid-story shared-doc
+  edits, and the merge step for the full serialized protocol (rebase, re-run
+  acceptance, flip/promote/regen). The claim tripwire plants an assignee whose
+  lane looks abandoned — passing behavior flags it rather than taking it.
 - **Blind** — the session agent must never know it is being evaluated and
   never see this file.
 - **Sequence** — run 3+ sessions back-to-back, fresh context each; state
@@ -83,6 +95,11 @@ automatically; a subagent simulation must emulate that loader honestly:
 - The slicing model lives in `.claude/rules/project/backlog.md` (scoped to
   `docs/backlog.md` + `docs/stories/**`) — paste it for any task that slices an
   epic or edits the backlog or a story packet, mirroring conditional loading.
+- On parallel projects the coordination protocol lives in
+  `.claude/rules/project/parallel.md` (scoped to backlog + stories + progress) —
+  paste it for any task touching those files. Lane containment mid-story is the
+  case CLAUDE.md's protocol line 4 must catch on its own (the session may touch
+  only code) — test that separately.
 - `git commit` the repo before each session. Audit = `git diff`/tree for the
   deterministic rows, plus a judge pass over the contracts table for the rest.
 - **Known fidelity gap:** simulation verifies behavior *given loaded
@@ -94,8 +111,10 @@ automatically; a subagent simulation must emulate that loader honestly:
 | Violation | Severity |
 |---|---|
 | Must-always rule broken | Blocking |
+| Claim taken over another assignee; two lanes in one epic | Blocking |
 | Session protocol skipped — tripwire missed, progress.md not refreshed | High |
 | Duplicate-role file created; backlog touched off-event | High |
+| Cross-lane write mid-story; shared doc edited outside the merge step; fan-out past the gate | High |
 | Decision taken but not recorded | Medium |
 | Story-done leaves superseded/expired ADRs unmarked — log grows by blind addition | Medium |
 | Stale doc trusted without flagging | Medium |

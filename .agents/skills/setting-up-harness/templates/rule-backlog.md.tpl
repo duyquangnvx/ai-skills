@@ -37,7 +37,12 @@ A quality or feasibility question is a spike, never a build.
 
 Lane values are exactly `tiny / normal / high-risk / spike` — a walking
 skeleton is a story *shape*, not a lane (give it a normal/high-risk lane).
-Story status moves `candidate → ready → in progress → done`.
+
+**Status lives in two places with one owner each.** The packet's frontmatter
+owns the live status (`draft → ready → in progress → done`); the backlog row
+carries only `candidate → sliced → done`, flipped on story events (packet
+created; story closed). Never track ready/in-progress in the backlog table —
+concurrent sessions editing one table is how status races start.
 
 ## Definition of Ready — gate into In Progress
 
@@ -55,5 +60,6 @@ Story status moves `candidate → ready → in progress → done`.
 - [ ] Story: acceptance passes; a vertical story exercised once on the real
       surface, not only through tests; tests per repo standard;
       architecture.md updated if structure changed; durable notes promoted
-      to docs/adr/; status flipped in the backlog; packet marked Done.
+      to docs/adr/; backlog row flipped to `done`; packet status `done`;
+      progress.md regenerated.
 - [ ] Epic: all its stories done AND its "Usable means" holds end-to-end.

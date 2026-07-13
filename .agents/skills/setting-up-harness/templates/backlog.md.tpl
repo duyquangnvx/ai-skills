@@ -22,10 +22,13 @@ to start early in parallel.>
 
 ## Story backlog (prioritized; sliced into a packet when selected)
 
+Status here is coarse — `candidate` (no packet yet) → `sliced` (packet exists;
+its frontmatter owns the live status) → `done`. Flip it on story events only.
+
 | Story | Epic | Lane | Status | Builds (one line) |
 |-------|------|------|--------|-------------------|
-| US-001 | E01 | normal | ready | As <the operator>, <goal> — <slice, surface included> |
-| SP-001 | E0X | spike | ready | <research question> → ADR in docs/adr/; code discarded |
+| US-001 | E01 | normal | candidate | As <the operator>, <goal> — <slice, surface included> |
+| SP-001 | E0X | spike | candidate | <research question> → ADR in docs/adr/; code discarded |
 
 ## Definition of Done — v1
 
@@ -35,10 +38,15 @@ to start early in parallel.>
 
 - Select an epic to slice → break it into stories per the slicing rule
   (.claude/rules/project/backlog.md), add candidate rows.
-- Select a story → create its packet and refine to Ready: confirm deps are built
-  (or stubbed behind a real seam), write acceptance, set In/Out, spike high-risk
-  unknowns, decide build-vs-buy, record durable picks as ADRs in docs/adr/. The
+- Select a story → create its packet (row flips to `sliced`) and refine to
+  Ready in the packet: confirm deps are built (or stubbed behind a real seam),
+  write acceptance, set In/Out, spike high-risk unknowns, decide build-vs-buy,
+  record durable picks as ADRs in docs/adr/. From here the packet's frontmatter
+  owns the story's live status; this table is not touched again until done. The
   manifest stays the source of truth for what's used.
+- New story rows land only when slicing an epic or closing a story — work
+  discovered mid-story accumulates in the packet's notes and becomes rows at
+  close, so this file never changes while stories are in flight.
 - A story is done → flip its Status to `done`; in one pass over docs/adr/, add
   ADRs for durable packet notes and sweep stale ones (mark newly-superseded ADRs,
   retire expired stopgaps — supersede, never delete) — appending without sweeping

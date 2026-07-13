@@ -70,10 +70,11 @@ clear direction → recommend skipping the backlog rather than inventing epics.
 
 ### 5. External constraints
 
-Hard deadlines, team shape (solo vs team), budget signals, compliance,
-platform commitments, dependencies on other teams. Constraints often hide as
-throwaway phrases — "it's for kids" can imply a compliance regime. Skip
-coordination questions for a solo project.
+Hard deadlines, team shape (solo vs team; one agent session or several in
+parallel — specs often state "the operator will run N sessions"), budget
+signals, compliance, platform commitments, dependencies on other teams.
+Constraints often hide as throwaway phrases — "it's for kids" can imply a
+compliance regime. Skip coordination questions for a solo project.
 
 ### 6. Success bar at v1
 

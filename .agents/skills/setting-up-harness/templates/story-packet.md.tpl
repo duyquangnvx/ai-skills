@@ -1,3 +1,7 @@
+---
+status: draft   # draft → ready → in progress → done — THIS file owns the story's live status
+assignee:       # session/owner while in progress; leave blank when a single session works alone
+---
 # US-001 — <title>   ·   Epic E01   ·   Lane: high-risk
 
 Goal: As <the operator/user>, I want <goal>, so that <benefit>.
