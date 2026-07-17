@@ -1,6 +1,6 @@
-# Pressure Scenarios
+# Pressure Scenarios (maintainer artifact — not part of the skill)
 
-Use these with `superpowers:writing-skills` when changing this skill. Baseline agents should commonly miss at least one expected behavior without the skill; agents with the skill should comply. Scenarios are grouped by surface; a change to one half of the skill still warrants a spot check on the other half, because the shared principles serve both.
+Test scenarios for changes to `.claude/skills/agent-interface-design/`. Baseline agents should commonly miss at least one expected behavior without the skill; agents with the skill should comply. Scenarios are grouped by surface; a change to one half of the skill still warrants a spot check on the other half, because the shared principles serve both.
 
 ## Instruction Surface
 

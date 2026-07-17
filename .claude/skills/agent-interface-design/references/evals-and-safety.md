@@ -2,6 +2,14 @@
 
 Use this when a tool design needs evidence, iteration, or safety review.
 
+## Contents
+
+- Evaluation loop
+- Metrics
+- Review criteria
+- Using agents to improve tools
+- Safety and trust boundaries (destructive actions, MCP annotations, lethal trifecta)
+
 ## Evaluation Loop
 
 1. **Prototype the tool set.** Wire the tools into the actual or closest available runtime. Try realistic tasks by hand before optimizing descriptions.
@@ -88,17 +96,11 @@ Tool safety is not just a property of one tool. It is a property of the session 
 
 ### Destructive Actions
 
-For delete, overwrite, send, publish, payment, permission, or external side-effect tools:
-
-- Make the action obvious in the name.
-- Provide dry-run or preview where useful.
-- Require user confirmation for high-stakes effects.
-- Validate permissions server-side.
-- Return clear, bounded summaries of what changed.
+Beyond the naming, dry-run, and confirmation rules in SKILL.md: validate permissions server-side, and return clear, bounded summaries of what changed — a destructive tool that answers with a dump forces the agent to re-verify its own action.
 
 ### MCP-Style Annotations
 
-When the runtime supports annotations, use them:
+When the runtime supports annotations, set them deliberately:
 
 - `readOnlyHint`
 - `destructiveHint`
@@ -106,7 +108,9 @@ When the runtime supports annotations, use them:
 - `openWorldHint`
 - human-readable `title`
 
-Treat these as hints, not guarantees. Annotations from untrusted servers can be wrong or malicious. Client policy, sandboxing, authorization, and network controls are where hard guarantees belong.
+A tool with no annotations is assumed non-read-only, potentially destructive, non-idempotent, and open-world — hosts then gate every call with confirmation friction, so omitting annotations is itself a choice with UX cost.
+
+Treat these as hints, not guarantees. Annotations from untrusted servers can be wrong or malicious — a server can claim `readOnlyHint: true` and delete files anyway. Client policy, sandboxing, authorization, and network controls are where hard guarantees belong.
 
 ### Lethal Trifecta
 

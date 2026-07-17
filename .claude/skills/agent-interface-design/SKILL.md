@@ -9,8 +9,6 @@ Everything the model reads is one interface: instructions, routing metadata, too
 
 The reader is a non-deterministic caller with limited attention, imperfect tool choice, and imperfect argument construction, and it cannot ask clarifying questions before acting on what you wrote. Design every surface for that reader.
 
-When creating, editing, or reviewing `SKILL.md` files in a Superpowers environment, **REQUIRED SUB-SKILL:** use `superpowers:writing-skills`. That skill owns the test-first workflow; this guide supplies the quality criteria.
-
 ## Start Here
 
 Classify the symptom, then jump to the matching section:
@@ -49,11 +47,12 @@ Classify the symptom, then jump to the matching section:
 For system prompts, agent configs, skill bodies, and prompt templates:
 
 - **Make important rules observable.** Each should affect a transcript-visible behavior: output shape, tool choice, file edit, refusal, escalation. Replace "be careful, be thorough" with the verification step or output change you actually want.
-- **State the priority model.** System, user, project, tool contract, retrieved content, and examples can disagree; spell out what wins, and tell the agent to ask when a conflict cannot be resolved safely.
+- **Remove contradictions; state the priority model for the rest.** When two same-level rules disagree, the model picks one arbitrarily — no ladder fixes that, so delete or reconcile first. For conflicts across levels (system, user, project, tool contract, retrieved content, examples), spell out what wins, and tell the agent to ask when a conflict cannot be resolved safely.
 - **Positive guidance for style and routine; negative constraints for boundaries.** Give a constructive default path. Reserve explicit prohibitions for safety, privacy, destructive actions, data exfiltration, and legal boundaries — costly failures need hard edges.
 - **Explain the why for judgment rules.** Models generalize from clear intent better than from brittle rule lists: "Use TypeScript because this package relies on typed import boundaries" outperforms "Always use TypeScript."
-- **Calibrate force to risk.** Reserve MUST, NEVER, and CRITICAL for costly failures, required routing, and tested discipline rules. Blanket intensity teaches the model that intensity means nothing.
-- **Examples are behavioral tests.** Add them only for non-obvious formats or observed failure modes. An example that contradicts a prose rule wins over the rule — every example must comply with all of them.
+- **Calibrate force to risk.** Reserve MUST, NEVER, and CRITICAL for costly failures, required routing, and tested discipline rules. Miscalibration fails both ways: blanket intensity teaches the model that intensity means nothing, and current models over-respond to aggressive language — when a behavior fires too often, dial the language back to plain phrasing instead of adding force.
+- **Give hard requirements an escape hatch.** An absolute rule the model cannot always satisfy ("you must call a tool before responding") produces fabricated compliance — hallucinated arguments, invented facts. Pair every MUST with its conditional exit ("if you lack the information, ask").
+- **Examples are behavioral tests.** Add them only for non-obvious formats or observed failure modes. An example carries at least as much steering weight as a prose rule, so one that demonstrates a violation teaches the violation — every example must comply with all of them.
 
 Extended guidance and worked examples: `references/instructions.md`.
 
@@ -61,11 +60,11 @@ Extended guidance and worked examples: `references/instructions.md`.
 
 ### 1. Shape tools around workflows
 
-Do not mirror backend endpoints. Consolidate chains the agent repeatedly performs (`schedule_event` beats `list_users` + `list_events` + `create_event`); split when variants differ in semantics, preconditions, side effects, or safety. Overlap test: if a human engineer cannot say which tool to use in one sentence, the agent cannot either. Over-consolidation is the opposite failure — one tool with many modes and 8–10+ parameters the agent misparameterizes. When the data layer is legible and the model strong, a few primitive tools can beat many specialized ones: `references/architectural-reduction.md`.
+Do not mirror backend endpoints. Consolidate chains the agent repeatedly performs (`schedule_event` beats `list_users` + `list_events` + `create_event`), and prefer one tool with an `action` parameter over near-identical siblings; split when variants differ in semantics, preconditions, side effects, or safety class — reads, reversible writes, and destructive operations stay separate, because a merged tool inherits the scariest gate any of its actions needs. Overlap test: if a human engineer cannot say which tool to use in one sentence, the agent cannot either. Over-consolidation is the opposite failure — one tool with many modes and 8–10+ parameters the agent misparameterizes. Keep the active set small (cross-vendor guidance: under ~20 tools per turn); namespace beyond that. When the data layer is legible and the model strong, a few primitive tools can beat many specialized ones: `references/architectural-reduction.md`.
 
 ### 2. Make tool contracts self-explanatory
 
-Names read clearly in a trace: `billing_refund_payment`, not `get_data`. Keep naming consistent across the catalog (always `customer_id`, never sometimes `id`) and namespace by domain when many tools load. The description leads with what the tool does, when to call it, input conventions and defaults, side effects, and how it differs from sibling tools. The schema owns field names, types, required/optional, enums, and return shape. Prefer partial updates (`update_scene(scene_id, updates)`) over resending whole objects; use strict schemas where the runtime supports them.
+Names read clearly in a trace: `billing_refund_payment`, not `get_data`. Keep naming consistent across the catalog (always `customer_id`, never sometimes `id`) and namespace by domain when many tools load. The description is the highest-leverage surface in the contract — vendor evals rank it the single most important factor in tool performance. Aim for at least 3–4 sentences leading with what the tool does, when to call it (and when not), input conventions and defaults, side effects, and how it differs from sibling tools. The schema owns field names, types, required/optional, enums, and return shape; add schema-validated input examples for format-sensitive tools where the runtime supports them. Prefer partial updates (`update_scene(scene_id, updates)`) over resending whole objects; use strict schemas where the runtime supports them.
 
 ### 3. Design responses for the agent reader
 
@@ -138,9 +137,7 @@ For new designs: propose the smallest viable surface set, explain the boundaries
 
 Load only what the task needs:
 
-- `references/instructions.md` — extended instruction-writing guidance and examples.
-- `references/tool-patterns.md` — expanded tool design patterns and examples.
+- `references/instructions.md` — worked examples for the Writing Instructions rules.
+- `references/tool-patterns.md` — worked examples for the Tool Layer rules.
 - `references/architectural-reduction.md` — when fewer, primitive tools beat many specialized ones; production case study.
 - `references/evals-and-safety.md` — eval loop, metrics, safety and trust boundaries.
-- `references/pressure-scenarios.md` — scenarios to test changes to this skill.
-- `references/sources.md` — verified source notes and links.

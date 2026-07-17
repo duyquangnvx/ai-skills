@@ -1,12 +1,23 @@
-# Tool Design Patterns
+# Tool Design Patterns: Worked Examples
 
-Use this reference when the main checklist is too compressed. These are design heuristics, not universal laws; verify important tradeoffs with evals in the target runtime.
+The rules live in SKILL.md (Designing the Tool Layer). This file shows them applied. These are design heuristics, not universal laws; verify important tradeoffs with evals in the target runtime.
 
-## 1. Choose Tools by Workflow
+## Contents
 
-Agents do better with tools that match the work they need to perform, not tools copied one-for-one from backend endpoints.
+- Consolidation and splitting
+- Naming and namespacing
+- Response shaping
+- Bounding context
+- Actionable errors
+- Schema vs prompt ownership
+- Partial updates
+- Server-side validation
+- Orient and validate tools
+- Descriptions rot
 
-Useful consolidation:
+## Consolidation and splitting
+
+Consolidate around the work, not the endpoints:
 
 ```text
 Weak: list_users + list_events + create_event
@@ -19,22 +30,22 @@ Weak: get_customer + list_transactions + list_notes
 Better: get_customer_context(customer_ref, include_recent_activity=true)
 ```
 
-Split tools when variants have different semantics, preconditions, side effects, or safety requirements:
+Grouping near-identical sibling actions behind one tool with an `action` parameter is a vendor-endorsed default — `pr_manage(action: "create" | "review", ...)` beats three tools that differ only in verb, because fewer, more capable tools reduce selection ambiguity. Draw the line at safety class:
 
 ```text
-Good split:
+Good split (different safety class):
 - update_scene(scene_id, updates)
 - delete_scene(scene_id, dry_run=true)
 
-Risky merge:
-- mutate_scene(scene_id, operation, payload)
+Risky merge (destructive hidden behind a mode):
+- mutate_scene(scene_id, operation, payload)   # "operation" includes delete
 ```
 
-The human-engineer test: if a developer cannot quickly explain which tool to call, the model probably cannot either.
+A merged tool inherits the scariest confirmation gate any of its actions needs, and a read-only annotation becomes impossible. Keep reads, reversible writes, and destructive operations separate even when consolidating everything else.
 
-Guard against over-consolidation too. A tool that serves fundamentally different use cases, or needs 8–10+ parameters, shifts the failure from tool *selection* to tool *parameterization*. Provide sensible defaults, group related options into format presets, move rarely-used parameters into an `options` object — or split the tool.
+When a tool drifts toward 8–10+ parameters serving unrelated use cases, the failure moves from tool *selection* to tool *parameterization*. Remedies before splitting: sensible defaults, format presets that group related options, an `options` object for the rarely-used tail.
 
-## 2. Name and Namespace for Selection
+## Naming and namespacing
 
 Names are part of the prompt. Prefer intent and domain over implementation:
 
@@ -53,9 +64,7 @@ Consistency extends to parameters and enums across the whole catalog:
 
 When referencing MCP tools in prompts, use fully qualified names (`ServerName:tool_name`, e.g. `GitHub:create_issue`). With multiple servers loaded, unqualified names can collide or fail to resolve; audit for collisions when adding a new server.
 
-## 3. Make Responses Easy for the Agent to Use
-
-Tool responses are model context. Prefer high-signal fields that directly support the next decision.
+## Response shaping
 
 ```json
 // Low signal
@@ -77,7 +86,7 @@ Concise suits confirmations and follow-up calls after an initial retrieval; deta
 
 Response format has no universal winner. JSON, XML, Markdown, and plain text can all work. Choose the simplest shape that preserves structure, avoids awkward escaping/counting, and performs well in evals.
 
-## 4. Bound Context Before the Runtime Does
+## Bounding context
 
 Provider or client output caps are backstops, not design. Add controls where responses can grow:
 
@@ -98,9 +107,9 @@ Example:
 }
 ```
 
-## 5. Make Errors Actionable
+## Actionable errors
 
-Opaque errors waste turns. Errors serve two audiences — developers debugging and agents recovering — and the agent is the primary one: every error must say what went wrong and what to change before retrying.
+Errors serve two audiences — developers debugging and agents recovering — and the agent is the primary one: every error must say what went wrong and what to change before retrying.
 
 ```json
 {
@@ -126,7 +135,7 @@ For richer catalogs, a structured error shape pays off:
 
 Common cases: validation errors state received vs expected plus a fix; rate limits state wait time; not-found suggests a verification step. Only include valid values when safe; for permissions or sensitive resources, return a non-enumerating error.
 
-## 6. Keep Schema and Prompt Separate
+## Schema vs prompt ownership
 
 The tool schema should own:
 
@@ -135,7 +144,8 @@ The tool schema should own:
 - Enums and structured output shape.
 - Per-field descriptions, with concrete format examples where the format is non-obvious (`"CUST-######, e.g. CUST-000001"`, `"YYYY-MM-DD"`).
 - Sensible defaults that reflect the common case, so the agent can omit parameters safely.
-- Tool-level description: what the tool does, when to call it, side effects, sibling-tool disambiguation — key usage criteria and argument conventions first. This is a model-facing prompt, not human documentation — drop file paths, change history, implementation notes, and "how it works" details. Return shape belongs in the schema, not restated as prose or long code examples.
+
+The tool description is a model-facing prompt, not human documentation — drop file paths, change history, implementation notes, and "how it works" details. Return shape belongs in the schema, not restated as prose or long code examples.
 
 The developer/system prompt should own:
 
@@ -147,7 +157,7 @@ The developer/system prompt should own:
 
 Duplicating field schemas in the prompt costs tokens and creates drift.
 
-## 7. Prefer Partial Updates
+## Partial updates
 
 For editing structured state:
 
@@ -158,18 +168,13 @@ Riskier: update_scene(scene_id, scene: Scene)
 
 Partial updates reduce the amount the agent must reconstruct and let the server preserve omitted fields. For deeply nested objects, a constrained patch format may be useful, but JSON Pointer-style paths add another thing the model can get wrong.
 
-## 8. Validate References Server-Side
+## Server-side validation
 
-Any deterministic check belongs in software:
-
-- Does this ID exist?
-- Is this enum valid for the current object?
-- Is this transition allowed from current state?
-- Does the user have permission?
+Any deterministic check belongs in software: ID existence, enum validity for the current object, allowed state transitions, permissions.
 
 Dynamic per-request enums can prevent invalid references in strict runtimes, but they may reduce prompt-cache reuse. Use them when the reliability gain beats the cache cost; otherwise rely on server validation plus actionable errors.
 
-## 9. Add Orient and Validate Tools When They Pay Off
+## Orient and validate tools
 
 Many editing domains benefit from:
 
@@ -181,6 +186,6 @@ Many editing domains benefit from:
 
 Document the usual call pattern as guidance, not as a rigid mandate.
 
-## 10. Treat Descriptions as Code
+## Descriptions rot
 
 Descriptions rot: parameters get added, return formats change, error codes shift, and the prose stops matching behavior. Version descriptions with the tool, review them in the same change that touches the API, and re-run tool evals after meaningful edits. A stale description misroutes the agent more quietly than a broken schema.
