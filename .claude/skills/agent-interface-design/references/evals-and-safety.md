@@ -7,6 +7,7 @@ Use this when a tool design needs evidence, iteration, or safety review.
 - Evaluation loop
 - Metrics
 - Review criteria
+- Cross-surface review checks
 - Using agents to improve tools
 - Safety and trust boundaries (destructive actions, MCP annotations, lethal trifecta)
 
@@ -74,6 +75,17 @@ When judging a tool design qualitatively — during review rather than measureme
 - **Efficiency**: are responses bounded, with verbosity options where size genuinely varies?
 - **Consistency**: do names, parameters, and enums follow the catalog's conventions?
 
+## Cross-Surface Review Checks
+
+Apply to every surface, alongside the per-surface checklists in `instructions.md` and `tool-patterns.md`:
+
+- [ ] No rule, field, or workflow documented in two homes.
+- [ ] Untrusted input is separated from trusted instructions.
+- [ ] Heavy references, schemas, and examples load on demand.
+- [ ] Changes are verified with pressure scenarios or evals, not read-throughs.
+- [ ] Evals track task success, tool-call count, invalid-call rate, tokens, and latency.
+- [ ] Safety gates cover destructive actions and lethal-trifecta combinations.
+
 ## Using Agents to Improve Tools
 
 Agents can review transcripts and propose tool improvements. Ask for concrete changes:
@@ -96,7 +108,13 @@ Tool safety is not just a property of one tool. It is a property of the session 
 
 ### Destructive Actions
 
-Beyond the naming, dry-run, and confirmation rules in SKILL.md: validate permissions server-side, and return clear, bounded summaries of what changed — a destructive tool that answers with a dump forces the agent to re-verify its own action.
+For delete, overwrite, send, publish, payment, permission, or external side-effect tools:
+
+- Name the action plainly (`delete_scene`, `send_email`) — obvious in a trace.
+- Provide dry-run or preview for high-stakes actions.
+- Require user confirmation where effects are hard to reverse.
+- Validate permissions server-side.
+- Return clear, bounded summaries of what changed — a destructive tool that answers with a dump forces the agent to re-verify its own action.
 
 ### MCP-Style Annotations
 

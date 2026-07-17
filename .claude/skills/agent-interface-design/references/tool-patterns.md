@@ -1,23 +1,24 @@
-# Tool Design Patterns: Worked Examples
+# The Tool Layer: The Standard
 
-The rules live in SKILL.md (Designing the Tool Layer). This file shows them applied. These are design heuristics, not universal laws; verify important tradeoffs with evals in the target runtime.
+Applies to tool scoping, names, schemas, descriptions, responses, and errors. These are design rules with strong defaults, not universal laws; verify important tradeoffs with evals in the target runtime (see `evals-and-safety.md`).
 
 ## Contents
 
-- Consolidation and splitting
-- Naming and namespacing
-- Response shaping
-- Bounding context
-- Actionable errors
+- Shape tools around workflows
+- Make tool contracts self-explanatory
+- Design responses for the agent reader
+- Bound context before the runtime does
+- Make errors actionable
 - Schema vs prompt ownership
 - Partial updates
+- Keep handlers thin
 - Server-side validation
 - Orient and validate tools
 - Descriptions rot
 
-## Consolidation and splitting
+## Shape tools around workflows
 
-Consolidate around the work, not the endpoints:
+Do not mirror backend endpoints. Consolidate chains the agent repeatedly performs:
 
 ```text
 Weak: list_users + list_events + create_event
@@ -43,11 +44,15 @@ Risky merge (destructive hidden behind a mode):
 
 A merged tool inherits the scariest confirmation gate any of its actions needs, and a read-only annotation becomes impossible. Keep reads, reversible writes, and destructive operations separate even when consolidating everything else.
 
-When a tool drifts toward 8–10+ parameters serving unrelated use cases, the failure moves from tool *selection* to tool *parameterization*. Remedies before splitting: sensible defaults, format presets that group related options, an `options` object for the rarely-used tail.
+Overlap test: if a human engineer cannot say which tool to use in one sentence, the agent cannot either. Keep the active set small — cross-vendor guidance suggests under ~20 tools per turn; namespace beyond that.
 
-## Naming and namespacing
+Over-consolidation is the opposite failure. When a tool drifts toward 8–10+ parameters serving unrelated use cases, the failure moves from tool *selection* to tool *parameterization*. Remedies before splitting: sensible defaults, format presets that group related options, an `options` object for the rarely-used tail.
 
-Names are part of the prompt. Prefer intent and domain over implementation:
+When the data layer is legible and the model strong, a few primitive tools can beat many specialized ones: see `architectural-reduction.md`.
+
+## Make tool contracts self-explanatory
+
+Names read clearly in a trace. Prefer intent and domain over implementation:
 
 ```text
 Good: github_search_issues, billing_refund_payment, scene_update
@@ -64,7 +69,11 @@ Consistency extends to parameters and enums across the whole catalog:
 
 When referencing MCP tools in prompts, use fully qualified names (`ServerName:tool_name`, e.g. `GitHub:create_issue`). With multiple servers loaded, unqualified names can collide or fail to resolve; audit for collisions when adding a new server.
 
-## Response shaping
+The description is the highest-leverage surface in the contract — vendor evals rank it the single most important factor in tool performance. Aim for at least 3–4 sentences leading with what the tool does, when to call it (and when not), input conventions and defaults, side effects, and how it differs from sibling tools. Add schema-validated input examples for format-sensitive tools where the runtime supports them, and use strict schemas where the runtime supports them.
+
+## Design responses for the agent reader
+
+Responses become context. Lead with human-readable, task-relevant fields — labels, slugs, short refs — and include raw IDs only where follow-up calls need them:
 
 ```json
 // Low signal
@@ -74,7 +83,7 @@ When referencing MCP tools in prompts, use fully qualified names (`ServerName:to
 { "label": "Jane Chen in #product-launch", "last_message_at": "2h ago", "ref": "thread_7" }
 ```
 
-Use natural-language labels, stable slugs, or short references where possible. Include raw IDs when the next tool requires them, but avoid making cryptic IDs the main thing the agent must reason over.
+Cryptic identifiers as the main reasoning surface increase hallucinated references.
 
 Use `response_format` only when response verbosity meaningfully varies:
 
@@ -86,7 +95,7 @@ Concise suits confirmations and follow-up calls after an initial retrieval; deta
 
 Response format has no universal winner. JSON, XML, Markdown, and plain text can all work. Choose the simplest shape that preserves structure, avoids awkward escaping/counting, and performs well in evals.
 
-## Bounding context
+## Bound context before the runtime does
 
 Provider or client output caps are backstops, not design. Add controls where responses can grow:
 
@@ -107,7 +116,7 @@ Example:
 }
 ```
 
-## Actionable errors
+## Make errors actionable
 
 Errors serve two audiences — developers debugging and agents recovering — and the agent is the primary one: every error must say what went wrong and what to change before retrying.
 
@@ -168,9 +177,13 @@ Riskier: update_scene(scene_id, scene: Scene)
 
 Partial updates reduce the amount the agent must reconstruct and let the server preserve omitted fields. For deeply nested objects, a constrained patch format may be useful, but JSON Pointer-style paths add another thing the model can get wrong.
 
+## Keep handlers thin
+
+A tool parses and validates input, delegates to existing domain code, and shapes the result for the agent. Business rules do not live in the handler: thin handlers keep logic testable outside the agent and let you rename, split, or merge tools freely. (Workflow shaping decides what each tool exposes; this rule keeps logic out of the plumbing.)
+
 ## Server-side validation
 
-Any deterministic check belongs in software: ID existence, enum validity for the current object, allowed state transitions, permissions.
+Any deterministic check belongs in software: ID existence, enum validity for the current object, allowed state transitions, permissions. Prompts are for judgment, never for enforcing what software can enforce.
 
 Dynamic per-request enums can prevent invalid references in strict runtimes, but they may reduce prompt-cache reuse. Use them when the reliability gain beats the cache cost; otherwise rely on server validation plus actionable errors.
 
@@ -189,3 +202,15 @@ Document the usual call pattern as guidance, not as a rigid mandate.
 ## Descriptions rot
 
 Descriptions rot: parameters get added, return formats change, error codes shift, and the prose stops matching behavior. Version descriptions with the tool, review them in the same change that touches the API, and re-run tool evals after meaningful edits. A stale description misroutes the agent more quietly than a broken schema.
+
+## Review checklist
+
+- [ ] Each tool maps to a real workflow; overlapping tools have a one-sentence disambiguation.
+- [ ] Destructive operations are separate tools, never modes of a merged tool.
+- [ ] Naming, parameters, and enums are consistent across the catalog; namespaced when large.
+- [ ] Every description carries when-to-call, conventions, side effects, sibling boundaries — and nothing meant for humans.
+- [ ] The schema is the source of truth for fields, enums, and return shape.
+- [ ] Responses are bounded and human-readable first; truncation says how to narrow.
+- [ ] Every error says what to change before retrying.
+- [ ] References are validated server-side.
+- [ ] Handlers are thin: validate, delegate, shape.
