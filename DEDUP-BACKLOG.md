@@ -2,16 +2,9 @@
 
 Các cặp skill trùng/lấn mục đích, cần review biên tập riêng (đọc kỹ cả hai, test trigger) — **không** gộp vội trong đợt dọn cấu trúc. Mỗi mục là một pass độc lập.
 
-## 1. `tool-design` ↔ `agent-tool-design`
+## 1. `tool-design` ↔ `agent-tool-design` — ĐÃ XỬ LÝ (2026-07-17)
 
-Cả hai cùng chủ đề: thiết kế **lớp tool-interface của agent** (tool description, schema, response format, naming, MCP).
-
-| | `tool-design` | `agent-tool-design` |
-|---|---|---|
-| SKILL.md | 295 dòng | 102 dòng |
-| Kèm theo | `references/architectural-reduction.md`, `references/best-practices.md`, `scripts/description-generator.py` | `references/{process,sources,testing,patterns}.md` |
-
-Hai cách tiếp cận khác cấu trúc, không phải bản sao. **Cần quyết:** gộp thành một (giữ tên nào, hợp nhất references + script), hay tách vai trò rạch ròi để cùng tồn tại (vd `agent-tool-design` = quy trình/nguyên tắc, `tool-design` = mức một tool + tooling script).
+Đã gộp cả hai, cùng với `instructions-best-practices`, thành **`agent-interface-design`** (mọi bề mặt model đọc: instructions + tool layer). Nội dung riêng của `tool-design` được hấp thụ (architectural reduction, MCP qualified naming, guardrail over-consolidation); `scripts/description-generator.py` bị bỏ vì là rule-based scaffolding mâu thuẫn với chính guidance của skill.
 
 ## 2. `delegating-to-codex` ↔ `using-codex-cli`
 

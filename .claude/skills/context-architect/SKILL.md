@@ -108,7 +108,7 @@ For long-running work, preserve decisions, open issues, current state, user cons
 
 Tools are part of context. Their names, schemas, descriptions, responses, errors, and safety annotations shape model behavior.
 
-Use the agent-tool-design skill when the tool layer itself needs design or review. In context architecture, focus on:
+Designing the tool layer itself is a separate concern; in context architecture, focus on:
 
 - Tool outputs should be bounded, relevant, and human-readable before raw IDs.
 - Discovery tools should return enough metadata for selection without dumping full documents.

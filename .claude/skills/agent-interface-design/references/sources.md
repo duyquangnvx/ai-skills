@@ -1,6 +1,6 @@
 # Verified Source Notes
 
-Use these as background, not as a substitute for checking the target runtime's current documentation.
+Use these as background, not as a substitute for checking the target runtime's current documentation. The notes below cover the tool-layer claims; the instruction-writing half of this skill distills provider prompt-engineering and skill-authoring guidance plus pressure-test results, and carries no version-specific claims that need source tracking.
 
 ## Strongly Supported Claims
 
@@ -106,6 +106,21 @@ Supported guidance:
 Important adjustment:
 
 - Some provider content discusses reasoning/CoT for eval analysis. In this skill, prefer observable diagnostics and provider-exposed reasoning summaries. Do not ask models to reveal hidden chain-of-thought.
+
+### Architectural reduction can outperform many specialized tools
+
+Source:
+
+- Vercel Engineering, "We removed 80% of our agent's tools" (Dec 2025) — text-to-SQL agent case study; verify details against the original post.
+
+Supported guidance:
+
+- Replacing 17 specialized tools with 2 primitives (sandboxed bash + SQL) improved speed, cost, and success rate on their workload.
+- Prerequisites: legible, well-documented data layer; sufficient model capability; sandboxed safety; file-navigable domain.
+
+Notes:
+
+- Five-task eval set. Treat as a directional case study, workload-specific until reproduced on the target system.
 
 ### Tool annotations are hints, not guarantees
 

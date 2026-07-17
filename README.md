@@ -5,7 +5,7 @@ Thư viện skill cá nhân cho Claude Code. Mỗi skill sống độc lập tro
 ## Cấu trúc
 
 ```
-.claude/skills/   # 29 skill — nguồn canonical duy nhất
+.claude/skills/   # 46 skill — nguồn canonical duy nhất
 .claude/rules/    # coding rules áp cho công việc trong repo này
 data/             # fixture/output local (gitignored)
 ```
@@ -15,11 +15,9 @@ data/             # fixture/output local (gitignored)
 ### Agent & LLM engineering
 | Skill | Mục đích |
 |---|---|
-| `agent-tool-design` | Thiết kế/review lớp tool của LLM agent: schema, description, MCP, response format |
-| `tool-design` | Lớp tool-interface: description, schema, naming, error message, thiết kế MCP server |
+| `agent-interface-design` | Thiết kế mọi bề mặt model đọc: system prompt, SKILL.md, tool schema/description, response format, MCP |
 | `context-architect` | Thiết kế cách agent nhận, truy hồi, ghi nhớ, nén & cập nhật context qua nhiều lượt |
 | `flow-prompt-language` | Viết prompt cho agent bám workflow nghiệp vụ, route giữa các state |
-| `instructions-best-practices` | Viết/review chỉ dẫn cho LLM (SKILL.md, system prompt, tool description) |
 | `delegating-to-codex` | Giao việc cho OpenAI `codex exec` CLI (chẩn đoán, refactor, ảnh) |
 | `using-codex-cli` | Gọi Codex CLI từ script/agent; xử lý sự cố khi chạy codex |
 | `workflow-skill-builder` | Dựng SKILL orchestrator nhiều pha, spawn subagent song song |
@@ -71,4 +69,4 @@ data/             # fixture/output local (gitignored)
 
 ## Thêm skill mới
 
-Tạo `.claude/skills/<name>/SKILL.md` với frontmatter `name` + `description`. Không cần đăng ký ở đâu khác — Claude Code tự nạp. Xem `instructions-best-practices` và `workflow-skill-builder` để viết skill tốt.
+Tạo `.claude/skills/<name>/SKILL.md` với frontmatter `name` + `description`. Không cần đăng ký ở đâu khác — Claude Code tự nạp. Xem `agent-interface-design` và `workflow-skill-builder` để viết skill tốt.

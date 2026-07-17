@@ -7,4 +7,9 @@
 
 ## Skill creation rules:
 
-- Các skill sống độc lập được, không references và không nhắc về nhau
+- SKILL sống độc lập được, không references và không nhắc về nhau.
+- Nội dung SKILL phải đọc hiểu được từ trên xuống dưới, không trùng nội dung với references.
+- SKILL không tự chứa lịch sử của chính nó
+- SKILL không tự giải thích về chính nó
+- SKILL phục vụ frontier models (đã thông minh sẵn), nên SKILL chủ yếu là hướng dẫn và gợi ý
+- SKILL không nên chứa nội dung mà model đã biết một cách hiển nhiên (không phải suy luận nhiều), nếu bạn biết thì model cũng biết. Ví dụ như rules trong project, các patterns phổ biến

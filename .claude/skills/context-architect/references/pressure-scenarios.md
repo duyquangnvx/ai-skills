@@ -43,7 +43,7 @@ Expected behavior:
 
 - Treat tool definitions and outputs as context.
 - Recommend workflow-shaped tools, bounded search results, human-readable labels, and ID validation.
-- Mention using the agent-tool-design skill for deeper tool review.
+- Scope recommendations to context concerns; flag deeper tool-layer redesign as separate work.
 - Include metrics: wrong tool calls, invalid IDs, tokens, latency, task success.
 
 ## 4. Prompt Injection In Retrieved Content

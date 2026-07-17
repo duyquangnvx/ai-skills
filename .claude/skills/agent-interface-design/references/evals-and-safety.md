@@ -56,6 +56,16 @@ Track more than final accuracy:
 
 These metrics reveal different failure classes. High token use can suggest response bloat or too many chained calls. Invalid-call rate usually points to schema, naming, description, or validation-error problems.
 
+## Review Criteria
+
+When judging a tool design qualitatively — during review rather than measurement — score it against five criteria:
+
+- **Clarity**: can an agent determine when to use this tool over its siblings?
+- **Completeness**: does the contract carry every convention a caller needs (formats, defaults, side effects)?
+- **Recoverability**: does every error tell the agent what to change before retrying?
+- **Efficiency**: are responses bounded, with verbosity options where size genuinely varies?
+- **Consistency**: do names, parameters, and enums follow the catalog's conventions?
+
 ## Using Agents to Improve Tools
 
 Agents can review transcripts and propose tool improvements. Ask for concrete changes:

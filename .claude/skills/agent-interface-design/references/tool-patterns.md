@@ -32,6 +32,8 @@ Risky merge:
 
 The human-engineer test: if a developer cannot quickly explain which tool to call, the model probably cannot either.
 
+Guard against over-consolidation too. A tool that serves fundamentally different use cases, or needs 8–10+ parameters, shifts the failure from tool *selection* to tool *parameterization*. Provide sensible defaults, group related options into format presets, move rarely-used parameters into an `options` object — or split the tool.
+
 ## 2. Name and Namespace for Selection
 
 Names are part of the prompt. Prefer intent and domain over implementation:
@@ -42,6 +44,14 @@ Weak: get_data, update, parseAndInsertNodes
 ```
 
 Use consistent service/domain prefixes when many tools are loaded. Prefix vs suffix order can matter by model and runtime, so pick a convention and test it rather than treating one style as universal.
+
+Consistency extends to parameters and enums across the whole catalog:
+
+- One name per concept: always `customer_id`, never `id` in one tool and `identifier` in another.
+- Boolean options follow one pattern: `include_history`, `include_metadata`, `exclude_archived`.
+- Verbosity enums match everywhere: `"concise" | "detailed"`, not `"short" | "long"` in some tools.
+
+When referencing MCP tools in prompts, use fully qualified names (`ServerName:tool_name`, e.g. `GitHub:create_issue`). With multiple servers loaded, unqualified names can collide or fail to resolve; audit for collisions when adding a new server.
 
 ## 3. Make Responses Easy for the Agent to Use
 
@@ -63,7 +73,7 @@ Use `response_format` only when response verbosity meaningfully varies:
 type ResponseFormat = "concise" | "detailed";
 ```
 
-Do not add this parameter to tiny tools where it only expands the schema.
+Concise suits confirmations and follow-up calls after an initial retrieval; detailed suits decisions that need the full record. Document in the description when to use each. Do not add this parameter to tiny tools where it only expands the schema.
 
 Response format has no universal winner. JSON, XML, Markdown, and plain text can all work. Choose the simplest shape that preserves structure, avoids awkward escaping/counting, and performs well in evals.
 
@@ -75,6 +85,7 @@ Provider or client output caps are backstops, not design. Add controls where res
 - Filters for query, type, date, owner, status, or range.
 - Truncation that clearly says what was omitted.
 - Narrow follow-up instructions in truncation messages.
+- For very large payloads, a file-reference mode: write the content to a file and return the path instead of the body.
 
 Example:
 
@@ -89,7 +100,7 @@ Example:
 
 ## 5. Make Errors Actionable
 
-Opaque errors waste turns. Validation errors should tell the agent exactly what to fix.
+Opaque errors waste turns. Errors serve two audiences — developers debugging and agents recovering — and the agent is the primary one: every error must say what went wrong and what to change before retrying.
 
 ```json
 {
@@ -99,7 +110,21 @@ Opaque errors waste turns. Validation errors should tell the agent exactly what 
 }
 ```
 
-Only include valid values when safe; for permissions or sensitive resources, return a non-enumerating error.
+For richer catalogs, a structured error shape pays off:
+
+```json
+{
+  "error": {
+    "code": "INVALID_CUSTOMER_ID",
+    "message": "Customer ID 'CUST-123' does not match required format",
+    "expected_format": { "pattern": "CUST-######", "example": "CUST-000001" },
+    "resolution": "Provide a customer ID matching pattern CUST-######",
+    "retryable": true
+  }
+}
+```
+
+Common cases: validation errors state received vs expected plus a fix; rate limits state wait time; not-found suggests a verification step. Only include valid values when safe; for permissions or sensitive resources, return a non-enumerating error.
 
 ## 6. Keep Schema and Prompt Separate
 
@@ -108,8 +133,9 @@ The tool schema should own:
 - Field names and types.
 - Required vs optional.
 - Enums and structured output shape.
-- Per-field descriptions.
-- Tool-level description: what the tool does, when to call it, side effects, sibling-tool disambiguation. This is a model-facing prompt, not human documentation — drop file paths, change history, implementation notes, and "how it works" details.
+- Per-field descriptions, with concrete format examples where the format is non-obvious (`"CUST-######, e.g. CUST-000001"`, `"YYYY-MM-DD"`).
+- Sensible defaults that reflect the common case, so the agent can omit parameters safely.
+- Tool-level description: what the tool does, when to call it, side effects, sibling-tool disambiguation — key usage criteria and argument conventions first. This is a model-facing prompt, not human documentation — drop file paths, change history, implementation notes, and "how it works" details. Return shape belongs in the schema, not restated as prose or long code examples.
 
 The developer/system prompt should own:
 
@@ -154,3 +180,7 @@ Many editing domains benefit from:
 - `validate`: read-only structural and reference checks after edits.
 
 Document the usual call pattern as guidance, not as a rigid mandate.
+
+## 10. Treat Descriptions as Code
+
+Descriptions rot: parameters get added, return formats change, error codes shift, and the prose stops matching behavior. Version descriptions with the tool, review them in the same change that touches the API, and re-run tool evals after meaningful edits. A stale description misroutes the agent more quietly than a broken schema.
