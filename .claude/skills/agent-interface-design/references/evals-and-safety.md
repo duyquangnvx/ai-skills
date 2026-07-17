@@ -9,7 +9,7 @@ Use this when a tool design needs evidence, iteration, or safety review.
 - Review criteria
 - Cross-surface review checks
 - Using agents to improve tools
-- Safety and trust boundaries (destructive actions, MCP annotations, lethal trifecta)
+- Safety and trust boundaries (destructive actions, one approval gate, MCP annotations, lethal trifecta)
 
 ## Evaluation Loop
 
@@ -84,7 +84,7 @@ Apply to every surface, alongside the per-surface checklists in `instructions.md
 - [ ] Heavy references, schemas, and examples load on demand.
 - [ ] Changes are verified with pressure scenarios or evals, not read-throughs.
 - [ ] Evals track task success, tool-call count, invalid-call rate, tokens, and latency.
-- [ ] Safety gates cover destructive actions and lethal-trifecta combinations.
+- [ ] Safety gates cover destructive actions and lethal-trifecta combinations, with exactly one approval gate per destructive action.
 
 ## Using Agents to Improve Tools
 
@@ -112,9 +112,17 @@ For delete, overwrite, send, publish, payment, permission, or external side-effe
 
 - Name the action plainly (`delete_scene`, `send_email`) — obvious in a trace.
 - Provide dry-run or preview for high-stakes actions.
-- Require user confirmation where effects are hard to reverse.
+- Require user confirmation where effects are hard to reverse — through exactly one gate (next section).
 - Validate permissions server-side.
 - Return clear, bounded summaries of what changed — a destructive tool that answers with a dump forces the agent to re-verify its own action.
+
+### One Approval Gate
+
+Before writing any confirmation policy, check what the runtime already provides: MCP hosts gate calls based on annotations, agent frameworks support tool-level approval (e.g. ai-sdk `needsApproval`), harnesses have permission modes.
+
+- **The runtime has a gate: use it.** The prompt then owns choreography, not a second ask — tell the user what is about to happen before calling, treat a conversational "yes" as context rather than the approval (make the call and let the gate decide), and on denial don't retry the same request.
+- **No gate exists: fall back to prompt-level confirmation.** State the exact effect and get an explicit yes before calling.
+- **Never both.** A framework gate plus a prompt or description rule saying "ask the user to approve first" makes the user approve the same action twice. When reviewing an existing catalog, check for this stack — it appears when a gate is added later without removing the prompt rule, or the reverse.
 
 ### MCP-Style Annotations
 

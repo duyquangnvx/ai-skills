@@ -160,7 +160,7 @@ The developer/system prompt should own:
 
 - Cross-tool workflow order.
 - Disambiguation between overlapping tools.
-- Destructive-action confirmation policy.
+- Destructive-action approval choreography — the gate itself belongs in the runtime when one exists (see `evals-and-safety.md`, One Approval Gate).
 - Domain concepts that are not field definitions.
 - Tone and user-facing behavior.
 

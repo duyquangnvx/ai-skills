@@ -51,6 +51,7 @@ An audit or review of a whole agent interface touches all of the first three.
 | Oversized responses | `references/tool-patterns.md` — bounding context |
 | Same fact documented in two places | One Home Per Fact below |
 | Risky or destructive action | `references/evals-and-safety.md` — safety and trust boundaries |
+| User asked to approve the same action twice | `references/evals-and-safety.md` — one approval gate |
 | Unclear design tradeoff | `references/evals-and-safety.md` — evaluation loop |
 
 ## One Home Per Fact
@@ -61,7 +62,8 @@ An audit or review of a whole agent interface touches all of the first three.
 | Process and workflow steps | Skill body or system prompt — never a description |
 | Field names, types, required/optional, enums, return shape | Tool schema |
 | Input conventions, side effects, sibling disambiguation | Tool description |
-| Cross-tool workflow order, confirmation policy, tone | System/developer prompt |
+| Cross-tool workflow order, approval choreography, tone | System/developer prompt |
+| Which actions require user approval | Runtime approval gate (MCP annotations, framework approval flags); prompt-level ask only when no gate exists |
 | Deterministic constraints (IDs, permissions, transitions) | Server-side validation |
 | Heavy reference, long examples, API docs | On-demand reference files |
 
