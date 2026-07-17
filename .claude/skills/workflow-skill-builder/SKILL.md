@@ -1,7 +1,7 @@
 ---
 name: workflow-skill-builder
 description: |
-  Build a new SKILL that orchestrates a multi-phase, repeatable workflow inside Claude Code — phases written in document order, parallel subagents spawned via the Task tool, results polled from the filesystem (.json success / .error failure), with explicit timeout layers and never-fully-fail semantics. Use this skill when the user wants to turn a repeatable multi-step process into a self-contained skill folder that can be invoked manually or run headless. Trigger phrases include "build me a workflow skill", "convert this pipeline into a skill", "scaffold an orchestrator skill for X then Y then Z", "create a skill that spawns parallel agents", "make a Claude Code workflow engine for ...", "tạo skill cho workflow X", "build skill pipeline", "skill cho quy trình lặp lại". Do NOT use for single-step skills, technique or pattern reference docs, or feature-level code generation. Do NOT regenerate over an existing skill — read it first and propose surgical edits. The output is a new folder under .agents/skills/<generated-name>/ containing SKILL.md, agent definitions, helper script signatures, and per-pipeline conventions.
+  Build a new SKILL that orchestrates a multi-phase, repeatable workflow inside Claude Code — phases written in document order, parallel subagents spawned via the Task tool, results polled from the filesystem (.json success / .error failure), with explicit timeout layers and never-fully-fail semantics. Use this skill when the user wants to turn a repeatable multi-step process into a self-contained skill folder that can be invoked manually or run headless. Trigger phrases include "build me a workflow skill", "convert this pipeline into a skill", "scaffold an orchestrator skill for X then Y then Z", "create a skill that spawns parallel agents", "make a Claude Code workflow engine for ...", "tạo skill cho workflow X", "build skill pipeline", "skill cho quy trình lặp lại". Do NOT use for single-step skills, technique or pattern reference docs, or feature-level code generation. Do NOT regenerate over an existing skill — read it first and propose surgical edits. The output is a new folder under .claude/skills/<generated-name>/ containing SKILL.md, agent definitions, helper script signatures, and per-pipeline conventions.
 ---
 
 # Workflow Skill Builder
@@ -10,7 +10,7 @@ Build a self-contained SKILL that orchestrates a multi-phase workflow inside Cla
 
 ## What this skill produces
 
-A new folder under `.agents/skills/<generated-name>/` containing:
+A new folder under `.claude/skills/<generated-name>/` containing:
 
 | File | Role |
 |---|---|
@@ -131,7 +131,7 @@ For interactive mode, the generated SKILL.md gets a "resume" section. For headle
 
 Use the templates in `assets/`. Order of operations:
 
-1. Create folder `.agents/skills/<generated-name>/` and subdirs `agents/`, `lib/`, `references/`.
+1. Create folder `.claude/skills/<generated-name>/` and subdirs `agents/`, `lib/`, `references/`.
 2. Fill `assets/SKILL.md.template` → `<generated-name>/SKILL.md` with phase blocks rendered from `assets/phase-block.md.template`, the failure-handling block, the resume or recovery section, and the delivery block.
 3. For each agent role identified in Phase 2: fill `assets/agent-definition.md.template` → `<generated-name>/agents/<role>.md`. Pick tools and model conservatively (see `references/subagent-design.md`).
 4. For each helper identified in Phase 2: fill `assets/helper-script.py.template` → `<generated-name>/lib/<name>.py`. Include signature, docstring, example call, and `raise NotImplementedError("Domain logic — implement based on: <one-sentence purpose>")` as the body.
