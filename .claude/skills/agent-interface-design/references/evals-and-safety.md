@@ -106,6 +106,8 @@ Do not accept suggestions only because they sound plausible. Apply them to the e
 
 Tool safety is not just a property of one tool. It is a property of the session and runtime.
 
+Conversation I/O gets the same enforce-in-software treatment as tool calls: where the runtime ships input/output guardrail processors (moderation, PII), use them instead of prompt rules, ordered cheap deterministic checks first, model-based classifiers second.
+
 ### Destructive Actions
 
 For delete, overwrite, send, publish, payment, permission, or external side-effect tools:

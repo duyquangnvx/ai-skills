@@ -1,6 +1,6 @@
 ---
 name: agent-interface-design
-description: "Use when designing, writing, or reviewing anything an LLM agent reads to decide behavior — system prompts, skills, tool schemas and descriptions, MCP servers, tool responses — and how its context is assembled at runtime: what loads when, memory, compaction, prompt caching. Symptoms: wrong tool calls, ignored instructions, oversized responses, prompt injection, forgotten or repeated work, degrading long sessions, poor cache hits."
+description: "Use when designing, writing, or reviewing anything an LLM agent reads to decide behavior — system prompts, skills, tool schemas and descriptions, MCP servers, tool responses — how its context is assembled at runtime: what loads when, memory, compaction, prompt caching — and when to escalate from workflow to agent to multi-agent. Symptoms: wrong tool calls, ignored instructions, oversized responses, prompt injection, forgotten or repeated work, degrading long sessions, poor cache hits."
 ---
 
 # Agent Interface Design
@@ -19,7 +19,7 @@ The standards live in the reference files. Whatever the task — writing a new s
 | Tool layer: tool scoping, names, schemas, descriptions, responses, errors | `references/tool-patterns.md` |
 | Context runtime: load policy, prompt caching, compaction, memory, sub-agent isolation | `references/context-runtime.md` |
 | Verification and safety: evals, destructive actions, MCP annotations, prompt injection | `references/evals-and-safety.md` |
-| Replacing many specialized tools with a few primitives | `references/architectural-reduction.md` |
+| Architecture decisions: workflow vs agent, multi-agent, stop conditions, tool reduction | `references/architectural-reduction.md` |
 
 An audit or review of a whole agent interface touches all of the first four.
 
@@ -55,6 +55,8 @@ An audit or review of a whole agent interface touches all of the first four.
 | Quality degrades as the session grows | `references/context-runtime.md` — compaction, tool result clearing |
 | Low cache hits, cost growing per turn | `references/context-runtime.md` — cache-aware layout |
 | Retrieval adds noise or contradicts current rules | `references/context-runtime.md` — load policy |
+| Loop never terminates or burns budget retrying | `references/architectural-reduction.md` — stop conditions |
+| Sub-agents conflict or duplicate work | `references/architectural-reduction.md` — multi-agent |
 | Risky or destructive action | `references/evals-and-safety.md` — safety and trust boundaries |
 | User asked to approve the same action twice | `references/evals-and-safety.md` — one approval gate |
 | Unclear design tradeoff | `references/evals-and-safety.md` — evaluation loop |

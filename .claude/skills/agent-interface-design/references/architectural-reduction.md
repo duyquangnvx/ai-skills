@@ -1,4 +1,42 @@
-# Architectural Reduction
+# Architecture Decisions
+
+How much machinery the task needs: workflow vs agent, multi-agent topology, stop conditions, and tool reduction. Start minimal and escalate on evidence — sophistication is a cost, not a feature.
+
+## Contents
+
+- The escalation ladder
+- Multi-agent: when and how
+- Stop conditions are design
+- Architectural reduction (case study, prerequisites, deciding)
+
+## The Escalation Ladder
+
+The discipline that governs tool count governs agency itself. Four rungs, each a real step up in latency, spend, and debuggability:
+
+1. **Single call** — one model call with the right context.
+2. **Workflow** — fixed steps composed in code (chain, route, parallelize); the model fills in steps, code decides the path.
+3. **Agent loop** — the model decides the path: which tool, when to stop. Buy it only for open-ended tasks where step count and order cannot be predicted.
+4. **Multi-agent** — several loops with separate contexts.
+
+Climb a rung only when evals show the rung below failing, and name the failure that justified the climb. The common error is starting at rung 3 or 4 for a task a workflow serves predictably.
+
+## Multi-Agent: When and How
+
+Sub-agents cannot see each other's decisions, and every action carries implicit decisions — two writers with separate contexts produce conflicting work. The reconciling heuristics:
+
+- **Parallelize reads, not writes.** Research, search, review, and evaluation fan out well; work whose outputs must form one coherent artifact (one codebase, one document) stays single-threaded with full shared context.
+- **Scale effort to complexity.** A simple lookup is one agent making a handful of tool calls; spawn many sub-agents only for genuinely divisible, read-heavy work — and state the budget in the task brief.
+- **The orchestrator is taught, not assumed.** Delegation quality is prompt content: each sub-agent brief must be self-contained (the agents-as-tools standard in `tool-patterns.md`), because the sub-agent knows nothing the brief doesn't carry.
+
+## Stop Conditions Are Design
+
+Framework step limits and budgets are backstops, not design. Decide what the loop does at the boundary:
+
+- Give the loop an observable done condition — the same completion-criterion discipline instructions get.
+- The same call failing twice with the same arguments is a signal to change strategy or stop, never to retry a third time.
+- When stuck — ambiguity, repeated failure, missing access — the agent escalates with state: what it tried, what failed, what it needs. An agent that silently burns its budget retrying fails worse than one that asks.
+
+## Architectural Reduction
 
 Consolidation taken to its logical end: replace most specialized tools with a few primitive, general-purpose capabilities and let the model reason. Production evidence shows this can outperform sophisticated multi-tool architectures — under specific prerequisites. Treat the numbers below as one workload's results, not a universal constant.
 

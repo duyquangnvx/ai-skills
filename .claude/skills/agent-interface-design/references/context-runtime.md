@@ -31,15 +31,15 @@ Prompt caching (prefix caching in inference engines, context caching in some pro
 - Keep the prefix byte-stable. A timestamp, request ID, or per-user counter in the system prompt breaks the cache on every request; put volatile data in the latest user message instead.
 - Append, don't rewrite. Message history edits invalidate everything after the edit point; summaries and state updates go in new messages.
 - Where the API takes explicit cache breakpoints, place one on the last block that is identical across the requests that should share the cache.
-- Swapping the active tool set mid-session invalidates the whole cache. Change it only when the gain beats the cache cost — the same tradeoff as dynamic per-request enums in schemas.
+- Swapping the active tool set mid-session invalidates the whole cache. To constrain choices mid-session, prefer masking — forced tool choice or state-machine limits on which tools may fire — over editing definitions: the context stays stable and past calls keep referring to tools that still exist.
 
 When instructions are functions of runtime state (per-request context, per-step overrides), keep the stable core static and cacheable, and inject per-run data as a clearly delimited data block near the end of the prompt rather than woven into instruction prose. Injected data that originates outside the system is untrusted content, not instructions. Prefer appending step state as messages over rewriting the system prompt each step.
 
-Within the window, attention is strongest at the beginning and end: critical rules go early, current task data near the generation point, and for very long contexts the one or two critical rules bear repeating near the end.
+Within the window, attention is strongest at the beginning and end: critical rules go early, current task data near the generation point, and for very long contexts the one or two critical rules bear repeating near the end. In long loops, recitation applies the same lever — the agent rewrites its plan or todo list at the tail of context each step, pulling the global goal into recent attention instead of letting it fade mid-loop.
 
 ## Compaction
 
-When history grows, summarize and reinitialize. Keep decisions and their rationale, unresolved issues, current state, key discovered facts, and user constraints. Drop raw tool outputs, redundant back-and-forth, superseded facts, and exploratory dead ends. Tune for recall first — a compaction that loses a design decision causes the agent to revert it later — then trim for precision.
+When history grows, summarize and reinitialize. Keep decisions and their rationale, unresolved issues, current state, key discovered facts, and user constraints. Drop raw tool outputs, redundant back-and-forth, superseded facts, and exploratory dead ends. Failed actions are the exception: keep recent failures and their error output visible — a model that sees its own stack trace stops repeating the action — and compact a failure only once it is resolved or stale. Tune for recall first — a compaction that loses a design decision causes the agent to revert it later — then trim for precision.
 
 The lightest-touch form is tool result clearing: once the agent has acted on a tool result, replace the raw output with a one-line summary. Gradual degradation over a long session usually comes from accumulated debris rather than any single item, so clear on a schedule instead of waiting for the window limit.
 
