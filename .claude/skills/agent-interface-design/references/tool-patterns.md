@@ -14,6 +14,7 @@ Applies to tool scoping, names, schemas, descriptions, responses, and errors. Th
 - Keep handlers thin
 - Server-side validation
 - Orient and validate tools
+- Agents as tools
 - Descriptions rot
 
 ## Shape tools around workflows
@@ -154,6 +155,8 @@ The tool schema should own:
 - Per-field descriptions, with concrete format examples where the format is non-obvious (`"CUST-######, e.g. CUST-000001"`, `"YYYY-MM-DD"`).
 - Sensible defaults that reflect the common case, so the agent can omit parameters safely.
 
+These rules apply to any schema the model writes against, not just tool inputs. Structured-output schemas (`generateObject`-style response formats) are the same surface: per-field descriptions steer generation exactly as parameter descriptions steer calls, and a vague field name yields a vague field value.
+
 The tool description is a model-facing prompt, not human documentation — drop file paths, change history, implementation notes, and "how it works" details. Return shape belongs in the schema, not restated as prose or long code examples.
 
 The developer/system prompt should own:
@@ -199,6 +202,13 @@ Many editing domains benefit from:
 
 Document the usual call pattern as guidance, not as a rigid mandate.
 
+## Agents as tools
+
+Multi-agent runtimes expose sub-agents as callable tools, and the description standard above applies unchanged. Two specifics:
+
+- Describe what the sub-agent returns — shape and level of detail — so the caller can plan around it without a verification call.
+- The task argument is the sub-agent's entire briefing: it starts without the caller's conversation, so the call itself must carry the deliverable, the constraints, and any refs it needs. A one-line task produces a sub-agent that rediscovers context the caller already had.
+
 ## Descriptions rot
 
 Descriptions rot: parameters get added, return formats change, error codes shift, and the prose stops matching behavior. Version descriptions with the tool, review them in the same change that touches the API, and re-run tool evals after meaningful edits. A stale description misroutes the agent more quietly than a broken schema.
@@ -214,3 +224,4 @@ Descriptions rot: parameters get added, return formats change, error codes shift
 - [ ] Every error says what to change before retrying.
 - [ ] References are validated server-side.
 - [ ] Handlers are thin: validate, delegate, shape.
+- [ ] Sub-agent tools state what they return, and their task argument carries the full briefing.
