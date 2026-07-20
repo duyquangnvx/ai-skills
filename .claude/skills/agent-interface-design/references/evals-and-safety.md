@@ -118,7 +118,7 @@ For delete, overwrite, send, publish, payment, permission, or external side-effe
 
 ### One Approval Gate
 
-Before writing any confirmation policy, check what the runtime already provides: MCP hosts gate calls based on annotations, agent frameworks support tool-level approval (e.g. ai-sdk `needsApproval`), harnesses have permission modes.
+Before writing any confirmation policy, check what the runtime already provides: MCP hosts gate calls based on annotations, agent frameworks support tool-level approval settings, harnesses have permission modes.
 
 - **The runtime has a gate: use it.** The prompt then owns choreography, not a second ask — tell the user what is about to happen before calling, treat a conversational "yes" as context rather than the approval (make the call and let the gate decide), and on denial don't retry the same request.
 - **No gate exists: fall back to prompt-level confirmation.** State the exact effect and get an explicit yes before calling.

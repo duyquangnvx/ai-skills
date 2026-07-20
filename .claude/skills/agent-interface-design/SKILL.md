@@ -1,11 +1,11 @@
 ---
 name: agent-interface-design
-description: "Use when writing, reviewing, or refactoring anything an LLM agent reads to decide behavior: system prompts, agent configs, SKILL.md files, prompt templates, tool schemas, tool descriptions, MCP servers, and tool response formats. Symptoms: wrong tool calls, malformed arguments, hallucinated IDs, oversized responses, instructions ignored or rationalized around, prompt injection concerns, prompt/schema drift, one-tool-vs-many-tool decisions."
+description: "Use when designing, writing, or reviewing anything an LLM agent reads to decide behavior — system prompts, skills, tool schemas and descriptions, MCP servers, tool responses — and how its context is assembled at runtime: what loads when, memory, compaction, prompt caching. Symptoms: wrong tool calls, ignored instructions, oversized responses, prompt injection, forgotten or repeated work, degrading long sessions, poor cache hits."
 ---
 
 # Agent Interface Design
 
-Everything the model reads is one interface: instructions, routing metadata, tool contracts, and tool responses. Write each surface as a small, testable behavior contract — the fewest high-signal words that reliably change model behavior in realistic scenarios.
+Everything the model reads is one interface: instructions, routing metadata, tool contracts, tool responses, and the context assembled around them at runtime. Write each surface as a small, testable behavior contract — the fewest high-signal words that reliably change model behavior in realistic scenarios.
 
 The reader is a non-deterministic caller with limited attention, imperfect tool choice, and imperfect argument construction, and it cannot ask clarifying questions before acting on what you wrote. Design every surface for that reader.
 
@@ -17,10 +17,11 @@ The standards live in the reference files. Whatever the task — writing a new s
 | --- | --- |
 | Instructions: system prompts, agent configs, skill bodies, prompt templates | `references/instructions.md` |
 | Tool layer: tool scoping, names, schemas, descriptions, responses, errors | `references/tool-patterns.md` |
+| Context runtime: load policy, prompt caching, compaction, memory, sub-agent isolation | `references/context-runtime.md` |
 | Verification and safety: evals, destructive actions, MCP annotations, prompt injection | `references/evals-and-safety.md` |
 | Replacing many specialized tools with a few primitives | `references/architectural-reduction.md` |
 
-An audit or review of a whole agent interface touches all of the first three.
+An audit or review of a whole agent interface touches all of the first four.
 
 ## Principles for Every Surface
 
@@ -34,7 +35,7 @@ An audit or review of a whole agent interface touches all of the first three.
 
 5. **Enforce in software what software can enforce.** Prompts are for judgment. ID existence, enum membership, permissions, state transitions, and payload shape are validated server-side with actionable errors — never delegated to prompt rules.
 
-6. **Every token competes.** Bound everything that can grow. Instructions: audit for redundancy, stale caveats, and vague quality words. Responses: pagination, filters, and truncation that says how to narrow.
+6. **Every token competes.** Prefer the smallest high-signal context that lets the model make the next decision, and bound everything that can grow. Instructions: audit for redundancy, stale caveats, and vague quality words. Responses: pagination, filters, and truncation that says how to narrow. Large or conditional data: load just in time, not up front.
 
 7. **Test, don't assume.** Instructions get pressure scenarios; tool sets get evals on realistic multi-step tasks. If you didn't watch the model fail without the change and comply with it, you don't know the words work.
 
@@ -50,6 +51,10 @@ An audit or review of a whole agent interface touches all of the first three.
 | Hallucinated or invalid IDs | `references/tool-patterns.md` — response shaping; Principle 5 |
 | Oversized responses | `references/tool-patterns.md` — bounding context |
 | Same fact documented in two places | One Home Per Fact below |
+| Agent forgets decisions or repeats completed work | `references/context-runtime.md` — memory, compaction |
+| Quality degrades as the session grows | `references/context-runtime.md` — compaction, tool result clearing |
+| Low cache hits, cost growing per turn | `references/context-runtime.md` — cache-aware layout |
+| Retrieval adds noise or contradicts current rules | `references/context-runtime.md` — load policy |
 | Risky or destructive action | `references/evals-and-safety.md` — safety and trust boundaries |
 | User asked to approve the same action twice | `references/evals-and-safety.md` — one approval gate |
 | Unclear design tradeoff | `references/evals-and-safety.md` — evaluation loop |

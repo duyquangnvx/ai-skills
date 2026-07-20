@@ -15,8 +15,7 @@ data/             # fixture/output local (gitignored)
 ### Agent & LLM engineering
 | Skill | Mục đích |
 |---|---|
-| `agent-interface-design` | Thiết kế mọi bề mặt model đọc: system prompt, SKILL.md, tool schema/description, response format, MCP |
-| `context-architect` | Thiết kế cách agent nhận, truy hồi, ghi nhớ, nén & cập nhật context qua nhiều lượt |
+| `agent-interface-design` | Thiết kế mọi bề mặt model đọc và context runtime: system prompt, tool schema/description, response, MCP, load policy, memory, compaction, prompt caching |
 | `flow-prompt-language` | Viết prompt cho agent bám workflow nghiệp vụ, route giữa các state |
 | `delegating-to-codex` | Giao việc cho OpenAI `codex exec` CLI (chẩn đoán, refactor, ảnh) |
 | `using-codex-cli` | Gọi Codex CLI từ script/agent; xử lý sự cố khi chạy codex |
