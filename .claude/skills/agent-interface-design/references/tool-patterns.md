@@ -155,6 +155,8 @@ The tool schema should own:
 - Per-field descriptions, with concrete format examples where the format is non-obvious (`"CUST-######, e.g. CUST-000001"`, `"YYYY-MM-DD"`).
 - Sensible defaults that reflect the common case, so the agent can omit parameters safely.
 
+Every parameter is a decision delegated to the model. A value the model cannot reliably know — the current user, tenant, project scope — is not a parameter: resolve it in the handler from session or runtime context (injected arguments) and keep it out of the schema, even when the backend API requires it. The model can no longer hallucinate an ID software already knows, the schema stays small and cache-stable, and a manipulated call cannot reach another tenant's scope.
+
 These rules apply to any schema the model writes against, not just tool inputs. Structured-output schemas (`generateObject`-style response formats) are the same surface: per-field descriptions steer generation exactly as parameter descriptions steer calls, and a vague field name yields a vague field value.
 
 The tool description is a model-facing prompt, not human documentation — drop file paths, change history, implementation notes, and "how it works" details. Return shape belongs in the schema, not restated as prose or long code examples.
@@ -187,6 +189,8 @@ A tool parses and validates input, delegates to existing domain code, and shapes
 ## Server-side validation
 
 Any deterministic check belongs in software: ID existence, enum validity for the current object, allowed state transitions, permissions. Prompts are for judgment, never for enforcing what software can enforce.
+
+For permissions, prose is neither the gate nor the map. The handler enforces regardless of what the prompt says — a prompt is not a security boundary. And instead of describing who may do what, filter tool exposure per session: a role that cannot use a tool should not see it in the tool list. Fine-grained denials the toolset cannot express (per-resource, per-row) surface as actionable, non-enumerating errors. Decide the toolset at session start — swapping it mid-session invalidates the prompt cache.
 
 Dynamic per-request enums can prevent invalid references in strict runtimes, but they may reduce prompt-cache reuse. Use them when the reliability gain beats the cache cost; otherwise rely on server validation plus actionable errors.
 
@@ -223,5 +227,6 @@ Descriptions rot: parameters get added, return formats change, error codes shift
 - [ ] Responses are bounded and human-readable first; truncation says how to narrow.
 - [ ] Every error says what to change before retrying.
 - [ ] References are validated server-side.
+- [ ] No parameter asks the model for what the handler can resolve from session context.
 - [ ] Handlers are thin: validate, delegate, shape.
 - [ ] Sub-agent tools state what they return, and their task argument carries the full briefing.
