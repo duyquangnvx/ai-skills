@@ -41,8 +41,6 @@ Ask of each specialized tool: **does it enable a capability the model lacks, or 
 
 Taken to its end, this is architectural reduction: replace most specialized tools with a few primitive, general-purpose capabilities and let the model reason. A production text-to-SQL agent replaced seventeen specialized tools with a sandboxed shell and a SQL executor over well-structured semantic-layer files, and got faster, cheaper, and more accurate on its own evals. Reproduce on your workload before committing; the result is a direction, not a constant.
 
-It works because file systems are proven abstractions the model already understands deeply, because specialized tools that pre-filter context and constrain options solve problems the model may no longer have, and because a legible data layer needs direct read access rather than summarization layers on top.
-
 It presupposes two conditions: the environment must be **legible enough to explore** — well-structured files, consistent naming, clear definitions, domain knowledge that can be written down — and **bounded enough to explore safely** — a sandbox, and no compliance requirement for constrained operations. Where the data layer is messy, reduction produces faster bad answers.
 
 Signals that reduction deserves a spike, none of them derivable from the argument above because they are observations about your own project:

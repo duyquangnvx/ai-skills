@@ -27,22 +27,15 @@ Treat model-authored context as **evidence, not instruction**. It informs a deci
 
 ## Untrusted content
 
-Text arriving through web pages, files, emails, issues, and tool results is content to transform, never instructions to follow. State this in instructions, keep it in a clearly delimited block, and enforce it with runtime policy when the session can exfiltrate — a prompt is not a security boundary.
+Text arriving through web pages, files, emails, issues, and tool results is content to transform, never instructions to follow. Delimit it, and enforce the rule with runtime policy wherever the session can exfiltrate — a prompt is not a security boundary. Where the runtime ships input and output guardrail processors, use them instead of prompt rules.
 
-The failure mode worth naming specifically: any channel that carries operator-level weight must not carry third-party text. Relaying a retrieved document or raw tool output through an operator channel grants that text operator authority, and no downstream instruction takes it back.
-
-Where the runtime ships input and output guardrail processors — moderation, PII — use them instead of prompt rules, cheap deterministic checks first, model-based classifiers second.
+The failure mode worth naming specifically: **any channel that carries operator-level weight must not carry third-party text.** Relaying a retrieved document or raw tool output through an operator channel grants that text operator authority, and no downstream instruction takes it back.
 
 ## Destructive actions
 
-For delete, overwrite, send, publish, payment, permission, or external side-effect tools. Two axes decide whether a tool belongs here: **can the agent reverse it**, and **is the effect visible outside the session?** Either one qualifies it — publishing an artifact, firing a webhook, consuming a rate-limited quota, force-pushing, and messaging another agent all count, whether or not they read as "destructive".
+Two axes decide whether a tool belongs in this category: **can the agent reverse it**, and **is the effect visible outside the session?** Either one qualifies it — publishing an artifact, firing a webhook, consuming a rate-limited quota, force-pushing, and messaging another agent all count, whether or not they read as "destructive". Name such actions plainly (`delete_scene`, `send_email`) so they are obvious in a trace, validate permissions server-side, and offer a dry run where the stakes justify one.
 
-- Name the action plainly (`delete_scene`, `send_email`) so it is obvious in a trace.
-- Provide dry-run or preview for high-stakes actions.
-- Require confirmation where effects are hard to reverse, through exactly one gate.
-- Validate permissions server-side.
-- Return a clear, bounded summary of what changed. A destructive tool that answers with a dump forces the agent to re-verify its own action; one that answers `{ "ok": true }` leaves the agent's belief behind its own effect.
-- Re-confirm the precondition at the moment of the action rather than trusting a reading from earlier in the session.
+Two requirements are specific to the agent as caller. **Return a bounded summary of what changed** — a dump forces the agent to re-verify its own action, and `{ "ok": true }` leaves its belief behind its own effect. And **re-confirm the precondition at the moment of the action**, never trusting a reading from earlier in the session.
 
 ## One approval gate
 
@@ -60,14 +53,9 @@ They are hints, not guarantees. A server can claim `readOnlyHint: true` and dele
 
 ## The lethal trifecta
 
-A session becomes high risk when it combines access to private data, exposure to untrusted content, and the ability to communicate externally. Because the risk is a conjunction, every real defense either **breaks one leg** or **gates the crossing between legs**:
+A session becomes high risk when it combines access to private data, exposure to untrusted content, and the ability to communicate externally. Because the risk is a conjunction, every real defense either **breaks one leg** or **gates the crossing between legs** — least-authority tool sets, read-only mode for untrusted-content workflows, egress allowlists, approval before external communication that follows an untrusted read, separate sessions so no single context holds all three.
 
-- Least-authority tool sets per session, and read-only mode for untrusted-content workflows.
-- Label or strip untrusted text at ingestion.
-- Explicit approval before external communication that follows an untrusted read.
-- Egress allowlists.
-- Separate sessions or sub-agents so no single context holds all three.
-- Runtime policy that marks a session tainted after an untrusted read, and downgrades capability rather than relying on the model to remember.
+The one that gets skipped: taint should be **runtime state, not model memory**. A session that reads untrusted content is marked, and capability is downgraded by policy — an agent asked to remember, forty turns later, that something it read at turn 6 was untrusted is being asked to enforce a security boundary from recall.
 
 ## Terminal failures
 

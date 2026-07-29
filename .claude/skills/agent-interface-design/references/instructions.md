@@ -4,19 +4,7 @@ Applies to system prompts, agent configs, skill bodies, and prompt templates.
 
 ## Make important rules observable
 
-Each important rule should affect a transcript-visible behavior: output shape, tool choice, file edit, refusal, escalation. If you cannot point to the behavior a rule should produce, the model cannot either.
-
-Bad:
-
-```text
-Be smart, careful, and high quality.
-```
-
-Better:
-
-```text
-Before reporting a task complete, run the test suite and paste the summary line. If any test fails, report the failure instead of fixing it silently.
-```
+Each important rule should affect a transcript-visible behavior: output shape, tool choice, file edit, refusal, escalation. If you cannot point to the behavior a rule should produce, the model cannot either — and you have no way to tell whether the line is working, which makes it permanently unfalsifiable and permanently unremovable.
 
 ## Match the form to the failure
 
@@ -45,19 +33,7 @@ Know where each artifact lands in your runtime, because that determines what may
 
 ## Explain the why for judgment rules
 
-Models generalize from clear intent better than from brittle rule lists. A bare rule covers the cases you spelled out; the reason covers the ones you didn't.
-
-Bad:
-
-```text
-Always use TypeScript.
-```
-
-Better:
-
-```text
-Use TypeScript for new source files because this package relies on typed import boundaries. Keep existing JavaScript files unchanged unless the task requires migration.
-```
+Models generalize from clear intent better than from brittle rule lists. A bare rule covers the cases you spelled out; the reason covers the ones you didn't — and gives the model the grounds to recognize when a case falls outside the rule entirely, which no amount of enumeration provides.
 
 ## Calibrate force
 

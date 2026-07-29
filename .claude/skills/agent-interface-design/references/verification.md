@@ -24,15 +24,14 @@ Three rules make it trustworthy:
 
 ## The eval loop
 
-1. **Prototype in the real runtime**, or the closest available. Try the tasks by hand before optimizing wording.
-2. **Write tasks that would fail for the reason you care about.** A task the design passes for unrelated reasons measures nothing.
-3. **Define verifiers**: exact checks, regex, deterministic assertions, or a model judge where the output is genuinely open-ended. Avoid pinning to one correct tool-call path when several are valid.
-4. **Run programmatically**, recording task, tool calls, inputs, raw outputs, errors, final answer, tokens, latency, and retries.
-5. **Log observable diagnostics, not hidden reasoning.** Use whatever reasoning summaries the runtime exposes; never require private chain-of-thought. A useful visible block: goal, selected tool, one-sentence reason, parameters, expected result, uncertainty, observed issue, next action.
-6. **Read transcripts.** Look for wrong-tool calls, redundant reads, invalid arguments, oversized results, ignored errors, acting on facts from earlier turns, and stopping early.
-7. **Change one thing at a time** where practical, and re-run held-out tasks so you are not fitting the eval set.
+Standard eval hygiene applies — prototype in the real runtime, change one thing at a time, hold out tasks so you are not fitting the set. Four things are specific to this material:
 
-Agents can review traces and propose changes — names, schemas, response shapes, validation, error text, disambiguation, and the evals that would prove the fix. Do not accept a suggestion because it reads well; run it.
+- **Write tasks that would fail for the reason you care about.** A task the design passes for unrelated reasons measures nothing, and it is the most common way an eval suite reads green while the interface is broken.
+- **Do not pin the verifier to one correct tool-call path** when several are valid. You are measuring whether the agent got there, not whether it took your route.
+- **Log observable diagnostics, never hidden reasoning.** Use the reasoning summaries the runtime exposes; do not build a design that requires private chain-of-thought. A useful visible block: goal, selected tool, one-sentence reason, parameters, expected result, uncertainty, observed issue, next action.
+- **Read transcripts, not just scores.** The failures that matter here — redundant reads, oversized results, ignored errors, acting on a fact from twenty turns ago, stopping early — mostly do not change the final answer, which is exactly why they survive.
+
+Agents can review traces and propose changes: names, schemas, response shapes, validation, error text, disambiguation, and the evals that would prove the fix. Do not accept a suggestion because it reads well; run it.
 
 ## What to measure
 

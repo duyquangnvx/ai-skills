@@ -34,8 +34,11 @@ The standards live in the reference files, and each fact lives in exactly one of
 | Authority and safety: source ranking, untrusted content, destructive actions, approval | `references/trust-and-safety.md` |
 | Knowing it works: ablation, pressure scenarios, evals, metrics | `references/verification.md` |
 | Architecture: workflow vs agent, multi-agent, stop conditions, tool reduction | `references/architecture.md` |
+| Checkable facts: what the specs and runtimes actually do, with dates | `references/platform-facts.md` |
 
-A single design question usually needs two or three of these, not one: the standard for the surface you are changing, plus `instructions.md` when the fix is a matter of wording, plus `verification.md` when you need to prove it worked. Only an audit of a whole interface touches all six.
+A single design question usually needs two or three of these, not one: the standard for the surface you are changing, plus `instructions.md` when the fix is a matter of wording, plus `verification.md` when you need to prove it worked. Only an audit of a whole interface touches all seven.
+
+The first six are reasoning, and they age slowly. `platform-facts.md` is the opposite — it exists because spec and runtime behavior is where a capable model is most often a revision behind, and it carries the date it was true for exactly that reason. Read it whenever a design turns on what a protocol or harness actually provides, and re-check it against the version you target rather than trusting it.
 
 ## Principles
 
@@ -84,6 +87,7 @@ Collisions in this skill happen along one seam: a **static contract** and its **
 | What a tool catalog offers and in what shape | `tool-patterns.md` |
 | What a sub-agent returns, and in what shape | Its registered description where one exists; the brief itself where the spawn is ad-hoc — never left to the sub-agent |
 | What happens to a loaded fact as the session runs | `context-lifecycle.md` |
+| What a given spec version or harness actually does | `platform-facts.md`, always with its as-of date |
 | Heavy reference, long examples, API docs | On-demand reference files |
 
 ## Output pattern

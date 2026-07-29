@@ -12,7 +12,6 @@ Applies to tool scoping, names, schemas, descriptions, responses, and errors. Th
 - Make errors actionable
 - Schema vs prompt ownership
 - Partial updates
-- Keep handlers thin
 - Server-side validation
 - A cost ladder over the same data
 - Agents as tools
@@ -182,11 +181,7 @@ Better: update_scene(scene_id, updates: Partial<Scene>)
 Riskier: update_scene(scene_id, scene: Scene)
 ```
 
-Partial updates reduce what the agent must reconstruct and let the server preserve omitted fields — which also means the agent cannot silently revert a field it never read. For deeply nested objects a constrained patch format may help, but pointer-style paths add another thing the model can get wrong.
-
-## Keep handlers thin
-
-A tool parses and validates input, delegates to existing domain code, and shapes the result for the agent. Business rules do not live in the handler: thin handlers keep logic testable outside the agent and let you rename, split, or merge tools freely.
+The agent-specific argument for partial updates is not convenience: a whole-object update makes the agent reconstruct fields it never read, so any field that changed under it gets silently reverted by its own write. Partials let the server preserve what the agent did not touch. For deeply nested objects a constrained patch format may help, but pointer-style paths add another thing the model can get wrong.
 
 ## Server-side validation
 
@@ -217,7 +212,7 @@ Where the spawn is ad-hoc and there is no registered description to hold it, the
 
 ## Descriptions rot
 
-Parameters get added, return formats change, error codes shift, and the prose stops matching behavior. Version descriptions with the tool, review them in the same change that touches the API, and re-run tool evals after meaningful edits. A stale description misroutes the agent more quietly than a broken schema.
+A stale description misroutes the agent more quietly than a broken schema does — the call is well-formed and simply wrong, so nothing errors. Version descriptions with the tool, review them in the change that touches the API, and re-run tool evals after meaningful edits.
 
 ## Review checklist
 
@@ -230,4 +225,3 @@ Parameters get added, return formats change, error codes shift, and the prose st
 - [ ] Mutations return the post-write state; racy writes require the version the agent read.
 - [ ] Every error says what was applied, whether to retry, and what to change.
 - [ ] No parameter asks the model for what the handler can resolve from session context.
-- [ ] Handlers are thin: validate, delegate, shape.
