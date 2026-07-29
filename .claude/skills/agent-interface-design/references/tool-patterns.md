@@ -147,8 +147,9 @@ For richer catalogs, a structured shape pays off:
     "message": "Scene 'arrival' changed since the version you read (41 → 47).",
     "current": { "title": "...", "beats": [...] },
     "applied": "none",
-    "resolution": "Reapply your change against the state included here.",
-    "retryable": true
+    "safe_to_retry_verbatim": false,
+    "replan_required": true,
+    "resolution": "Re-derive your change from the state included here. If what landed touches the field you meant to write, surface it instead of reapplying."
   }
 }
 ```
@@ -156,7 +157,7 @@ For richer catalogs, a structured shape pays off:
 Four properties do the work:
 
 - **Say what was applied.** A conflict from a multi-entity write may arrive after part of it committed. "Retry" against a partially applied write re-fires whatever already succeeded — a second notification, a second charge. State `applied` explicitly rather than leaving the agent to infer that a conflict means nothing happened.
-- **Set retryability server-side.** It is a fact about the failure, not something the agent should derive from the word "conflict" or from a retry count it keeps itself.
+- **Split retryability into two questions, and answer both server-side.** *May the identical payload be resent?* and *is the decision behind it still valid?* A single `retryable: true` conflates them, and on a conflict it answers the wrong one: the mechanism will accept a retry, which is precisely why the agent must not send one. Resubmitting the same value against a fresh version launders a stale decision through the precondition that existed to catch it. Transient failures — a timeout, a lock, a rate limit — are retryable verbatim; conflicts and precondition failures never are.
 - **Carry the current state.** Recovery then costs no extra round trip, and the correction arrives at the one moment with guaranteed attention: an announcement can be ignored, a refused write cannot.
 - **Distinguish "retry this" from "stop".** A conflict caused by someone else's change is an escalation signal — see `context-lifecycle.md`. Authorization failures are terminal and must not read as solvable; `trust-and-safety.md` covers why.
 

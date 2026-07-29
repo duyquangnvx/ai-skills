@@ -71,9 +71,13 @@ A session becomes high risk when it combines access to private data, exposure to
 
 ## Terminal failures
 
-Most errors should tell the agent what to change before retrying. Authorization is the exception, and getting it wrong is worse than a bad error message. A revoked permission, a rotated credential, or a scope the caller no longer holds is a real answer, not a solvable problem — but an agent trained on actionable errors will treat a denial as an obstacle and route around it: try a sibling tool, take a different path to the same effect, or ask the user to run the command manually.
+Most errors should tell the agent what to change before retrying. Authorization is the exception, and getting it wrong is worse than a bad error message. A revoked permission, a rotated credential, or a scope the caller no longer holds is a real answer, not a solvable problem — but an agent trained on actionable errors will treat a denial as an obstacle and route around it: reach for a shell that has no check in front of it, take a different path to the same effect, or ask the user to run the command by hand.
 
-Authorization failures state that access is denied, do not enumerate what would have worked, and do not suggest a retry. The agent's correct move is to stop and report, and the error should leave no other reading available.
+The line that separates a legitimate next step from a bypass is **who decides**. Filing a request through a sanctioned access channel, or reporting to the user so *they* can decide with the full picture, respects the denial — the decision still belongs to whoever holds the authority. Getting the same effect through another tool, or asking the user to type the command as a way past the block, does not; that is the same bypass with a human used as hands. Say which of the two you mean, because "stop and report" stated flat also forbids the legitimate move, and an agent that reads it that way gives the user a dead end instead of a decision.
+
+The error carries four things: that access is denied, that it is policy rather than a transient condition, **that reaching the same effect by another route is a violation and not a workaround**, and at most one sanctioned next step with concrete arguments. Non-enumerating means it does not list which roles, scopes, or resources would have succeeded — not that it says nothing. A bare "Access denied." leaves a capable model to invent its own path, and it will.
+
+Error text is the second line of defense, never the first. **Tool exposure is the permission boundary.** A gated deploy tool sitting beside an ungated shell that can reach the same API means the fine-grained check is advisory, and you are relying on the model's disposition where you meant a control.
 
 ## Review checklist
 
