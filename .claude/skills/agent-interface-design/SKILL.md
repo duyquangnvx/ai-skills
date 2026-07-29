@@ -35,7 +35,7 @@ The standards live in the reference files, and each fact lives in exactly one of
 | Knowing it works: ablation, pressure scenarios, evals, metrics | `references/verification.md` |
 | Architecture: workflow vs agent, multi-agent, stop conditions, tool reduction | `references/architecture.md` |
 
-An audit of a whole agent interface touches all six.
+A single design question usually needs two or three of these, not one: the standard for the surface you are changing, plus `instructions.md` when the fix is a matter of wording, plus `verification.md` when you need to prove it worked. Only an audit of a whole interface touches all six.
 
 ## Principles
 
@@ -82,6 +82,7 @@ Collisions in this skill happen along one seam: a **static contract** and its **
 | Which actions require approval, and what may override what | Runtime gate; source ranking in `trust-and-safety.md` |
 | Deterministic constraints (IDs, permissions, transitions) | Server-side validation |
 | What a tool catalog offers and in what shape | `tool-patterns.md` |
+| What a sub-agent returns, and in what shape | Its registered description where one exists; the brief itself where the spawn is ad-hoc — never left to the sub-agent |
 | What happens to a loaded fact as the session runs | `context-lifecycle.md` |
 | Heavy reference, long examples, API docs | On-demand reference files |
 

@@ -33,6 +33,8 @@ Weak: get_customer + list_transactions + list_notes
 Better: get_customer_context(customer_ref, include_recent_activity=true)
 ```
 
+Consolidation is a claim about **call shape**, never about how long the result may be held. A bundled response routinely mixes a stable identity with volatile state, so stamp per field rather than per response, and decide separately — by volatility, in `context-lifecycle.md` — which of those fields may sit in context and which must be re-fetched at the point of use.
+
 Grouping near-identical sibling actions behind one tool with an `action` parameter is a good default — `pr_manage(action: "create" | "review", ...)` beats three tools differing only in verb, because fewer, more capable tools reduce selection ambiguity. Consolidation also has a correctness argument beyond efficiency: a sequence of writes that must be coherent should be one call, because a rejection partway through a sequence leaves the earlier writes applied.
 
 **Consolidate along axes the model chooses well — which entity, which field. Split along axes where a wrong choice is unrecoverable or unbudgeted.**
@@ -47,6 +49,8 @@ Risky merge (destructive hidden behind a mode):
 ```
 
 Safety class is the clearest case of unrecoverable, and a merged tool inherits the scariest gate any of its actions needs while making a read-only annotation impossible. But the criterion reaches further than safety: a ten-minute expensive backfill does not belong behind the same name as a cheap query, and neither do operations with different authorization scopes.
+
+The mechanism behind all of these is that **permission, cost expectation, and annotation attach to the tool name, not to its arguments.** Allow-listing a merged tool because its cheap read is harmless silently allow-lists everything else the mode parameter can reach, and no amount of description text narrows that grant. So the practical question is not "are these the same kind of operation" but "would I grant them together" — and tool count is the wrong thing to minimize anyway. Minimize ambiguity per tool.
 
 Overlap test: if a human engineer cannot say which tool to use in one sentence, the agent cannot either. Keep the active set small — cross-vendor guidance suggests under ~20 tools per turn — and namespace beyond that.
 
@@ -207,6 +211,8 @@ Not every domain needs every rung, and domains with expensive reads earn others 
 ## Agents as tools
 
 Where sub-agents are exposed as callable tools, the description standard above applies unchanged. Two specifics: describe what the sub-agent returns, in shape and level of detail, so the caller can plan around it without a verification call; and treat the task argument as the entire briefing, since the sub-agent starts without the caller's conversation. A one-line task produces a sub-agent that rediscovers context the caller already had.
+
+Where the spawn is ad-hoc and there is no registered description to hold it, the return contract moves into the brief and becomes one of its required parts. An unspecified return shape is not an omission the sub-agent will fill in consistently — a capable model picks a reasonable shape and a different one each time, and a caller with no declared shape cannot even detect the mismatch. State the required parts in order, including what to return when the result is empty or the work was blocked, since those are where shapes diverge most and where a guessing caller does the most damage.
 
 ## Descriptions rot
 
