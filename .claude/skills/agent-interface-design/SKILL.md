@@ -1,6 +1,6 @@
 ---
 name: agent-interface-design
-description: "Use when designing, writing, or reviewing anything an LLM agent reads to decide behavior — system prompts, skills, tool schemas and descriptions, MCP servers, tool responses — how its context is assembled at runtime: what loads when, memory, compaction, prompt caching — and when to escalate from workflow to agent to multi-agent. Symptoms: wrong tool calls, ignored instructions, oversized responses, prompt injection, forgotten or repeated work, degrading long sessions, poor cache hits."
+description: "Use when designing, writing, or reviewing anything an LLM agent reads to decide behavior — system prompts, skills, tool schemas and descriptions, MCP servers, tool responses — and how its context is assembled and ages at runtime: what loads when, what stays true, memory, compaction, prompt caching, and when to escalate from workflow to agent to multi-agent. Symptoms: wrong tool calls, ignored instructions, oversized responses, prompt injection, the agent acting on a fact that has since changed, forgotten or repeated work, degrading long sessions, poor cache hits."
 ---
 
 # Agent Interface Design
@@ -9,59 +9,68 @@ Everything the model reads is one interface: instructions, routing metadata, too
 
 The reader is a non-deterministic caller with limited attention, imperfect tool choice, and imperfect argument construction, and it cannot ask clarifying questions before acting on what you wrote. Design every surface for that reader.
 
+## Four questions generate the rules
+
+Every piece of context has the same four properties. Ask them of anything you put in front of the model and the specific rule follows, including for cases no standard here enumerates.
+
+| Property | Ask |
+| --- | --- |
+| **Authority** | Who could have written this, can the user see it, and what may it override? |
+| **Freshness** | When did this become true, is it still, and would the agent find out if it weren't? |
+| **Cost** | What does carrying this cost on every turn from here on — tokens, latency, and attention taken from the current task? |
+| **Actionability** | Does it change the next decision? |
+
+Freshness is the one most often skipped. Context is a copy of state taken at a known time, and nothing in the window announces that a copy has gone wrong: stale context looks exactly like fresh context. A surface with no answer to the freshness question is a surface whose failures are invisible in any single transcript.
+
 ## This file is the map, not the standard
 
-The standards live in the reference files. Whatever the task — writing a new surface, reviewing one, fixing a symptom — read the standard for every surface you are touching before producing output. Work produced from this overview alone is below the standard and forces a second pass later.
+The standards live in the reference files, and each fact lives in exactly one of them. Whatever the task — writing a new surface, reviewing one, fixing a symptom — read the standard for every surface you are touching before producing output.
 
 | Surface you are touching | Standard to read |
 | --- | --- |
 | Instructions: system prompts, agent configs, skill bodies, prompt templates | `references/instructions.md` |
-| Tool layer: tool scoping, names, schemas, descriptions, responses, errors | `references/tool-patterns.md` |
-| Context runtime: load policy, prompt caching, compaction, memory, sub-agent isolation | `references/context-runtime.md` |
-| Verification and safety: evals, destructive actions, MCP annotations, prompt injection | `references/evals-and-safety.md` |
-| Architecture decisions: workflow vs agent, multi-agent, stop conditions, tool reduction | `references/architectural-reduction.md` |
+| Tool layer: scoping, names, schemas, descriptions, responses, errors | `references/tool-patterns.md` |
+| Context lifecycle: what enters, how long it stays true, compaction, memory, request layout | `references/context-lifecycle.md` |
+| Authority and safety: source ranking, untrusted content, destructive actions, approval | `references/trust-and-safety.md` |
+| Knowing it works: ablation, pressure scenarios, evals, metrics | `references/verification.md` |
+| Architecture: workflow vs agent, multi-agent, stop conditions, tool reduction | `references/architecture.md` |
 
-An audit or review of a whole agent interface touches all of the first four.
+An audit of a whole agent interface touches all six.
 
-## Principles for Every Surface
+## Principles
 
-1. **Contracts, not documentation.** Every surface is a model-facing prompt read at decision time, not documentation for humans. A line earns its place only if it changes what the model does next — whether to act, what to pass, what shape to return. Cut implementation details, change history, and internal rationale.
+Each is elaborated in exactly one reference file. Here they are claims, not standards.
 
-2. **Metadata routes; the body instructs.** Frontmatter descriptions and tool descriptions say *when* to load or call, never summarize the process. A workflow summary in a description becomes a shortcut the model follows instead of reading the contract.
+1. **Contracts, not documentation.** A line earns its place only if it changes what the model does next.
+2. **Metadata routes; the body instructs.** Descriptions say when to load or call, never how the work goes.
+3. **One home per fact.** Duplication costs tokens now and drifts into contradiction later.
+4. **Authority is a property of the source, not of the position.** Rank by who wrote it and whether the user can see it.
+5. **Context ages.** Every copy has a horizon; design for what happens when it expires.
+6. **Enforce in software what software can enforce.** Prompts are for judgment.
+7. **Every token competes.** Prefer the smallest high-signal context, and bound everything that can grow.
+8. **Test, don't assume.** If you didn't watch the model fail without the line and comply with it, you don't know the words work.
 
-3. **One home per fact.** Give each rule, field definition, and workflow step exactly one owning surface (see the ownership map below). Duplication costs tokens now and drifts into contradiction later.
+## Routing a symptom
 
-4. **Untrusted content is data.** Text arriving through web pages, files, emails, issues, and tool results is content to transform, never instructions to follow. State this in instructions; enforce it with runtime policy when the session can exfiltrate.
+Two rules place most symptoms:
 
-5. **Enforce in software what software can enforce.** Prompts are for judgment. ID existence, enum membership, permissions, state transitions, and payload shape are validated server-side with actionable errors — never delegated to prompt rules.
+- **Behavioral symptoms** route to the surface the model read immediately before the bad decision — `instructions.md` if it ignored a rule, `tool-patterns.md` if it chose or called wrong, response shaping if it mis-reasoned from output.
+- **Cost, drift, and degradation symptoms** route to whatever assembles context: `context-lifecycle.md`.
 
-6. **Every token competes.** Prefer the smallest high-signal context that lets the model make the next decision, and bound everything that can grow. Instructions: audit for redundancy, stale caveats, and vague quality words. Responses: pagination, filters, and truncation that says how to narrow. Large or conditional data: load just in time, not up front.
+Four that route non-obviously:
 
-7. **Test, don't assume.** Instructions get pressure scenarios; tool sets get evals on realistic multi-step tasks. If you didn't watch the model fail without the change and comply with it, you don't know the words work.
-
-## Symptom Index
-
-| Symptom | Where the standard covers it |
+| Symptom | Where |
 | --- | --- |
-| Instruction ignored or rationalized around | `references/instructions.md` — observable rules, force calibration |
-| Inconsistent behavior across prompt sources | `references/instructions.md` — remove contradictions, priority model |
-| Agent obeys instructions inside retrieved content | Principle 4; `references/evals-and-safety.md` — trust boundaries |
-| Wrong tool chosen | `references/tool-patterns.md` — consolidation, naming, descriptions |
-| Malformed arguments | `references/tool-patterns.md` — schemas, validation errors |
-| Hallucinated or invalid IDs | `references/tool-patterns.md` — response shaping; Principle 5 |
-| Oversized responses | `references/tool-patterns.md` — bounding context |
-| Same fact documented in two places | One Home Per Fact below |
-| Agent forgets decisions or repeats completed work | `references/context-runtime.md` — memory, compaction |
-| Quality degrades as the session grows | `references/context-runtime.md` — compaction, tool result clearing |
-| Low cache hits, cost growing per turn | `references/context-runtime.md` — cache-aware layout |
-| Retrieval adds noise or contradicts current rules | `references/context-runtime.md` — load policy |
-| Loop never terminates or burns budget retrying | `references/architectural-reduction.md` — stop conditions |
-| Sub-agents conflict or duplicate work | `references/architectural-reduction.md` — multi-agent |
-| Risky or destructive action | `references/evals-and-safety.md` — safety and trust boundaries |
-| User asked to approve the same action twice | `references/evals-and-safety.md` — one approval gate |
-| Unclear design tradeoff | `references/evals-and-safety.md` — evaluation loop |
+| Agent obeys instructions found inside retrieved content | `trust-and-safety.md` — source ranking, untrusted content |
+| User asked to approve the same action twice | `trust-and-safety.md` — one approval gate |
+| Agent confidently reports something that was true earlier and is not now | `context-lifecycle.md` — freshness, detection |
+| Loop never terminates, or retries a failure that will never succeed | `architecture.md` — stop conditions |
 
-## One Home Per Fact
+## One home per fact
+
+Collisions in this skill happen along one seam: a **static contract** and its **runtime behavior** are the same fact seen from two sides. The rule that resolves them:
+
+**The artifact file owns what to write down. The lifecycle file owns what happens to it during a session.**
 
 | Content | Its one home |
 | --- | --- |
@@ -70,19 +79,21 @@ An audit or review of a whole agent interface touches all of the first four.
 | Field names, types, required/optional, enums, return shape | Tool schema |
 | Input conventions, side effects, sibling disambiguation | Tool description |
 | Cross-tool workflow order, approval choreography, tone | System/developer prompt |
-| Which actions require user approval | Runtime approval gate (MCP annotations, framework approval flags); prompt-level ask only when no gate exists |
+| Which actions require approval, and what may override what | Runtime gate; source ranking in `trust-and-safety.md` |
 | Deterministic constraints (IDs, permissions, transitions) | Server-side validation |
+| What a tool catalog offers and in what shape | `tool-patterns.md` |
+| What happens to a loaded fact as the session runs | `context-lifecycle.md` |
 | Heavy reference, long examples, API docs | On-demand reference files |
 
-## Output Pattern
+## Output pattern
 
-For reviews, be concrete:
+For reviews:
 
 ```text
 Symptom:
 Likely cause:
 Recommended change (surface + exact wording, signature, or error):
-Eval or scenario to verify:
+How to verify it (ablation, scenario, or eval):
 ```
 
-For new designs: propose the smallest viable surface set, explain the boundaries between tools and between prompt and schema, and list the first eval tasks that would prove the design works.
+For new designs: propose the smallest viable surface set, state each surface's authority and freshness horizon, explain the boundaries between tools and between prompt and schema, and list the first tasks that would prove the design works.

@@ -1,6 +1,6 @@
 # The Tool Layer: The Standard
 
-Applies to tool scoping, names, schemas, descriptions, responses, and errors. These are design rules with strong defaults, not universal laws; verify important tradeoffs with evals in the target runtime (see `evals-and-safety.md`).
+Applies to tool scoping, names, schemas, descriptions, responses, and errors. These are strong defaults, not universal laws; verify important tradeoffs in the target runtime.
 
 ## Contents
 
@@ -8,12 +8,13 @@ Applies to tool scoping, names, schemas, descriptions, responses, and errors. Th
 - Make tool contracts self-explanatory
 - Design responses for the agent reader
 - Bound context before the runtime does
+- Answer with the new state
 - Make errors actionable
 - Schema vs prompt ownership
 - Partial updates
 - Keep handlers thin
 - Server-side validation
-- Orient and validate tools
+- A cost ladder over the same data
 - Agents as tools
 - Descriptions rot
 
@@ -32,10 +33,12 @@ Weak: get_customer + list_transactions + list_notes
 Better: get_customer_context(customer_ref, include_recent_activity=true)
 ```
 
-Grouping near-identical sibling actions behind one tool with an `action` parameter is a vendor-endorsed default — `pr_manage(action: "create" | "review", ...)` beats three tools that differ only in verb, because fewer, more capable tools reduce selection ambiguity. Draw the line at safety class:
+Grouping near-identical sibling actions behind one tool with an `action` parameter is a good default — `pr_manage(action: "create" | "review", ...)` beats three tools differing only in verb, because fewer, more capable tools reduce selection ambiguity. Consolidation also has a correctness argument beyond efficiency: a sequence of writes that must be coherent should be one call, because a rejection partway through a sequence leaves the earlier writes applied.
+
+**Consolidate along axes the model chooses well — which entity, which field. Split along axes where a wrong choice is unrecoverable or unbudgeted.**
 
 ```text
-Good split (different safety class):
+Good split (wrong choice is unrecoverable):
 - update_scene(scene_id, updates)
 - delete_scene(scene_id, dry_run=true)
 
@@ -43,13 +46,13 @@ Risky merge (destructive hidden behind a mode):
 - mutate_scene(scene_id, operation, payload)   # "operation" includes delete
 ```
 
-A merged tool inherits the scariest confirmation gate any of its actions needs, and a read-only annotation becomes impossible. Keep reads, reversible writes, and destructive operations separate even when consolidating everything else.
+Safety class is the clearest case of unrecoverable, and a merged tool inherits the scariest gate any of its actions needs while making a read-only annotation impossible. But the criterion reaches further than safety: a ten-minute expensive backfill does not belong behind the same name as a cheap query, and neither do operations with different authorization scopes.
 
-Overlap test: if a human engineer cannot say which tool to use in one sentence, the agent cannot either. Keep the active set small — cross-vendor guidance suggests under ~20 tools per turn; namespace beyond that.
+Overlap test: if a human engineer cannot say which tool to use in one sentence, the agent cannot either. Keep the active set small — cross-vendor guidance suggests under ~20 tools per turn — and namespace beyond that.
 
-Over-consolidation is the opposite failure. When a tool drifts toward 8–10+ parameters serving unrelated use cases, the failure moves from tool *selection* to tool *parameterization*. Remedies before splitting: sensible defaults, format presets that group related options, an `options` object for the rarely-used tail.
+Over-consolidation is the opposite failure. When one tool serves unrelated use cases, the failure moves from tool *selection* to tool *parameterization*: the model can no longer tell which combination of parameters is valid. Remedies before splitting: sensible defaults, format presets that group related options, an `options` object for the rarely-used tail.
 
-When the data layer is legible and the model strong, a few primitive tools can beat many specialized ones: see `architectural-reduction.md`.
+When the data layer is legible and the model strong, a few primitive tools can beat many specialized ones — see `architecture.md`.
 
 ## Make tool contracts self-explanatory
 
@@ -60,17 +63,13 @@ Good: github_search_issues, billing_refund_payment, scene_update
 Weak: get_data, update, parseAndInsertNodes
 ```
 
-Use consistent service/domain prefixes when many tools are loaded. Prefix vs suffix order can matter by model and runtime, so pick a convention and test it rather than treating one style as universal.
+Use consistent service or domain prefixes when many tools are loaded. Prefix versus suffix order can matter by model and runtime, so pick a convention and test it rather than treating one style as universal.
 
-Consistency extends to parameters and enums across the whole catalog:
+Consistency extends across the whole catalog: one name per concept (`customer_id` everywhere, never `id` in one tool and `identifier` in another); one pattern for boolean options (`include_history`, `include_metadata`, `exclude_archived`); the same verbosity enum everywhere.
 
-- One name per concept: always `customer_id`, never `id` in one tool and `identifier` in another.
-- Boolean options follow one pattern: `include_history`, `include_metadata`, `exclude_archived`.
-- Verbosity enums match everywhere: `"concise" | "detailed"`, not `"short" | "long"` in some tools.
+When referencing tools in prompts, use fully qualified names (`ServerName:tool_name`). With multiple servers loaded, unqualified names can collide or fail to resolve; audit for collisions when adding a server.
 
-When referencing MCP tools in prompts, use fully qualified names (`ServerName:tool_name`, e.g. `GitHub:create_issue`). With multiple servers loaded, unqualified names can collide or fail to resolve; audit for collisions when adding a new server.
-
-The description is the highest-leverage surface in the contract — vendor evals rank it the single most important factor in tool performance. Aim for at least 3–4 sentences leading with what the tool does, when to call it (and when not), input conventions and defaults, side effects, and how it differs from sibling tools. Add schema-validated input examples for format-sensitive tools where the runtime supports them, and use strict schemas where the runtime supports them.
+The description is the highest-leverage surface in the contract — evals rank it the single largest factor in tool performance, above naming and schema. Lead with what the tool does, then when to call it and when not, input conventions and defaults, side effects, and how it differs from its siblings. Where state has a lifetime, put that lifetime in the description so it enters context alongside the handle the model is carrying. Add schema-validated input examples for format-sensitive tools, and use strict schemas, where the runtime supports them.
 
 ## Design responses for the agent reader
 
@@ -86,27 +85,17 @@ Responses become context. Lead with human-readable, task-relevant fields — lab
 
 Cryptic identifiers as the main reasoning surface increase hallucinated references.
 
-Use `response_format` only when response verbosity meaningfully varies:
+Where a value can change under the agent, say when the response was true. An undated value reads as present tense forever, and a stamp is the only lever the agent has for reasoning about its own staleness.
 
-```typescript
-type ResponseFormat = "concise" | "detailed";
-```
+Use `response_format` only where verbosity meaningfully varies — concise for confirmations and follow-ups, detailed for decisions needing the full record — and document in the description when to use each. Do not add it to tiny tools where it only expands the schema.
 
-Concise suits confirmations and follow-up calls after an initial retrieval; detailed suits decisions that need the full record. Document in the description when to use each. Do not add this parameter to tiny tools where it only expands the schema.
-
-Response format has no universal winner. JSON, XML, Markdown, and plain text can all work. Choose the simplest shape that preserves structure, avoids awkward escaping/counting, and performs well in evals.
+Response format has no universal winner. JSON, XML, Markdown, and plain text can all work. Choose the simplest shape that preserves structure and avoids awkward escaping.
 
 ## Bound context before the runtime does
 
-Provider or client output caps are backstops, not design. Add controls where responses can grow:
+Provider or client output caps are backstops, not design. **Any dimension that can grow needs an agent-visible control, and any bounded response must describe its own incompleteness** — the second half is what makes truncation safe, because a response that silently omits looks identical to one that had nothing more to give.
 
-- Pagination with sensible defaults.
-- Filters for query, type, date, owner, status, or range.
-- Truncation that clearly says what was omitted.
-- Narrow follow-up instructions in truncation messages.
-- For very large payloads, a file-reference mode: write the content to a file and return the path instead of the body.
-
-Example:
+Growth dimensions worth controlling: result count, nesting depth, per-item fan-out, history length, and expansion of linked records.
 
 ```json
 {
@@ -117,9 +106,25 @@ Example:
 }
 ```
 
+For very large payloads, write the content to a file and return the path instead of the body.
+
+## Answer with the new state
+
+A write that returns `{ "ok": true }` leaves the agent's belief behind its own action, and the agent's next move is either to re-read what it just did or to reason from the pre-write copy still in its context. Return the post-write state instead — it costs one response body and removes a whole class of failure:
+
+```json
+// Weak
+{ "ok": true }
+
+// Better
+{ "scene": { "id": "arrival", "title": "...", "beats": [...] }, "version": 47 }
+```
+
+For writes that others can race, take the version the agent read as a required argument and refuse the write before applying it when the version no longer matches. Required rather than optional: an optional precondition protects only the callers that remember it, and the model is exactly the caller that will not. Where the runtime carries no transport-level mechanism for this, the token rides in the tool arguments, which means it passes through the model — so keep it short, opaque, and adjacent to the value it validates.
+
 ## Make errors actionable
 
-Errors serve two audiences — developers debugging and agents recovering — and the agent is the primary one: every error must say what went wrong and what to change before retrying.
+Errors serve two audiences — developers debugging and agents recovering — and the agent is the primary one. Every error says what went wrong and what to change before retrying.
 
 ```json
 {
@@ -129,104 +134,93 @@ Errors serve two audiences — developers debugging and agents recovering — an
 }
 ```
 
-For richer catalogs, a structured error shape pays off:
+For richer catalogs, a structured shape pays off:
 
 ```json
 {
   "error": {
-    "code": "INVALID_CUSTOMER_ID",
-    "message": "Customer ID 'CUST-123' does not match required format",
-    "expected_format": { "pattern": "CUST-######", "example": "CUST-000001" },
-    "resolution": "Provide a customer ID matching pattern CUST-######",
+    "code": "STALE_WRITE",
+    "message": "Scene 'arrival' changed since the version you read (41 → 47).",
+    "current": { "title": "...", "beats": [...] },
+    "applied": "none",
+    "resolution": "Reapply your change against the state included here.",
     "retryable": true
   }
 }
 ```
 
-Common cases: validation errors state received vs expected plus a fix; rate limits state wait time; not-found suggests a verification step. Only include valid values when safe; for permissions or sensitive resources, return a non-enumerating error.
+Four properties do the work:
+
+- **Say what was applied.** A conflict from a multi-entity write may arrive after part of it committed. "Retry" against a partially applied write re-fires whatever already succeeded — a second notification, a second charge. State `applied` explicitly rather than leaving the agent to infer that a conflict means nothing happened.
+- **Set retryability server-side.** It is a fact about the failure, not something the agent should derive from the word "conflict" or from a retry count it keeps itself.
+- **Carry the current state.** Recovery then costs no extra round trip, and the correction arrives at the one moment with guaranteed attention: an announcement can be ignored, a refused write cannot.
+- **Distinguish "retry this" from "stop".** A conflict caused by someone else's change is an escalation signal — see `context-lifecycle.md`. Authorization failures are terminal and must not read as solvable; `trust-and-safety.md` covers why.
+
+Common cases: validation errors state received versus expected plus a fix; rate limits state the wait; not-found suggests a verification step. Only include valid values when safe — for permissions or sensitive resources, return a non-enumerating error.
 
 ## Schema vs prompt ownership
 
-The tool schema should own:
+The tool schema owns field names and types, required versus optional, enums and structured output shape, per-field descriptions with concrete format examples where the format is non-obvious (`"CUST-######, e.g. CUST-000001"`, `"YYYY-MM-DD"`), and defaults that reflect the common case so the agent can safely omit parameters.
 
-- Field names and types.
-- Required vs optional.
-- Enums and structured output shape.
-- Per-field descriptions, with concrete format examples where the format is non-obvious (`"CUST-######, e.g. CUST-000001"`, `"YYYY-MM-DD"`).
-- Sensible defaults that reflect the common case, so the agent can omit parameters safely.
+Every parameter is a decision delegated to the model. A value the model cannot reliably know — the current user, tenant, project scope — is not a parameter: resolve it in the handler from session or runtime context and keep it out of the schema, even when the backend API requires it. The model can no longer hallucinate an identifier software already knows, the schema stays small and cache-stable, and a manipulated call cannot reach another tenant's scope.
 
-Every parameter is a decision delegated to the model. A value the model cannot reliably know — the current user, tenant, project scope — is not a parameter: resolve it in the handler from session or runtime context (injected arguments) and keep it out of the schema, even when the backend API requires it. The model can no longer hallucinate an ID software already knows, the schema stays small and cache-stable, and a manipulated call cannot reach another tenant's scope.
+These rules apply to any schema the model writes against. Structured-output response schemas are the same surface: per-field descriptions steer generation exactly as parameter descriptions steer calls, and a vague field name yields a vague field value.
 
-These rules apply to any schema the model writes against, not just tool inputs. Structured-output schemas (`generateObject`-style response formats) are the same surface: per-field descriptions steer generation exactly as parameter descriptions steer calls, and a vague field name yields a vague field value.
+The tool description is a model-facing prompt, not human documentation — drop file paths, change history, implementation notes, and how-it-works detail. Return shape belongs in the schema, not restated as prose.
 
-The tool description is a model-facing prompt, not human documentation — drop file paths, change history, implementation notes, and "how it works" details. Return shape belongs in the schema, not restated as prose or long code examples.
-
-The developer/system prompt should own:
-
-- Cross-tool workflow order.
-- Disambiguation between overlapping tools.
-- Destructive-action approval choreography — the gate itself belongs in the runtime when one exists (see `evals-and-safety.md`, One Approval Gate).
-- Domain concepts that are not field definitions.
-- Tone and user-facing behavior.
-
-Duplicating field schemas in the prompt costs tokens and creates drift.
+The developer or system prompt owns cross-tool workflow order, disambiguation between overlapping tools, approval choreography, domain concepts that are not field definitions, and tone. Duplicating field schemas in the prompt costs tokens and creates drift.
 
 ## Partial updates
-
-For editing structured state:
 
 ```text
 Better: update_scene(scene_id, updates: Partial<Scene>)
 Riskier: update_scene(scene_id, scene: Scene)
 ```
 
-Partial updates reduce the amount the agent must reconstruct and let the server preserve omitted fields. For deeply nested objects, a constrained patch format may be useful, but JSON Pointer-style paths add another thing the model can get wrong.
+Partial updates reduce what the agent must reconstruct and let the server preserve omitted fields — which also means the agent cannot silently revert a field it never read. For deeply nested objects a constrained patch format may help, but pointer-style paths add another thing the model can get wrong.
 
 ## Keep handlers thin
 
-A tool parses and validates input, delegates to existing domain code, and shapes the result for the agent. Business rules do not live in the handler: thin handlers keep logic testable outside the agent and let you rename, split, or merge tools freely. (Workflow shaping decides what each tool exposes; this rule keeps logic out of the plumbing.)
+A tool parses and validates input, delegates to existing domain code, and shapes the result for the agent. Business rules do not live in the handler: thin handlers keep logic testable outside the agent and let you rename, split, or merge tools freely.
 
 ## Server-side validation
 
-Any deterministic check belongs in software: ID existence, enum validity for the current object, allowed state transitions, permissions. Prompts are for judgment, never for enforcing what software can enforce.
+Any deterministic check belongs in software: identifier existence, enum validity for the current object, allowed state transitions, permissions, freshness preconditions. Each of these has an unambiguous answer at call time, and a rule in prose asking the model to respect one is a rule it will occasionally decide around.
 
-For permissions, prose is neither the gate nor the map. The handler enforces regardless of what the prompt says — a prompt is not a security boundary. And instead of describing who may do what, filter tool exposure per session: a role that cannot use a tool should not see it in the tool list. Fine-grained denials the toolset cannot express (per-resource, per-row) surface as actionable, non-enumerating errors. Decide the toolset at session start — swapping it mid-session invalidates the prompt cache.
+For permissions, prose is neither the gate nor the map. The handler enforces regardless of what the prompt says. And rather than describing who may do what, filter tool exposure per session: a role that cannot use a tool should not see it in the tool list. Fine-grained denials the toolset cannot express surface as actionable, non-enumerating errors.
 
-Dynamic per-request enums can prevent invalid references in strict runtimes, but they may reduce prompt-cache reuse. Use them when the reliability gain beats the cache cost; otherwise rely on server validation plus actionable errors.
+Dynamic per-request enums can prevent invalid references in strict runtimes at some cost to prompt-cache reuse. Use them where the reliability gain beats the cost; otherwise rely on server validation plus good errors.
 
-## Orient and validate tools
+## A cost ladder over the same data
 
-Many editing domains benefit from:
+Give the agent several ways into the same data at different costs, cheap and broad to expensive and narrow, so it can spend proportionally to what it needs:
 
-- `overview` / `orient`: cheap counts, top-level refs, schema version, warnings.
+- `overview` / `orient`: counts, top-level refs, schema version, warnings.
 - `list_*`: shallow labels and refs.
-- `get_*`: full detail by ref.
 - `search_*`: keyword or semantic lookup.
+- `get_*`: full detail by ref.
+- `diff` / `history`: what changed, and when.
 - `validate`: read-only structural and reference checks after edits.
 
-Document the usual call pattern as guidance, not as a rigid mandate.
+Not every domain needs every rung, and domains with expensive reads earn others — a dry-run preview, a cost estimate before a large fetch. Document the usual call pattern as guidance, not as a mandate.
 
 ## Agents as tools
 
-Multi-agent runtimes expose sub-agents as callable tools, and the description standard above applies unchanged. Two specifics:
-
-- Describe what the sub-agent returns — shape and level of detail — so the caller can plan around it without a verification call.
-- The task argument is the sub-agent's entire briefing: it starts without the caller's conversation, so the call itself must carry the deliverable, the constraints, and any refs it needs. A one-line task produces a sub-agent that rediscovers context the caller already had.
+Where sub-agents are exposed as callable tools, the description standard above applies unchanged. Two specifics: describe what the sub-agent returns, in shape and level of detail, so the caller can plan around it without a verification call; and treat the task argument as the entire briefing, since the sub-agent starts without the caller's conversation. A one-line task produces a sub-agent that rediscovers context the caller already had.
 
 ## Descriptions rot
 
-Descriptions rot: parameters get added, return formats change, error codes shift, and the prose stops matching behavior. Version descriptions with the tool, review them in the same change that touches the API, and re-run tool evals after meaningful edits. A stale description misroutes the agent more quietly than a broken schema.
+Parameters get added, return formats change, error codes shift, and the prose stops matching behavior. Version descriptions with the tool, review them in the same change that touches the API, and re-run tool evals after meaningful edits. A stale description misroutes the agent more quietly than a broken schema.
 
 ## Review checklist
 
 - [ ] Each tool maps to a real workflow; overlapping tools have a one-sentence disambiguation.
-- [ ] Destructive operations are separate tools, never modes of a merged tool.
+- [ ] Splits fall where a wrong choice is unrecoverable or unbudgeted, never behind a mode parameter.
 - [ ] Naming, parameters, and enums are consistent across the catalog; namespaced when large.
 - [ ] Every description carries when-to-call, conventions, side effects, sibling boundaries — and nothing meant for humans.
 - [ ] The schema is the source of truth for fields, enums, and return shape.
-- [ ] Responses are bounded and human-readable first; truncation says how to narrow.
-- [ ] Every error says what to change before retrying.
-- [ ] References are validated server-side.
+- [ ] Responses are bounded, human-readable first, and state their own incompleteness.
+- [ ] Mutations return the post-write state; racy writes require the version the agent read.
+- [ ] Every error says what was applied, whether to retry, and what to change.
 - [ ] No parameter asks the model for what the handler can resolve from session context.
 - [ ] Handlers are thin: validate, delegate, shape.
-- [ ] Sub-agent tools state what they return, and their task argument carries the full briefing.
