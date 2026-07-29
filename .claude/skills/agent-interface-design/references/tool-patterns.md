@@ -4,7 +4,7 @@ Applies to tool scoping, names, schemas, descriptions, responses, and errors. Th
 
 ## Contents
 
-- Shape tools around workflows
+- Where to cut the catalog
 - Make tool contracts self-explanatory
 - Design responses for the agent reader
 - Bound context before the runtime does
@@ -17,82 +17,33 @@ Applies to tool scoping, names, schemas, descriptions, responses, and errors. Th
 - Agents as tools
 - Descriptions rot
 
-## Shape tools around workflows
+## Where to cut the catalog
 
-Do not mirror backend endpoints. Consolidate chains the agent repeatedly performs:
+Tools are shaped around workflows the agent repeatedly performs, not around backend endpoints. The hard question is where to cut, and one rule answers it: **consolidate along axes the model chooses well — which entity, which field. Split along axes where a wrong choice is unrecoverable or unbudgeted.**
 
-```text
-Weak: list_users + list_events + create_event
-Better: schedule_event(attendees, time_window, topic)
+Safety class is the clearest unrecoverable case, and hiding a delete behind `mutate_scene(operation, payload)` is the canonical error: the merged tool inherits the scariest gate any of its actions needs, and a read-only annotation becomes impossible. But the criterion reaches past safety. A ten-minute backfill does not belong behind the same name as a cheap query, and neither do operations under different authorization scopes.
 
-Weak: read_logs(limit=10000)
-Better: search_logs(query, time_range, context_lines)
+The mechanism behind all of it: **permission, cost expectation, and annotation attach to the tool name, not to its arguments.** Allow-listing a merged tool because its cheap read is harmless silently allow-lists everything else the mode parameter can reach, and no description text narrows that grant. The practical question is therefore not "are these the same kind of operation" but **"would I grant them together"**.
 
-Weak: get_customer + list_transactions + list_notes
-Better: get_customer_context(customer_ref, include_recent_activity=true)
-```
+Two corrections to the instinct that fewer is better. Tool count is not the thing to minimize — ambiguity per tool is; keep the active set small (cross-vendor guidance suggests under ~20 per turn) and namespace beyond that. And over-consolidation has its own failure: when one tool serves unrelated use cases, the failure moves from tool *selection* to tool *parameterization*, and the model can no longer tell which combination of parameters is valid. Reach for defaults, format presets, and an `options` object for the rarely-used tail before splitting.
 
-Consolidation is a claim about **call shape**, never about how long the result may be held. A bundled response routinely mixes a stable identity with volatile state, so stamp per field rather than per response, and decide separately — by volatility, in `context-lifecycle.md` — which of those fields may sit in context and which must be re-fetched at the point of use.
-
-Grouping near-identical sibling actions behind one tool with an `action` parameter is a good default — `pr_manage(action: "create" | "review", ...)` beats three tools differing only in verb, because fewer, more capable tools reduce selection ambiguity. Consolidation also has a correctness argument beyond efficiency: a sequence of writes that must be coherent should be one call, because a rejection partway through a sequence leaves the earlier writes applied.
-
-**Consolidate along axes the model chooses well — which entity, which field. Split along axes where a wrong choice is unrecoverable or unbudgeted.**
-
-```text
-Good split (wrong choice is unrecoverable):
-- update_scene(scene_id, updates)
-- delete_scene(scene_id, dry_run=true)
-
-Risky merge (destructive hidden behind a mode):
-- mutate_scene(scene_id, operation, payload)   # "operation" includes delete
-```
-
-Safety class is the clearest case of unrecoverable, and a merged tool inherits the scariest gate any of its actions needs while making a read-only annotation impossible. But the criterion reaches further than safety: a ten-minute expensive backfill does not belong behind the same name as a cheap query, and neither do operations with different authorization scopes.
-
-The mechanism behind all of these is that **permission, cost expectation, and annotation attach to the tool name, not to its arguments.** Allow-listing a merged tool because its cheap read is harmless silently allow-lists everything else the mode parameter can reach, and no amount of description text narrows that grant. So the practical question is not "are these the same kind of operation" but "would I grant them together" — and tool count is the wrong thing to minimize anyway. Minimize ambiguity per tool.
-
-Overlap test: if a human engineer cannot say which tool to use in one sentence, the agent cannot either. Keep the active set small — cross-vendor guidance suggests under ~20 tools per turn — and namespace beyond that.
-
-Over-consolidation is the opposite failure. When one tool serves unrelated use cases, the failure moves from tool *selection* to tool *parameterization*: the model can no longer tell which combination of parameters is valid. Remedies before splitting: sensible defaults, format presets that group related options, an `options` object for the rarely-used tail.
+Two things consolidation is *not*. It is not a claim about how long the result may be held — a bundled response routinely mixes stable identity with volatile state, so stamp per field rather than per response and decide holding time separately, by volatility. And it is not purely an efficiency argument: a sequence of writes that must be coherent should be one call, because a rejection partway through a sequence leaves the earlier writes applied.
 
 When the data layer is legible and the model strong, a few primitive tools can beat many specialized ones — see `architecture.md`.
 
 ## Make tool contracts self-explanatory
 
-Names read clearly in a trace. Prefer intent and domain over implementation:
+**The description is the highest-leverage surface in the contract** — evals rank it the single largest factor in tool performance, above naming and schema. Lead with what the tool does, then when to call it and when not, input conventions and defaults, side effects, and how it differs from its siblings. Where state has a lifetime, put that lifetime in the description, so it enters context alongside the handle the model is carrying. Add schema-validated input examples for format-sensitive tools, and use strict schemas where the runtime supports them.
 
-```text
-Good: github_search_issues, billing_refund_payment, scene_update
-Weak: get_data, update, parseAndInsertNodes
-```
-
-Use consistent service or domain prefixes when many tools are loaded. Prefix versus suffix order can matter by model and runtime, so pick a convention and test it rather than treating one style as universal.
-
-Consistency extends across the whole catalog: one name per concept (`customer_id` everywhere, never `id` in one tool and `identifier` in another); one pattern for boolean options (`include_history`, `include_metadata`, `exclude_archived`); the same verbosity enum everywhere.
-
-When referencing tools in prompts, use fully qualified names (`ServerName:tool_name`). With multiple servers loaded, unqualified names can collide or fail to resolve; audit for collisions when adding a server.
-
-The description is the highest-leverage surface in the contract — evals rank it the single largest factor in tool performance, above naming and schema. Lead with what the tool does, then when to call it and when not, input conventions and defaults, side effects, and how it differs from its siblings. Where state has a lifetime, put that lifetime in the description so it enters context alongside the handle the model is carrying. Add schema-validated input examples for format-sensitive tools, and use strict schemas, where the runtime supports them.
+Two naming facts that are runtime behavior rather than style. Prefix versus suffix order can measurably matter by model and runtime, so pick a convention and test it instead of treating one as universal. And in prompts, reference tools by fully qualified name (`ServerName:tool_name`) — with multiple servers loaded, unqualified names can collide or fail to resolve, so audit for collisions when adding a server.
 
 ## Design responses for the agent reader
 
-Responses become context. Lead with human-readable, task-relevant fields — labels, slugs, short refs — and include raw IDs only where follow-up calls need them:
-
-```json
-// Low signal
-{ "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479", "thread_ts": "1234567890.123" }
-
-// Higher signal
-{ "label": "Jane Chen in #product-launch", "last_message_at": "2h ago", "ref": "thread_7" }
-```
-
-Cryptic identifiers as the main reasoning surface increase hallucinated references.
+Responses become context, so they are read by something that reasons rather than renders. Lead with human-readable, task-relevant fields — labels, slugs, short refs — and include raw IDs only where follow-up calls need them. `{ "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479" }` as the main reasoning surface measurably increases hallucinated references; `{ "label": "Jane Chen in #product-launch", "ref": "thread_7" }` does not.
 
 Where a value can change under the agent, say when the response was true. An undated value reads as present tense forever, and a stamp is the only lever the agent has for reasoning about its own staleness.
 
-Use `response_format` only where verbosity meaningfully varies — concise for confirmations and follow-ups, detailed for decisions needing the full record — and document in the description when to use each. Do not add it to tiny tools where it only expands the schema.
-
-Response format has no universal winner. JSON, XML, Markdown, and plain text can all work. Choose the simplest shape that preserves structure and avoids awkward escaping.
+Use `response_format` only where verbosity meaningfully varies — concise for confirmations, detailed for decisions needing the full record — and document in the description when to use each. Do not add it to tiny tools, where it only expands the schema. The serialization itself has no universal winner: choose the simplest shape that preserves structure and avoids awkward escaping.
 
 ## Bound context before the runtime does
 
@@ -164,22 +115,15 @@ Common cases: validation errors state received versus expected plus a fix; rate 
 
 ## Schema vs prompt ownership
 
-The tool schema owns field names and types, required versus optional, enums and structured output shape, per-field descriptions with concrete format examples where the format is non-obvious (`"CUST-######, e.g. CUST-000001"`, `"YYYY-MM-DD"`), and defaults that reflect the common case so the agent can safely omit parameters.
+The tool schema owns field names and types, required versus optional, enums and return shape, and defaults that reflect the common case so the agent can safely omit parameters. Per-field descriptions carry a concrete format example wherever the format is non-obvious (`"CUST-######, e.g. CUST-000001"`, `"YYYY-MM-DD"`) — the schema is where the model looks when constructing an argument, and prose elsewhere will not reach it in time.
 
 Every parameter is a decision delegated to the model. A value the model cannot reliably know — the current user, tenant, project scope — is not a parameter: resolve it in the handler from session or runtime context and keep it out of the schema, even when the backend API requires it. The model can no longer hallucinate an identifier software already knows, the schema stays small and cache-stable, and a manipulated call cannot reach another tenant's scope.
 
 These rules apply to any schema the model writes against. Structured-output response schemas are the same surface: per-field descriptions steer generation exactly as parameter descriptions steer calls, and a vague field name yields a vague field value.
 
-The tool description is a model-facing prompt, not human documentation — drop file paths, change history, implementation notes, and how-it-works detail. Return shape belongs in the schema, not restated as prose.
-
-The developer or system prompt owns cross-tool workflow order, disambiguation between overlapping tools, approval choreography, domain concepts that are not field definitions, and tone. Duplicating field schemas in the prompt costs tokens and creates drift.
+The tool description is a model-facing prompt, not human documentation — drop file paths, change history, implementation notes, and how-it-works detail. The developer or system prompt owns cross-tool workflow order, disambiguation between overlapping tools, approval choreography, domain concepts that are not field definitions, and tone. Neither restates the schema.
 
 ## Partial updates
-
-```text
-Better: update_scene(scene_id, updates: Partial<Scene>)
-Riskier: update_scene(scene_id, scene: Scene)
-```
 
 The agent-specific argument for partial updates is not convenience: a whole-object update makes the agent reconstruct fields it never read, so any field that changed under it gets silently reverted by its own write. Partials let the server preserve what the agent did not touch. For deeply nested objects a constrained patch format may help, but pointer-style paths add another thing the model can get wrong.
 
