@@ -1,11 +1,20 @@
-# TypeScript/JavaScript Testing
+---
+paths:
+  - "**/*.{ts,tsx,mts,cts}"
+---
 
-> This file extends [common/testing.md](../common/testing.md) with TypeScript/JavaScript specific content.
+<!-- Scoped to all TS files (not just *.test.ts) on purpose: these rules govern
+     behavior while editing source too, and path-scoped rules trigger on file reads. -->
 
-## E2E Testing
+# TypeScript — Testing
 
-Use **Playwright** as the E2E testing framework for critical user flows.
+- Use the project's existing test runner, layout, and naming. Before writing a test, read one or two neighboring test files and match their style — don't introduce a new pattern.
+- Test observable behavior through the public API. Don't assert on private internals, and don't make "mock was called with …" the primary assertion.
+- Mock only true boundaries: network, clock, fs, external services. Don't mock modules the project owns just to make a test easier to write.
+- Tests must be deterministic: fake time, seed randomness, no real network.
+- Bug fixes are regression-test-first: write the failing test, confirm it fails for the right reason, then fix. Keep the test.
+- A failing test is information. Decide which is wrong — the code or the test. Fixing the code needs no permission; changing a test's expectations does: state why the old expectation was wrong and get confirmation first.
 
-## Agent Support
+## E2E
 
-- **e2e-runner** - Playwright E2E testing specialist
+- Use **Playwright** for E2E tests of critical user flows. Delegate to the **e2e-runner** agent where available.
