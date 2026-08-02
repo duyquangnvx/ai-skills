@@ -1,3 +1,15 @@
+# CLAUDE.md
+
+## Session protocol
+
+- Design decisions are grilled with the user one question at a time, each with a recommendation; the user decides. Don't build past an ungrilled decision.
+- When a domain term crystallises, update `CONTEXT.md` immediately. Hard-to-reverse + surprising + real trade-off → new ADR.
+- Research runs as a background agent against primary sources → one cited note in `docs/research/
+
+## Conventions
+
+- English for code; **Vietnamese** when talking to the user.
+
 ## Cấu trúc repo
 
 - Skills sống ở **`.claude/skills/<name>/`** — nguồn canonical **duy nhất**. Không dùng `.agents/skills`, không symlink, không copy sang nơi khác. Claude Code tự nạp skill từ đây.
