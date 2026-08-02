@@ -1,8 +1,3 @@
----
-paths:
-  - "**/*.{ts,tsx,mts,cts}"
----
-
 # TypeScript — Workflow
 
 ## Definition of done
