@@ -45,6 +45,10 @@ Claude Code is the worked example, and the shape generalizes: **whether a preloa
 - **Compaction is when preloaded instructions get re-read from disk** — project-root CLAUDE.md and auto memory are re-injected; path-scoped rules and nested CLAUDE.md are lost until a matching file is read again.
 - **Auto-memory entries carry a `modified` timestamp** whose documented purpose is to show "how current the fact is, both to you and to Claude when it reads the memory back." This is the as-of stamp, shipping in production, solving staleness by annotation rather than by refresh.
 
+### Deferred tool loading is shipping
+
+- **Claude Code exposes large catalogs as names only** (as of 2026-08-04): deferred tools appear by name in the session, and the model fetches full schemas on demand, in batches, through a search tool. Context cost is paid per loaded schema, not per registered tool — so a tool-count budget stated per turn applies to the *loaded* set, and trimming the catalog to protect context is the wrong lever on runtimes that have this.
+
 ### Corrections have a supported channel
 
 - **Mid-conversation system messages** append a `{"role": "system"}` message rather than editing the top-level `system` field, so the cached prefix survives. The precedence is specified: "later system messages take precedence over earlier ones, and mid-conversation system messages take precedence over the top-level `system` field for the turns that follow them." Named triggers include "a freshness note" and "files changed on disk."

@@ -47,6 +47,8 @@ Final accuracy hides most failure classes. Instrument every axis on which the de
 
 High token use suggests response bloat or too many chained calls. A high invalid-call rate points at schemas, names, descriptions, or error text. Rising context length with flat task success is debris. A stale-claim that survives to the final answer is the one failure the other metrics will not show you.
 
+Once the system serves real sessions, production adds signals no eval synthesizes. **Missing-tool attempts** — calls to names that do not exist — are the highest-signal one: each names the capability or naming scheme an agent expected, which is design feedback from the caller itself. Session replay finds workflows that degrade with no hard error — repeated exploration, retries, direction changes under an infrastructure view that reads healthy. And usage clustering shows which few workflows dominate real traffic, which is where consolidation pays first. Route all three back into the eval set: a production failure that never becomes a task will recur.
+
 ## Review criteria
 
 When judging qualitatively rather than measuring:

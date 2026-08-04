@@ -81,7 +81,7 @@ Collisions in this skill happen along one seam: a **static contract** and its **
 | Process and workflow steps | Skill body or system prompt — never a description |
 | Field names, types, required/optional, enums, return shape | Tool schema |
 | Input conventions, side effects, sibling disambiguation | Tool description |
-| Cross-tool workflow order, approval choreography, tone | System/developer prompt |
+| Cross-tool workflow order, approval choreography, tone | System/developer prompt — server-owned guidance channels when you do not author the client |
 | Which actions require approval, and what may override what | Runtime gate; source ranking in `trust-and-safety.md` |
 | Deterministic constraints (IDs, permissions, transitions) | Server-side validation |
 | What a tool catalog offers and in what shape | `tool-patterns.md` |

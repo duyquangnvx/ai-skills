@@ -15,6 +15,7 @@ Applies to tool scoping, names, schemas, descriptions, responses, and errors. Th
 - Server-side validation
 - A cost ladder over the same data
 - Agents as tools
+- When you own only the server
 - Descriptions rot
 
 ## Where to cut the catalog
@@ -25,7 +26,9 @@ Safety class is the clearest unrecoverable case, and hiding a delete behind `mut
 
 The mechanism behind all of it: **permission, cost expectation, and annotation attach to the tool name, not to its arguments.** Allow-listing a merged tool because its cheap read is harmless silently allow-lists everything else the mode parameter can reach, and no description text narrows that grant. The practical question is therefore not "are these the same kind of operation" but **"would I grant them together"**.
 
-Two corrections to the instinct that fewer is better. Tool count is not the thing to minimize — ambiguity per tool is; keep the active set small (cross-vendor guidance suggests under ~20 per turn) and namespace beyond that. And over-consolidation has its own failure: when one tool serves unrelated use cases, the failure moves from tool *selection* to tool *parameterization*, and the model can no longer tell which combination of parameters is valid. Reach for defaults, format presets, and an `options` object for the rarely-used tail before splitting.
+Two corrections to the instinct that fewer is better. Tool count is not the thing to minimize — ambiguity per tool is, and the count that matters is the *loaded* set: the schemas actually in context this turn. Where the runtime defers schemas behind a search or discovery step, a large catalog costs only what gets loaded — prefer that mechanism to trimming capability; without it, keep the active set small (cross-vendor guidance suggests under ~20 per turn) and namespace beyond that. And over-consolidation has its own failure: when one tool serves unrelated use cases, the failure moves from tool *selection* to tool *parameterization*, and the model can no longer tell which combination of parameters is valid. Reach for defaults, format presets, and an `options` object for the rarely-used tail before splitting.
+
+Catalogs at scale do reach for the merged shape anyway — domain tools with a typed action enum inside — because it caps top-level tool count. Name what that trade buys and costs: it solves catalog size, and it pays with permission granularity and annotations, since every grant and gate attaches to the one name all the actions share. Prefer namespacing plus deferred loading where the runtime offers it. Where layering is the only option, group so no tool name mixes safety classes — reads with reads, writes with writes, destructive or externally-visible actions under names of their own.
 
 Two things consolidation is *not*. It is not a claim about how long the result may be held — a bundled response routinely mixes stable identity with volatile state, so stamp per field rather than per response and decide holding time separately, by volatility. And it is not purely an efficiency argument: a sequence of writes that must be coherent should be one call, because a rejection partway through a sequence leaves the earlier writes applied.
 
@@ -154,6 +157,14 @@ Where sub-agents are exposed as callable tools, the description standard above a
 
 Where the spawn is ad-hoc and there is no registered description to hold it, the return contract moves into the brief and becomes one of its required parts. An unspecified return shape is not an omission the sub-agent will fill in consistently — a capable model picks a reasonable shape and a different one each time, and a caller with no declared shape cannot even detect the mismatch. State the required parts in order, including what to return when the result is empty or the work was blocked, since those are where shapes diverge most and where a guessing caller does the most damage.
 
+## When you own only the server
+
+Everything above assumes one author for the whole interface. The other authoring position — shipping a tool catalog for clients you do not control — removes the system prompt from your surface set, and with it the home this standard assigns to cross-tool workflow order, disambiguation between siblings, and approval choreography.
+
+That content does not squeeze into tool descriptions, which stay routing metadata. It moves into server-owned guidance channels: the initialize-time server instructions field, prompts and resources the client can pull, guide tools that return operational instructions on demand, and skills shipped alongside the connector. Tools expose what the agent can do; the guidance channel encodes how to do it well — workflow order, domain conventions, the judgment a task needs beyond API access.
+
+Design the rest for an unknown client. Annotations may not be honored, the permission UX is not yours, and the client's own prompt may contradict yours. Descriptions, schemas, responses, and errors are the only surfaces guaranteed to reach the model — which raises their weight, not the tolerance for what they carry.
+
 ## Descriptions rot
 
 A stale description misroutes the agent more quietly than a broken schema does — the call is well-formed and simply wrong, so nothing errors. Version descriptions with the tool, review them in the change that touches the API, and re-run tool evals after meaningful edits.
@@ -161,7 +172,7 @@ A stale description misroutes the agent more quietly than a broken schema does �
 ## Review checklist
 
 - [ ] Each tool maps to a real workflow; overlapping tools have a one-sentence disambiguation.
-- [ ] Splits fall where a wrong choice is unrecoverable or unbudgeted, never behind a mode parameter.
+- [ ] Splits fall where a wrong choice is unrecoverable or unbudgeted; no tool name mixes safety classes behind a mode parameter.
 - [ ] Naming, parameters, and enums are consistent across the catalog; namespaced when large.
 - [ ] Every description carries when-to-call, conventions, side effects, sibling boundaries — and nothing meant for humans.
 - [ ] The schema is the source of truth for fields, enums, and return shape.
