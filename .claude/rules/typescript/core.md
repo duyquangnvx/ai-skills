@@ -1,3 +1,9 @@
+---
+paths:
+  - "**/*.ts"
+  - "**/*.tsx"
+---
+
 <!-- Reusable TS rule set — canonical home. Keep generic; copy into another project's
      .claude/rules/typescript (or ~/.claude/rules/typescript for global use) to reuse. -->
 

@@ -1,3 +1,9 @@
+---
+paths:
+  - "**/*.ts"
+  - "**/*.tsx"
+---
+
 # TypeScript — Workflow
 
 ## Definition of done
@@ -6,6 +12,7 @@
 - Use the project's own scripts — check `package.json` for `typecheck`, `lint`, `test` or their equivalents. If no typecheck script exists, run `tsc --noEmit` through the project's package manager.
 - Run the smallest relevant check first (single test file, one package); run the full affected suite before declaring the task complete.
 - When reporting done, state: what changed, which checks ran with their results, and anything **not** verified.
+- If no runnable check covers the change, say it is unverified. Re-reading the code is not verification.
 
 ## Gate integrity
 

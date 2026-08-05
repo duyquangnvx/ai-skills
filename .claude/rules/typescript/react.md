@@ -1,4 +1,7 @@
-<!-- Only loads when .tsx files are read — free to keep in non-React projects. -->
+---
+paths:
+  - "**/*.tsx"
+---
 
 # TypeScript — React
 

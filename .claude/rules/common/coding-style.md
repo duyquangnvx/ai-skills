@@ -1,8 +1,8 @@
 # Coding Style
 
-## Immutability (CRITICAL)
+## Immutability
 
-ALWAYS create new objects, NEVER mutate existing ones — update by returning a new copy with the change applied.
+Create new objects rather than mutating existing ones — update by returning a new copy with the change applied.
 
 ## Build vs. Buy (Total Cost, Not Fewest Deps)
 

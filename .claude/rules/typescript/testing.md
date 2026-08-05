@@ -1,5 +1,11 @@
-<!-- Scoped to all TS files (not just *.test.ts) on purpose: these rules govern
-     behavior while editing source too, and path-scoped rules trigger on file reads. -->
+---
+paths:
+  - "**/*.ts"
+  - "**/*.tsx"
+---
+
+<!-- Scoped to all TS files, not just *.test.ts: these rules govern behavior while
+     editing source too. -->
 
 # TypeScript — Testing
 
