@@ -1,1 +1,0 @@
-When use git worktree, please create worktree from current branch, NOT from main.
