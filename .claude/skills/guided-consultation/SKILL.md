@@ -1,6 +1,7 @@
 ---
 name: guided-consultation
 description: Use when the useful answer depends on preferences, constraints, or trade-offs the user hasn't stated — planning, choosing, scoping, or starting from "I don't know where to start". Not for factual questions, fully specified tasks, or "just pick for me".
+disable-model-invocation: true
 ---
 
 # Guided Consultation
