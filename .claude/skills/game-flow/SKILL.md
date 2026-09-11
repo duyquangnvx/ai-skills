@@ -35,20 +35,24 @@ Each command declares a **policy**:
 | Timer expiry, effect expiry, turn end | `queue` | Must never be lost — it waits for the current command instead |
 | Quit, restart, level abort | `preempt` | Cancels whatever is running and clears the queue |
 
+A `queue` command runs after the world has moved on, so it re-checks its precondition before acting: a `TimeUp` that lands after a win does nothing.
+
 Pause, mute, and camera moves are **not** commands — see invariant 5.
 
 ## 3. Transaction
 
-A command is a transaction against the model: it commits model state **before** awaiting the port.
+A command is a transaction against the model: it commits model state **before** awaiting the port, including the outcome the move decides (win, level end, clock stop).
 
 ```ts
 this.selection = null;
-this.board.remove(a, b);              // commit first
-await this.view.clearPair(a, b, path); // then let the view catch up
-if (this.board.isEmpty()) await this.view.win();
+this.board.remove(a, b);                      // commit the move
+const isWon = this.board.isEmpty();
+if (isWon) this.endLevel('won');              // and its outcome
+await this.view.clearPair(a, b, path, token); // then let the view catch up
+if (isWon) await this.view.win(token);
 ```
 
-The model is always at or ahead of the view; the view is a lagging projection that reads its own copy. State committed after an `await` leaves the model wrong for the whole duration of the animation, and every read during that window is wrong with it.
+The model is always at or ahead of the view; the view is a lagging projection that reads its own copy. State committed after an `await` leaves the model wrong for the whole duration of the animation, and every read during that window is wrong with it, including a `queue` command that lands there.
 
 ## 4. Cancel
 
@@ -58,9 +62,9 @@ Anything a command turns on — targeting mode, highlights, input locks — is t
 
 ## 5. Clock
 
-Time lives in a `Clock` that logic owns and the render loop ticks with `dt`. The clock mutates only its own numbers and repaints through a fire-and-forget port method; when it reaches zero it **dispatches** a `queue` command rather than touching the board itself.
+Time lives in a `Clock` that logic owns and the render loop ticks with `dt`. The clock mutates only its own numbers and repaints through a fire-and-forget port method; when it reaches zero it **dispatches** a `queue` command rather than touching the board itself. Logic stops the clock under named reasons (`hold('freeze')`, `hold('end')`), each released only by its own writer, so a freeze wearing off never restarts a finished level.
 
-Pause bypasses the queue entirely: it stops the clock and calls `tweens.pauseAll()`. Commands stay suspended at their `await` because the tweens they wait on are frozen. A pause that dispatches a command would wait for the running animation before taking effect, which reads as a broken button.
+Pause bypasses the queue entirely: `update(dt)` stops ticking the clock and effects, the view freezes every tween through a fire-and-forget port method (`setPaused`), and raw input is refused until resume. Commands stay suspended at their `await` because the tweens they wait on are frozen. A pause that dispatches a command would wait for the running animation before taking effect, which reads as a broken button.
 
 Logic gets elapsed time only from `Clock` and waiting only from the port. A `setTimeout` in logic is a missing port method.
 
@@ -79,12 +83,15 @@ Timed buffs ("x2 for 10s", freeze, auto-hint) run beside the queue, not in it: r
 |---|---|---|
 | Two taps during one animation resolve two moves | 2 | Input source is not `drop`, or bypasses `dispatch` |
 | A tile reappears, or a match resolves against a stale board | 3 | State committed after the `await` |
-| Time-up fires but the win from the last move also fires | 2 | Both ran concurrently; expiry must be `queue` |
+| Time-up fires but the win from the last move also fires | 3, 2 | Outcome committed after the `await`, or the queued expiry skipped its precondition check |
 | Errors about destroyed nodes after quitting | 4 | Adapter is not checking the token |
 | Pause button feels laggy | 5 | Pause went through the queue |
+| Taps under the pause menu change the board | 5 | Raw input still reaches `dispatch` while paused |
+| Countdown resumes after the level ended, or after unpausing mid-freeze | 5 | Writers share one pause flag; hold the clock per reason |
 | Highlights stuck on after an abort | 4 | Cleanup is not in `finally` |
 | A booster's target prompt swallows the next real tap | — | Input router still holds a resolved request: see `references/runtime.md` |
-| Countdown drifts, or keeps running under the win animation | 5 | Clock is driven by wall time instead of `dt`, or the win command forgot `clock.pause()` |
+| Time-up never lands while a booster waits for a pick | — | The player-wait holds the queue: see `references/runtime.md` |
+| Countdown drifts | 5 | Clock is driven by wall time instead of `dt` |
 
 ## Other languages
 

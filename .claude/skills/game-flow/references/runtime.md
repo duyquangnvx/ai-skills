@@ -53,6 +53,8 @@ export class Runtime {
   private queue: Command[] = [];
   private pumping = false;
   private current: TokenSource | null = null;
+  /** Set by InputRouter while the running command waits on the player. */
+  waitingForPlayer = false;
 
   constructor(private readonly onError: (e: unknown, cmd: Command) => void) {}
 
@@ -64,6 +66,8 @@ export class Runtime {
       this.current?.cancel();
     } else if (cmd.policy === 'drop' && this.pumping) {
       return;
+    } else if (cmd.policy === 'queue' && this.waitingForPlayer) {
+      this.current?.cancel();
     }
     this.queue.push(cmd);
     void this.pump();
@@ -115,12 +119,18 @@ A command that stops to ask the player ("pick a tile to bomb") needs the next ta
 export class InputRouter<T> {
   private pending: ((v: T) => void) | null = null;
 
+  constructor(private readonly runtime: Runtime) {}
+
   ask(token: CancelToken): Promise<T> {
     token.throwIfCancelled();
     return new Promise<T>((resolve, reject) => {
-      this.pending = resolve;
-      const off = token.onCancel(() => { this.pending = null; reject(new Cancelled()); });
-      this.pending = (v: T) => { off(); resolve(v); };
+      this.runtime.waitingForPlayer = true;
+      const off = token.onCancel(() => {
+        this.pending = null;
+        this.runtime.waitingForPlayer = false;
+        reject(new Cancelled());
+      });
+      this.pending = (v: T) => { off(); this.runtime.waitingForPlayer = false; resolve(v); };
     });
   }
 
@@ -139,10 +149,13 @@ Raw input goes through the router first:
 
 ```ts
 onTapRaw(p: Pos): void {
+  if (this.paused) return;
   if (this.router.offer(p)) return;
   this.runtime.dispatch(new TapCommand(p));
 }
 ```
+
+A command parked on the router waits on the player, whose answer has no deadline, so a `queue` arrival (time-up, effect expiry) would sit behind it indefinitely. The runtime cancels the parked command instead and the arrival runs at once. A game that would rather keep the pick open stops the arrival at its source, e.g. `clock.hold('targeting')` for the duration of the ask.
 
 Cleanup belongs in the command, not the router:
 
@@ -163,7 +176,7 @@ async run(token: CancelToken) {
 
 ```ts
 export class Clock {
-  paused = false;
+  private holds = new Set<string>();
   private fired = false;
 
   constructor(
@@ -172,8 +185,12 @@ export class Clock {
     private readonly onExpire: () => void,
   ) {}
 
+  get stopped(): boolean { return this.holds.size > 0; }
+  hold(reason: string): void { this.holds.add(reason); }
+  release(reason: string): void { this.holds.delete(reason); }
+
   tick(dt: number): void {
-    if (this.paused || this.fired) return;
+    if (this.stopped || this.fired) return;
     this.remaining = Math.max(0, this.remaining - dt);
     this.onTick(this.remaining);
     if (this.remaining === 0) { this.fired = true; this.onExpire(); }
@@ -191,7 +208,7 @@ const clock = new Clock(60_000,
   () => runtime.dispatch(new TimeUpCommand()),  // policy 'queue'
 );
 // render loop:
-update(dt) { clock.tick(dt); effects.tick(dt); }
+update(dt) { if (paused) return; clock.tick(dt); effects.tick(dt); }
 ```
 
 `dt` comes from the engine's frame delta, never from `Date.now()` deltas computed inside logic — that is what makes the clock replayable at any speed in headless runs.

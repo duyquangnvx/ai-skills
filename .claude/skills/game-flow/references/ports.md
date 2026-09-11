@@ -9,7 +9,7 @@ Every game needs these four capabilities before a port method can honestly retur
 ```ts
 export interface Tweener {
   to(target: unknown, props: object, ms: number, opts?: TweenOpts): Handle;
-  sequence(...items: Handle[]): Handle;
+  sequence(...steps: (() => Handle)[]): Handle;  // factories: a created tween is already running
   parallel(...items: Handle[]): Handle;
   delay(ms: number): Handle;
   pauseAll(): void;
@@ -22,7 +22,9 @@ export interface Handle {
 }
 ```
 
-Most engines ship the tweening and omit the promise and the kill. Wrap the engine's tween once, in one adapter file, rather than per call site. `pauseAll`/`resumeAll` must be global because pause (invariant 5) relies on them to suspend commands that are parked at an `await`.
+Most engines ship the tweening and omit the promise and the kill. Wrap the engine's tween once, in one adapter file, rather than per call site. A tween reads its start values on its first tick, so a step created later in a sequence starts where the previous one ended.
+
+`pauseAll`/`resumeAll` must be global, freezing tweens created while paused too, because pause (invariant 5) relies on them to suspend commands that are parked at an `await`. Logic reaches them only through a fire-and-forget port method (`setPaused(isPaused)`) whose adapter calls them.
 
 `sequence` and `parallel` are what remove `setTimeout` from view code: a chained animation becomes one handle with one promise instead of nested callbacks with hand-counted delays.
 
@@ -43,7 +45,7 @@ Adapters use it uniformly:
 ```ts
 class BoardView implements BoardPort {
   async clearPair(a: Pos, b: Pos, path: Pos[], token: CancelToken): Promise<void> {
-    await run(this.tw.sequence(this.drawPath(path), this.pop(a, b)), token);
+    await run(this.tw.sequence(() => this.drawPath(path), () => this.pop(a, b)), token);
     token.throwIfCancelled();
     this.recycle(a, b);
   }

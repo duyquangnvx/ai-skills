@@ -35,7 +35,7 @@ expect(port.log).toEqual([...]);
 const settle = () => new Promise<void>(r => setTimeout(r, 0));
 ```
 
-`settle` is the one honest use of `setTimeout` in the codebase: it drains promises in the harness, never in game logic.
+`settle` is the one honest use of `setTimeout` in the codebase: it drains promises in the harness, never in game logic. Settle after every dispatch: the runtime stays busy for a microtask after even an instant command, so a second dispatch in the same tick is dropped by its `drop` policy.
 
 ## What to use it for
 

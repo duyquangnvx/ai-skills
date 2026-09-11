@@ -52,16 +52,16 @@ Expiry that only changes a number or a visual runs inline in `onExpire`. Expiry 
 ```ts
 this.effects.add({
   id: 'freeze', remaining: 5000,
-  onStart: () => { this.clock.paused = true; this.view.showFrozen(); },
-  onExpire: () => this.runtime.dispatch(new UnfreezeCommand()),  // policy 'queue'
+  onStart: () => { this.clock.hold('freeze'); this.view.showFrozen(); },
+  onExpire: () => this.runtime.dispatch(new UnfreezeCommand()),  // policy 'queue', runs clock.release('freeze')
 });
 ```
 
 ## Pause, cancel, and the clock
 
-- Pause skips `effects.tick` exactly as it skips `clock.tick`. Both are in the same `update(dt)`.
-- Freeze pausing the clock and the pause menu pausing the clock are two writers to one flag; use a counter or separate flags (`menuPaused`, `frozen`) and derive `clock.paused` from both.
-- Level end calls `effects.clear()`; every `onExpire` must be safe to run early and out of order.
+- Pause skips `effects.tick` and `clock.tick` behind the same guard in `update(dt)`.
+- Freeze holds the clock under its own reason, so neither the pause menu nor level end can release it, and its release cannot restart a finished level.
+- Level end calls `effects.clear()`; every `onExpire` must be safe to run early and out of order. A command it dispatches lands after the level ended, so it re-checks its precondition (invariant 2).
 
 ## Testing
 
